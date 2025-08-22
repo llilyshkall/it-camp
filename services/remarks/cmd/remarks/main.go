@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"remarks/internal/httputils"
 	"syscall"
 	"time"
-	"remarks/internal/httputils"
 )
 
 func main() {

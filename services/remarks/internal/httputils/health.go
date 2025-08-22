@@ -19,7 +19,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Method not allowed",
+			"error":           "Method not allowed",
 			"allowed_methods": "GET",
 		})
 		return
