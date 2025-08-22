@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remarks
+spec:
+  replicas: 1  # Количество копий приложения
+  selector:
+    matchLabels:
+      app: remarks
+  template:
+    metadata:
+      labels:
+        app: remarks
+    spec:
+      containers:
+        - name: remarks
+          image: remarks:latest  # Имя вашего образа
+          imagePullPolicy: Never  # Для локальных образов
+          ports:
+            - containerPort: 8080  # Порт, который слушает приложение
+          livenessProbe:         # Проверка живости контейнера
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:        # Проверка готовности контейнера
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

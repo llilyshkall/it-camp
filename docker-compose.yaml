@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  remarks:
+    build: ./services/remarks
+    ports:
+      - "8081:8080"
+#  llm:
+#    build: ./services/llm/deployments/docker
+#    ports:
+#      - "8082:8080"
