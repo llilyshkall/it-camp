@@ -113,7 +113,7 @@ jobs:
             docker run -d \
               --name remarks \
               --restart unless-stopped \
-              -p 80:8080 \
+              -p 8081:8080 \
               -e ENVIRONMENT=production \
               -e PORT=8080 \
               -e TZ=UTC \
@@ -121,7 +121,7 @@ jobs:
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
             
             # Ждем готовности
             echo "Waiting for container to be ready..."
@@ -133,7 +133,7 @@ jobs:
             
             # Проверяем health
             echo "Health check:"
-            curl -f http://localhost:80/health || echo "Health check failed"
+            curl -f http://localhost:8081/health || echo "Health check failed"
             
             echo "Deployment completed successfully!"
 
