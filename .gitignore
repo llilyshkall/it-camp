@@ -63,3 +63,7 @@ vendor/
 *.backup
 
 РЕЕСТР_ягодное - нулевой.xlsx
+
+# Frontend temp files
+services/front/.venv
+services/front/__pycache__

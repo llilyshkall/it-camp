@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ru" data-theme="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ page_title }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<a class="skip-link" href="#main">К содержанию</a>
+
+<header>
+  <div class="header-top">
+    <div class="container">
+      <div class="brand">Корпоративный проект</div>
+      <nav class="meta-nav" aria-label="Служебная навигация">
+        <button id="theme-toggle" class="icon-btn" title="Переключить тему" aria-label="Переключить тему">🌙</button>
+        <a href="#top">Помощь</a>
+        <a href="#top" lang="ru">RU</a>
+      </nav>
+    </div>
+  </div>
+
+  <div class="main-nav-wrapper">
+    <div class="container header-row">
+      <div class="wordmark"><a class="wordmark-link" href="#top">ПРОЕКТ ДЛЯ ГАЗПРОМА</a></div>
+      <nav class="main-nav" aria-label="Основная навигация">
+        <a href="#top" data-target="#top" class="nav-link" aria-current="page">Главная</a>
+        <a href="#assurance-card" data-target="#assurance-card" class="nav-link">Чек-лист</a>
+        <a href="#remarks-card" data-target="#remarks-card" class="nav-link">Замечания</a>
+        <a href="#protocol-card" data-target="#protocol-card" class="nav-link">Протокол</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <span id="top" class="anchor-offset" aria-hidden="true"></span>
+
+  <!-- HERO без кнопок -->
+  <section class="hero">
+    <div class="container">
+      <h1>Чистая стартовая страница</h1>
+      <p class="lead">Заглушка интерфейса с эстетикой «сине-белого» корпоративного стиля. Без логотипов и товарных знаков. Готово к наполнению.</p>
+    </div>
+  </section>
+
+  <!-- Шаги -->
+  <section class="steps">
+    <div class="container">
+      <ol class="steps-grid" aria-label="Этапы процесса">
+        <li class="step" data-target="#assurance-card"><div class="step-num">1</div><div class="step-body"><div class="step-title">Проверка по чек-листу</div><div class="step-desc">Быстрая проверка для ашуранса.</div></div></li>
+        <li class="step" data-target="#remarks-card"><div class="step-num">2</div><div class="step-body"><div class="step-title">Обработка замечаний</div><div class="step-desc">Нормализация Excel и выгрузка.</div></div></li>
+        <li class="step" data-target="#protocol-card"><div class="step-num">3</div><div class="step-body"><div class="step-title">Формирование протокола</div><div class="step-desc">Генерация протокола.</div></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Контент -->
+  <section class="section">
+    <div class="container">
+      <div class="stack">
+
+        <!-- 1) Проверка по чек-листу -->
+        <div class="card card-lg" id="assurance-card">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">✅</div>
+            <h3>Проверка по чек-листу для ашуранса</h3>
+          </div>
+          <p class="sublead">Загрузите файлы. Допустимые типы: <strong>PDF, DOC(X), XLS(X), CSV, TXT</strong>. До <strong>25&nbsp;МБ</strong> суммарно.</p>
+
+          <div id="dropzone" class="dropzone" aria-label="Зона загрузки файлов" tabindex="0">
+            <input id="file-input" type="file" name="files[]" multiple aria-hidden="true" />
+            <div class="dz-in">
+              <strong>Перетащите файлы сюда</strong>
+              <span class="dz-sep">или</span>
+              <button type="button" id="pick-btn" class="btn btn-ghost">Выбрать файлы</button>
+            </div>
+          </div>
+
+          <div id="upload-info" class="upload-info" hidden></div>
+
+          <div id="assurance-result" class="assurance-result" hidden>
+            <span id="verdict-badge" class="badge">—</span>
+            <ul id="verdict-reasons" class="reasons"></ul>
+          </div>
+
+          <div class="actions actions--spaced">
+            <button class="btn btn-primary" id="download-assurance" disabled>Скачать проверку чек-листа</button>
+          </div>
+        </div>
+
+        <!-- 2) Обработка замечаний -->
+        <div class="card card-lg" id="remarks-card">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">🧾</div>
+            <h3>Обработка замечаний</h3>
+          </div>
+          <p class="sublead">Загрузите Excel с замечаниями эксперта после ашуранса (<strong>.xls/.xlsx</strong>). Мы подготовим «обработанный реестр замечаний».</p>
+
+          <div id="remarks-zone" class="dropzone" aria-label="Файл замечаний" tabindex="0">
+            <input id="remarks-input" type="file" name="remarks" accept=".xls,.xlsx" aria-hidden="true" />
+            <div class="dz-in">
+              <strong>Перетащите Excel сюда</strong>
+              <span class="dz-sep">или</span>
+              <button type="button" id="remarks-pick" class="btn btn-ghost">Выбрать файл</button>
+            </div>
+          </div>
+
+          <div id="remarks-info" class="upload-info" hidden></div>
+
+          <div class="actions actions--spaced">
+            <button class="btn btn-primary" id="download-remarks" disabled>Скачать обработанный реестр замечаний</button>
+          </div>
+        </div>
+
+        <!-- 3) Формирование протокола -->
+        <div class="card card-lg" id="protocol-card">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">📄</div>
+            <h3>Формирование протокола</h3>
+          </div>
+          <p class="sublead">Нажмите «Сформировать», и система подготовит  файл протокола.</p>
+          <div class="actions">
+            <button class="btn btn-primary" id="make-protocol">Сформировать</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div>
+      <div class="wordmark-sm">Проект для Газпрома</div>
+      <small>Демо-стиль без официальной символики.</small>
+    </div>
+    <nav class="footer-nav" aria-label="Вторичная навигация">
+      <a href="#top">Политика</a>
+      <a href="#top">Условия</a>
+      <a href="#top">Контакты</a>
+    </nav>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+  <div id="toast-msg"></div>
+</div>
+
+<script>
+  // ===== Переключатель темы (auto → light → dark) =====
+  (function(){
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const apply = (mode) => {
+      if (!mode) { root.removeAttribute('data-theme'); btn.textContent='🌙'; return; }
+      root.setAttribute('data-theme', mode);
+      btn.textContent = mode === 'light' ? '🌞' : '🌙';
+    };
+    const saved = localStorage.getItem('theme');
+    apply(saved);
+    btn.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      let next;
+      if (!current) next = 'light';
+      else if (current === 'light') next = 'dark';
+      else next = null;
+      if (next) localStorage.setItem('theme', next); else localStorage.removeItem('theme');
+      apply(next);
+    });
+  })();
+
+  // Плавный скролл
+  function scrollToTarget(sel){const el=document.querySelector(sel); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});}
+
+  // Сжатие шапки
+  document.addEventListener('scroll',()=>{const w=document.querySelector('.main-nav-wrapper'); if(w) w.classList.toggle('compact',window.scrollY>16);},{passive:true});
+
+  // Меню и «Ступени»
+  document.querySelectorAll('.nav-link').forEach(a=>{
+    a.addEventListener('click',(e)=>{e.preventDefault(); scrollToTarget(a.getAttribute('data-target')||a.getAttribute('href'));});
+  });
+  document.querySelectorAll('.steps .step').forEach(s=>{
+    s.addEventListener('click',()=> scrollToTarget(s.getAttribute('data-target')));
+  });
+
+  // Подсветка активного пункта меню и шага
+  const anchors=['#top','#assurance-card','#remarks-card','#protocol-card'].map(s=>document.querySelector(s)).filter(Boolean);
+  const nav=[...document.querySelectorAll('.nav-link')];
+  const steps=[...document.querySelectorAll('.steps .step')];
+  const isInView=(el)=>{const r=el.getBoundingClientRect(); return r.top<=140 && r.bottom>=140;};
+  const updateActive=()=>{
+    for(const s of anchors){
+      if(isInView(s)){
+        const id='#'+(s.id||'top');
+        nav.forEach(a=>a.toggleAttribute('aria-current',(a.getAttribute('data-target')===id)||(a.getAttribute('href')===id)));
+        steps.forEach(st=>st.classList.toggle('active', st.getAttribute('data-target')===id));
+        break;
+      }
+    }
+  };
+  updateActive(); document.addEventListener('scroll',()=>requestAnimationFrame(updateActive),{passive:true});
+
+  // Тост
+  function toast(msg, ok=true){
+    const el=document.getElementById('toast'); const text=document.getElementById('toast-msg');
+    text.textContent=msg; el.classList.toggle('bad', !ok); el.hidden=false; el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'), 2400);
+  }
+
+  // ===== 1) Ашуренс =====
+  (()=>{const dz=document.getElementById('dropzone'); const input=document.getElementById('file-input');
+    const pickBtn=document.getElementById('pick-btn'); const info=document.getElementById('upload-info');
+    const res=document.getElementById('assurance-result'); const badge=document.getElementById('verdict-badge');
+    const reasonsUl=document.getElementById('verdict-reasons'); const downloadBtn=document.getElementById('download-assurance');
+    let lastAssurance=null;
+
+    const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
+    const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false;};
+    const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await fetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
+    const apply=(data)=>{lastAssurance=data; downloadBtn.disabled=false; badge.textContent=data.title||'—'; badge.classList.remove('ok','fail'); badge.classList.add(data.verdict==='ok'?'ok':'fail'); reasonsUl.innerHTML=''; (data.reasons||[]).forEach(t=>{const li=document.createElement('li'); li.textContent=t; reasonsUl.appendChild(li);}); res.hidden=false; toast(data.title, data.verdict==='ok');};
+
+    pickBtn.addEventListener('click',()=>input.click());
+    input.addEventListener('change',async()=>{const files=input.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
+
+    ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
+    ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
+    ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
+    dz.addEventListener('drop',async(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
+    dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+
+    // Скачать TXT-отчёт проверки
+    downloadBtn.addEventListener('click', () => {
+      if (!lastAssurance) return;
+      const lines = [
+        'ПРОВЕРКА ПО ЧЕК-ЛИСТУ',
+        '======================',
+        `Вердикт: ${lastAssurance.title || ''}`,
+        '',
+        'Пояснения:',
+        ...(lastAssurance.reasons || []).map((r,i)=>`${i+1}. ${r}`)
+      ];
+      const blob = new Blob([lines.join('\r\n')], {type: 'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'assurance_report.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast('Отчёт по чек-листу сохранён');
+    });
+  })();
+
+  // ===== 2) Обработка замечаний =====
+  (()=>{const zone=document.getElementById('remarks-zone'); const input=document.getElementById('remarks-input');
+    const pick=document.getElementById('remarks-pick'); const info=document.getElementById('remarks-info');
+    const btn=document.getElementById('download-remarks'); const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
+    const show=(file)=>{info.textContent=`${file.name} — ${(file.size/1024).toFixed(1)} КБ`; info.hidden=false; btn.disabled=false;};
+    pick.addEventListener('click',()=>input.click());
+    input.addEventListener('change',()=>{if(!input.files?.[0]) return; show(input.files[0]);});
+    ['dragenter','dragover','dragleave','drop'].forEach(ev=>zone.addEventListener(ev,stop,false));
+    ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.add('hover'),false));
+    ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.remove('hover'),false));
+    zone.addEventListener('drop',(e)=>{const file=e.dataTransfer.files?.[0]; if(!file) return; input.files=e.dataTransfer.files; show(file);});
+    zone.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+    btn.addEventListener('click',async()=>{if(!input.files?.[0]) return; const fd=new FormData(); fd.append('remarks',input.files[0],input.files[0].name);
+      const r=await fetch('/remarks',{method:'POST',body:fd}); if(!r.ok){toast('Не удалось обработать файл (.xls/.xlsx)',false); return;}
+      const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='remarks_processed.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Реестр замечаний сформирован');});
+  })();
+
+  // ===== 3) Формирование протокола =====
+  (()=>{const btn=document.getElementById('make-protocol');
+    btn.addEventListener('click',async()=>{const r=await fetch('/protocol',{method:'POST'}); if(!r.ok){toast('Не удалось сформировать протокол',false); return;}
+      const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='protocol.docx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Протокол готов');});
+  })();
+</script>
+</body>
+</html>
