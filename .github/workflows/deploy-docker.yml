@@ -115,11 +115,11 @@ jobs:
             docker stop remarks || true
             docker rm remarks || true
             
-            # Скачиваем новый образ (используем main тег)
+            # Скачиваем новый образ (используем master тег)
             echo "Pulling new image..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
             
-            # Запускаем новый контейнер (используем main тег)
+            # Запускаем новый контейнер (используем master тег)
             echo "Starting new container..."
             docker run -d \
               --name remarks \
@@ -132,7 +132,7 @@ jobs:
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
             
             # Ждем готовности
             echo "Waiting for container to be ready..."
