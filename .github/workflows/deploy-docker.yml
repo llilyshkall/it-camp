@@ -96,19 +96,26 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            # Создаем директорию для приложения
-            mkdir -p /opt/remarks
+            # Создаем директорию для приложения в домашней папке пользователя
+            mkdir -p ~/remarks
+            
+            # Проверяем, что пользователь в группе docker
+            if ! groups | grep -q docker; then
+              echo "User not in docker group. Adding to docker group..."
+              sudo usermod -aG docker $USER
+              echo "Please log out and log back in, or run: newgrp docker"
+            fi
             
             # Останавливаем старый контейнер
             echo "Stopping old container..."
             docker stop remarks || true
             docker rm remarks || true
             
-            # Скачиваем новый образ
+            # Скачиваем новый образ (используем main тег)
             echo "Pulling new image..."
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
             
-            # Запускаем новый контейнер
+            # Запускаем новый контейнер (используем main тег)
             echo "Starting new container..."
             docker run -d \
               --name remarks \
@@ -121,7 +128,7 @@ jobs:
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
             
             # Ждем готовности
             echo "Waiting for container to be ready..."
