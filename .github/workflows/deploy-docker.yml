@@ -1,0 +1,180 @@
+name: Deploy to Server (Docker)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Позволяет запускать вручную
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/remarks
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22.5'
+          cache: true
+
+      - name: Run tests
+        working-directory: ./services/remarks
+        run: |
+          go test -v ./...
+          go vet ./...
+          go fmt ./...
+
+      - name: Build binary
+        working-directory: ./services/remarks
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o remarks ./cmd/remarks
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/remarks
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: production
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            # Создаем директорию для приложения в домашней папке пользователя
+            mkdir -p ~/remarks
+            
+            # Проверяем, что пользователь в группе docker
+            if ! groups | grep -q docker; then
+              echo "User not in docker group. Adding to docker group..."
+              sudo usermod -aG docker $USER
+              echo "Please log out and log back in, or run: newgrp docker"
+            fi
+            
+            # Авторизация в GitHub Container Registry
+            echo "Authenticating with GitHub Container Registry..."
+            if ! echo ${{ secrets.PACKAGES_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+              echo "❌ Failed to authenticate with GitHub Container Registry"
+              exit 1
+            fi
+            
+            # Останавливаем старый контейнер
+            echo "Stopping old container..."
+            docker stop remarks || true
+            docker rm remarks || true
+            
+            # Скачиваем новый образ (используем master тег)
+            echo "Pulling new image..."
+            if ! docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
+              echo "❌ Failed to pull Docker image"
+              exit 1
+            fi
+            
+            # Запускаем новый контейнер (используем master тег)
+            echo "Starting new container..."
+            if ! docker run -d \
+              --name remarks \
+              --restart unless-stopped \
+              -p 8081:8080 \
+              -e ENVIRONMENT=production \
+              -e PORT=8080 \
+              -e TZ=UTC \
+              --health-cmd="curl -f http://localhost:8080/health || exit 1" \
+              --health-interval=30s \
+              --health-timeout=10s \
+              --health-retries=3 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
+              echo "❌ Failed to start Docker container"
+              exit 1
+            fi
+            
+            # Ждем готовности
+            echo "Waiting for container to be ready..."
+            sleep 10
+            
+            # Проверяем статус
+            echo "Container status:"
+            if ! docker ps | grep remarks; then
+              echo "❌ Container is not running"
+              exit 1
+            fi
+            
+            # Проверяем health
+            echo "Health check:"
+            if ! curl -f http://localhost:8081/health; then
+              echo "❌ Health check failed"
+              exit 1
+            fi
+            
+            echo "✅ Deployment completed successfully!"
+
+      - name: Health Check
+        run: |
+          echo "Waiting for service to be ready..."
+          sleep 30
+          
+          # Проверяем доступность сервиса
+          if curl -f "http://${{ secrets.SERVER_HOST }}/health"; then
+            echo "✅ Service is healthy and accessible!"
+          else
+            echo "❌ Service health check failed"
+            exit 1
+          fi
