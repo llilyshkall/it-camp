@@ -175,3 +175,39 @@ jobs:
             echo "❌ Service health check failed"
             exit 1
           fi
+
+      - name: Create Deployment Issue
+        if: success()
+        run: |
+          # Создаем issue с информацией о деплое
+          gh issue create \
+            --title "🚀 Deployment: ${{ github.event.head_commit.message }}" \
+            --body "## 📋 Deployment Information
+          
+          **Branch:** \`${{ github.ref_name }}\`
+          **Commit:** \`${{ github.sha }}\`
+          **Author:** ${{ github.event.head_commit.author.name }}
+          **Date:** ${{ github.event.head_commit.timestamp }}
+          **Message:** ${{ github.event.head_commit.message }}
+          
+          ## 🔧 Service Details
+          - **Service:** remarks
+          - **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+          - **Port:** 8081:8080
+          - **Environment:** production
+          
+          ## ✅ Status
+          - [x] Build completed
+          - [x] Image pushed to registry
+          - [x] Deployed to server
+          - [x] Health check passed
+          
+          ## 📝 Commit Details
+          \`\`\`
+          ${{ github.event.head_commit.message }}
+          \`\`\`
+          
+          ---
+          *This issue was automatically created by GitHub Actions*" \
+            --label "deployment" \
+            --label "automated"
