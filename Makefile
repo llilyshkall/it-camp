@@ -1,8 +1,8 @@
 .PHONY: help build test clean docker-build docker-compose-up docker-compose-down logs status health-check
 
 # Переменные
-SERVICE_NAME := remarks
-IMAGE_NAME := ghcr.io/llilyshkall/remarks
+SERVICE_NAME := evaluation
+IMAGE_NAME := ghcr.io/llilyshkall/evaluation
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo 'dev')
 
 help: ## Показать справку
@@ -33,7 +33,7 @@ docker-build: ## Собрать Docker образ
 docker-compose-up: ## Запустить сервисы через docker-compose
 	@echo "Starting services with docker-compose..."
 	docker-compose up -d
-	@echo "Services started! PostgreSQL and remarks service are running."
+	@echo "Services started! PostgreSQL and evaluation service are running."
 	@echo "Service available at http://localhost:8081"
 	@echo "Use 'make logs' to see logs"
 	@echo "Use 'make docker-compose-down' to stop"

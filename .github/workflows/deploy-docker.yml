@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/remarks
+  IMAGE_NAME: ${{ github.repository }}/evaluation
 
 jobs:
   test:
@@ -26,16 +26,16 @@ jobs:
           cache: true
 
       - name: Run tests
-        working-directory: ./services/remarks
+        working-directory: ./services/evaluation
         run: |
           go test -v ./...
           go vet ./...
           go fmt ./...
 
       - name: Build binary
-        working-directory: ./services/remarks
+        working-directory: ./services/evaluation
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o remarks ./cmd/remarks
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o evaluation ./cmd/evaluation
 
   build-and-push:
     name: Build and Push Docker Image
@@ -73,7 +73,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./services/remarks
+          context: ./services/evaluation
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -100,7 +100,7 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             # Создаем директорию для приложения в домашней папке пользователя
-            mkdir -p ~/remarks
+            mkdir -p ~/evaluation
             
             # Проверяем, что пользователь в группе docker
             if ! groups | grep -q docker; then
@@ -119,16 +119,16 @@ jobs:
             # Останавливаем старые контейнеры
             echo "Stopping old containers..."
             docker-compose down || true
-            docker stop remarks postgres || true
-            docker rm remarks postgres || true
+            docker stop evaluation postgres || true
+            docker rm evaluation postgres || true
             
             # Создаем docker-compose.yaml для продакшна
             echo "Creating production docker-compose.yaml..."
-            cat > ~/remarks/docker-compose.yaml << 'EOF'
+            cat > ~/evaluation/docker-compose.yaml << 'EOF'
             version: "3.9"
             
             services:
-              remarks:
+              evaluation:
                 image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
                 ports:
                   - "8081:8080"
@@ -137,8 +137,8 @@ jobs:
                   - ENVIRONMENT=production
                   - DB_HOST=postgres
                   - DB_PORT=5432
-                  - DB_NAME=remarks_db
-                  - DB_USER=remarks_user
+                  - DB_NAME=evaluation_db
+                  - DB_USER=evaluation_user
                   - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
                 depends_on:
                   - postgres
@@ -150,29 +150,29 @@ jobs:
                   start_period: 40s
                 restart: unless-stopped
                 networks:
-                  - remarks-network
+                  - evaluation-network
             
               postgres:
                 image: postgres:15-alpine
                 environment:
-                  - POSTGRES_DB=remarks_db
-                  - POSTGRES_USER=remarks_user
+                  - POSTGRES_DB=evaluation_db
+                  - POSTGRES_USER=evaluation_user
                   - POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
                 ports:
                   - "5432:5432"
                 volumes:
                   - postgres_data:/var/lib/postgresql/data
                 healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U remarks_user -d remarks_db"]
+                  test: ["CMD-SHELL", "pg_isready -U evaluation_user -d evaluation_db"]
                   interval: 10s
                   timeout: 5s
                   retries: 5
                 restart: unless-stopped
                 networks:
-                  - remarks-network
+                  - evaluation-network
             
             networks:
-              remarks-network:
+              evaluation-network:
                 driver: bridge
             
             volumes:
@@ -181,7 +181,7 @@ jobs:
             
             # Запускаем сервисы через docker-compose
             echo "Starting services with docker-compose..."
-            cd ~/remarks
+            cd ~/evaluation
             if ! docker-compose up -d; then
               echo "❌ Failed to start services with docker-compose"
               exit 1
