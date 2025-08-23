@@ -1,0 +1,7 @@
+BEGIN;
+
+DROP TABLE IF EXISTS remarks;
+DROP TABLE IF EXISTS project_files;
+DROP TABLE IF EXISTS projects;
+
+COMMIT;
