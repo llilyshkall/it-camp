@@ -108,7 +108,10 @@ jobs:
             
             # Авторизация в GitHub Container Registry
             echo "Authenticating with GitHub Container Registry..."
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            if ! echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+              echo "❌ Failed to authenticate with GitHub Container Registry"
+              exit 1
+            fi
             
             # Останавливаем старый контейнер
             echo "Stopping old container..."
@@ -117,11 +120,14 @@ jobs:
             
             # Скачиваем новый образ (используем master тег)
             echo "Pulling new image..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+            if ! docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
+              echo "❌ Failed to pull Docker image"
+              exit 1
+            fi
             
             # Запускаем новый контейнер (используем master тег)
             echo "Starting new container..."
-            docker run -d \
+            if ! docker run -d \
               --name remarks \
               --restart unless-stopped \
               -p 8081:8080 \
@@ -132,7 +138,10 @@ jobs:
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
+              echo "❌ Failed to start Docker container"
+              exit 1
+            fi
             
             # Ждем готовности
             echo "Waiting for container to be ready..."
@@ -140,13 +149,19 @@ jobs:
             
             # Проверяем статус
             echo "Container status:"
-            docker ps | grep remarks
+            if ! docker ps | grep remarks; then
+              echo "❌ Container is not running"
+              exit 1
+            fi
             
             # Проверяем health
             echo "Health check:"
-            curl -f http://localhost:8081/health || echo "Health check failed"
+            if ! curl -f http://localhost:8081/health; then
+              echo "❌ Health check failed"
+              exit 1
+            fi
             
-            echo "Deployment completed successfully!"
+            echo "✅ Deployment completed successfully!"
 
       - name: Health Check
         run: |
