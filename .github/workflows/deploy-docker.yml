@@ -87,6 +87,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     environment: production
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.0
