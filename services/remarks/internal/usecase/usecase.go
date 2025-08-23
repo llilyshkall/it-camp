@@ -1,14 +1,10 @@
 package usecase
 
 import (
-	"context"
-	model "remarks/internal/models"
 	rep "remarks/internal/repository"
 )
 
 type UsecaseInterface interface {
-	GetRemarks(ctx context.Context, projectID int) ([]*model.Remark, error)
-	CreateRemark(ctx context.Context, remark *model.Remark) error
 }
 
 type Usecase struct {
@@ -21,10 +17,10 @@ func NewUsecase(s rep.StoreInterface) UsecaseInterface {
 	}
 }
 
-func (u *Usecase) GetRemarks(ctx context.Context, projectID int) ([]*model.Remark, error) {
-	return u.store.GetRemarksByProjectID(projectID)
-}
+// func (u *Usecase) GetRemarks(ctx context.Context, projectID int) ([]*model.Remark, error) {
+// 	return u.store.GetRemarksByProjectID(projectID)
+// }
 
-func (u *Usecase) CreateRemark(ctx context.Context, remark *model.Remark) error {
-	return u.store.AddRemark(remark)
-}
+// func (u *Usecase) CreateRemark(ctx context.Context, remark *model.Remark) error {
+// 	return u.store.AddRemark(remark)
+// }
