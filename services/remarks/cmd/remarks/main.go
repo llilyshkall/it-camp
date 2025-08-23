@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	deliv "remarks/internal/delivery"
 	"remarks/internal/httputils"
+	rep "remarks/internal/repository"
+	uc "remarks/internal/usecase"
 	"syscall"
 	"time"
 )
@@ -28,6 +32,24 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	urlDB := "postgres://" + os.Getenv("TEST_POSTGRES_USER") + ":" + os.Getenv("TEST_POSTGRES_PASSWORD") + "@" + os.Getenv("TEST_DATABASE_HOST") + ":" + os.Getenv("DB_PORT") + "/" + os.Getenv("TEST_POSTGRES_DB")
+	db, err := sql.Open("pgx", urlDB)
+	if err != nil {
+		log.Println("could not connect to database")
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Println("unable to reach database ", err)
+	}
+	log.Println("database is reachable")
+
+	store := rep.NewSQLStore(db)
+
+	usecase := uc.NewUsecase(store)
+
+	handler := deliv.NewWebHandler(usecase)
+
 	// Регистрируем обработчики
 	http.HandleFunc("/health", httputils.HealthHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +57,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"message": "remarks service", "timestamp": "%s"}`, time.Now().Format(time.RFC3339))
 	})
+	http.HandleFunc("/load_excel_registry", handler.LoadExcelRegistry)
 
 	// Запускаем сервер в горутине
 	go func() {

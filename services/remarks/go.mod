@@ -5,6 +5,7 @@ go 1.24.5
 require github.com/xuri/excelize/v2 v2.9.1
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/tiendc/go-deepcopy v1.6.0 // indirect
