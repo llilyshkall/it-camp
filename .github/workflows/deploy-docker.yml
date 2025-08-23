@@ -181,6 +181,8 @@ jobs:
 
       - name: Create Deployment Issue
         if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Создаем issue с информацией о деплое
           gh issue create \
