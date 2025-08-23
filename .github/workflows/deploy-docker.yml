@@ -111,7 +111,7 @@ jobs:
             
             # Авторизация в GitHub Container Registry
             echo "Authenticating with GitHub Container Registry..."
-            if ! echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+            if ! echo ${{ secrets.PACKAGES_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
               echo "❌ Failed to authenticate with GitHub Container Registry"
               exit 1
             fi
