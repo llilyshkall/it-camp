@@ -2,9 +2,9 @@ name: Deploy to Server (Docker)
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch: # Позволяет запускать вручную
 
 env:
@@ -116,44 +116,85 @@ jobs:
               exit 1
             fi
             
-            # Останавливаем старый контейнер
-            echo "Stopping old container..."
-            docker stop remarks || true
-            docker rm remarks || true
+            # Останавливаем старые контейнеры
+            echo "Stopping old containers..."
+            docker-compose down || true
+            docker stop remarks postgres || true
+            docker rm remarks postgres || true
             
-            # Скачиваем новый образ (используем master тег)
-            echo "Pulling new image..."
-            if ! docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
-              echo "❌ Failed to pull Docker image"
-              exit 1
-            fi
+            # Создаем docker-compose.yaml для продакшна
+            echo "Creating production docker-compose.yaml..."
+            cat > ~/remarks/docker-compose.yaml << 'EOF'
+            version: "3.9"
             
-            # Запускаем новый контейнер (используем master тег)
-            echo "Starting new container..."
-            if ! docker run -d \
-              --name remarks \
-              --restart unless-stopped \
-              -p 8081:8080 \
-              -e ENVIRONMENT=production \
-              -e PORT=8080 \
-              -e TZ=UTC \
-              --health-cmd="curl -f http://localhost:8080/health || exit 1" \
-              --health-interval=30s \
-              --health-timeout=10s \
-              --health-retries=3 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master; then
-              echo "❌ Failed to start Docker container"
+            services:
+              remarks:
+                image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+                ports:
+                  - "8081:8080"
+                environment:
+                  - PORT=8080
+                  - ENVIRONMENT=production
+                  - DB_HOST=postgres
+                  - DB_PORT=5432
+                  - DB_NAME=remarks_db
+                  - DB_USER=remarks_user
+                  - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+                depends_on:
+                  - postgres
+                healthcheck:
+                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 40s
+                restart: unless-stopped
+                networks:
+                  - remarks-network
+            
+              postgres:
+                image: postgres:15-alpine
+                environment:
+                  - POSTGRES_DB=remarks_db
+                  - POSTGRES_USER=remarks_user
+                  - POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+                ports:
+                  - "5432:5432"
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U remarks_user -d remarks_db"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+                restart: unless-stopped
+                networks:
+                  - remarks-network
+            
+            networks:
+              remarks-network:
+                driver: bridge
+            
+            volumes:
+              postgres_data:
+            EOF
+            
+            # Запускаем сервисы через docker-compose
+            echo "Starting services with docker-compose..."
+            cd ~/remarks
+            if ! docker-compose up -d; then
+              echo "❌ Failed to start services with docker-compose"
               exit 1
             fi
             
             # Ждем готовности
-            echo "Waiting for container to be ready..."
-            sleep 10
+            echo "Waiting for services to be ready..."
+            sleep 20
             
             # Проверяем статус
-            echo "Container status:"
-            if ! docker ps | grep remarks; then
-              echo "❌ Container is not running"
+            echo "Services status:"
+            if ! docker-compose ps; then
+              echo "❌ Services are not running"
               exit 1
             fi
             
@@ -172,7 +213,7 @@ jobs:
           sleep 30
           
           # Проверяем доступность сервиса
-          if curl -f "http://${{ secrets.SERVER_HOST }}/health"; then
+          if curl -f "http://${{ secrets.SERVER_HOST }}:8081/health"; then
             echo "✅ Service is healthy and accessible!"
           else
             echo "❌ Service health check failed"

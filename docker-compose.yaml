@@ -10,12 +10,38 @@ services:
     environment:
       - PORT=8080
       - ENVIRONMENT=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=remarks_db
+      - DB_USER=remarks_user
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - postgres
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
+    networks:
+      - remarks-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=remarks_db
+      - POSTGRES_USER=remarks_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U remarks_user -d remarks_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - remarks-network
@@ -43,3 +69,6 @@ services:
 networks:
   remarks-network:
     driver: bridge
+
+volumes:
+  postgres_data:
