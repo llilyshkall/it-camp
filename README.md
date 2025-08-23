@@ -68,8 +68,8 @@ it-camp/
 ├── scripts/                    # Скрипты для деплоя
 │   └── deploy-server.sh       # Скрипт деплоя на сервер
 ├── services/
-│   └── remarks/                # Go микросервис
-│       ├── cmd/remarks/
+│   └── evaluation/                # Go микросервис
+│       ├── cmd/evaluation/
 │       ├── internal/httputils/
 │       ├── Dockerfile
 │       ├── go.mod
@@ -91,7 +91,7 @@ it-camp/
 
 2. Обновить `Makefile`:
    ```makefile
-   IMAGE_NAME := ghcr.io/ВАШ_USERNAME/remarks
+   IMAGE_NAME := ghcr.io/ВАШ_USERNAME/evaluation
    ```
 
 ### 2. Подготовка сервера
@@ -176,10 +176,10 @@ curl http://localhost:8081/health
 
 ```bash
 # Подключение к базе данных
-docker exec -it it-camp-postgres-1 psql -U remarks_user -d remarks_db
+docker exec -it it-camp-postgres-1 psql -U evaluation_user -d evaluation_db
 
 # Проверка статуса PostgreSQL
-docker exec -it it-camp-postgres-1 pg_isready -U remarks_user -d remarks_db
+docker exec -it it-camp-postgres-1 pg_isready -U evaluation_user -d evaluation_db
 
 # Просмотр логов PostgreSQL
 docker logs it-camp-postgres-1
@@ -246,8 +246,8 @@ curl http://localhost:8081/
 | `LOG_LEVEL` | Уровень логирования | `info` |
 | `DB_HOST` | Хост PostgreSQL | `postgres` |
 | `DB_PORT` | Порт PostgreSQL | `5432` |
-| `DB_NAME` | Имя базы данных | `remarks_db` |
-| `DB_USER` | Пользователь базы данных | `remarks_user` |
+| `DB_NAME` | Имя базы данных | `evaluation_db` |
+| `DB_USER` | Пользователь базы данных | `evaluation_user` |
 | `DB_PASSWORD` | Пароль базы данных | - (обязательно) |
 
 ## 🔄 Обновление
@@ -269,7 +269,7 @@ make docker-build
 
 ```bash
 # Обновить Go модули
-cd services/remarks
+cd services/evaluation
 go get -u ./...
 go mod tidy
 
@@ -297,7 +297,7 @@ make logs
 
 ```bash
 # Проверить локальные образы
-docker images | grep remarks
+docker images | grep evaluation
 
 # Пересобрать образ
 make docker-build

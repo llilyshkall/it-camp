@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  remarks:
+  evaluation:
     build:
-      context: ./services/remarks
+      context: ./services/evaluation
       dockerfile: Dockerfile
     ports:
       - "8081:8080"
@@ -12,8 +12,8 @@ services:
       - ENVIRONMENT=development
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=remarks_db
-      - DB_USER=remarks_user
+      - DB_NAME=evaluation_db
+      - DB_USER=evaluation_user
       - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       - postgres
@@ -25,26 +25,26 @@ services:
       start_period: 40s
     restart: unless-stopped
     networks:
-      - remarks-network
+      - evaluation-network
 
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=remarks_db
-      - POSTGRES_USER=remarks_user
+      - POSTGRES_DB=evaluation_db
+      - POSTGRES_USER=evaluation_user
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U remarks_user -d remarks_db"]
+      test: ["CMD-SHELL", "pg_isready -U evaluation_user -d evaluation_db"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
-      - remarks-network
+      - evaluation-network
 
   # LLM service (закомментирован для будущего использования)
   # llm:
@@ -64,10 +64,10 @@ services:
   #     start_period: 40s
   #   restart: unless-stopped
   #   networks:
-  #     - remarks-network
+  #     - evaluation-network
 
 networks:
-  remarks-network:
+  evaluation-network:
     driver: bridge
 
 volumes:
