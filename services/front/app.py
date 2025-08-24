@@ -209,6 +209,7 @@ def remarks():
     url = f"http://127.0.0.1:8080/api/attach?type=excel"
     file = request.files.get('remarks')
     if not file or not file.filename:
+        print('Файл не передан')
         return jsonify({'error': 'Файл не передан'}), 400
 
     # file_path = 'путь_к_вашему_файлу.xlsx'

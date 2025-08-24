@@ -86,7 +86,7 @@
           </div>
 
           <div class="actions actions--spaced">
-            <button class="btn btn-primary" id="download-assurance" disabled>Скачать проверку чек-листа</button>
+            <button class="btn btn-primary" id="download-assurance" disabled>Отправить чек-лист</button>
           </div>
         </div>
 
@@ -110,7 +110,7 @@
           <div id="remarks-info" class="upload-info" hidden></div>
 
           <div class="actions actions--spaced">
-            <button class="btn btn-primary" id="download-remarks" disabled>Скачать обработанный реестр замечаний</button>
+            <button class="btn btn-primary" id="download-remarks" disabled>Отправить реестр замечаний</button>
           </div>
         </div>
 
@@ -303,9 +303,41 @@
     ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.remove('hover'),false));
     zone.addEventListener('drop',(e)=>{const file=e.dataTransfer.files?.[0]; if(!file) return; input.files=e.dataTransfer.files; show(file);});
     zone.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
-    btn.addEventListener('click',async()=>{if(!input.files?.[0]) return; const fd=new FormData(); fd.append('remarks',input.files[0],input.files[0].name);
-      const r=await fetch('/remarks',{method:'POST',body:fd}); if(!r.ok){toast('Не удалось обработать файл (.xls/.xlsx)',false); return;}
-      const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='remarks_processed.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Реестр замечаний сформирован');});
+    // btn.addEventListener('click',async()=>{if(!input.files?.[0]) return; const fd=new FormData(); fd.append('remarks',input.files[0],input.files[0].name);
+    //   const r=await fetch('/remarks',{method:'POST',body:fd}); if(!r.ok){toast('Не удалось обработать файл (.xls/.xlsx)',false); return;}
+    //   const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='remarks_processed.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Реестр замечаний сформирован');});
+    btn.addEventListener('click', async () => {
+      if (!input.files?.[0]) return;
+      
+      const fd = new FormData();
+      fd.append('remarks', input.files[0], input.files[0].name);
+      
+      try {
+          const r = await fetch('/remarks', {
+              method: 'POST',
+              body: fd
+          });
+          
+          if (!r.ok) {
+              toast('Не удалось обработать файл (.xls/.xlsx)', false);
+              return;
+          }
+          
+          // // Обработка успешного ответа (скачивание файла)
+          // const blob = await r.blob();
+          // const url = window.URL.createObjectURL(blob);
+          // const a = document.createElement('a');
+          // a.href = url;
+          // a.download = 'processed_' + input.files[0].name;
+          // document.body.appendChild(a);
+          // a.click();
+          // a.remove();
+          
+      } catch (error) {
+          toast('Ошибка сети', false);
+          console.error(error);
+      }
+  });
   })();
 
   // ===== 3) Формирование протокола =====

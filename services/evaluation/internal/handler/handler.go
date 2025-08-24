@@ -110,44 +110,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 
 // ========== PROJECT HANDLERS ==========
 
-// func validateFile(filename string, fileHeader []byte) (string, error) {
-// 	// // 1. Проверяем расширение
-// 	// ext := strings.ToLower(filepath.Ext(filename))
-// 	// if ext != ".xlsx" && ext != ".docx" {
-// 	// 	//return "", errors.New("invalid file extension")
-// 	// 	return "", m.StacktraceError(errors.New("invalid file extension"), m.ErrServerError500)
-// 	// }
-
-// 	// // 2. Проверяем содержимое
-// 	// mtype := mimetype.Detect(fileHeader)
-// 	// isAllowed := false
-// 	// for _, m := range []string{
-// 	// 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-// 	// 	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-// 	// } {
-// 	// 	if mtype.Is(m) {
-// 	// 		isAllowed = true
-// 	// 		break
-// 	// 	}
-// 	// }
-// 	// log.Println(ext)
-// 	// // // 3. Если основной тип zip, проверяем вложенные типы
-// 	// // if !isAllowed && mtype.Is("application/zip") {
-// 	// // 	for _, ext := range []string{".xlsx", ".docx"} {
-// 	// // 		if ext == ".xlsx" || ext == ".docx" {
-// 	// // 			isAllowed = true
-// 	// // 			break
-// 	// // 		}
-// 	// // 	}
-// 	// // }
-
-// 	// if !isAllowed {
-// 	// 	return "", m.StacktraceError(errors.New("invalid file content"), m.ErrServerError500)
-// 	// }
-
-// 	// return ext, nil
-// }
-
 // UploadAttach godoc
 // @Summary Upload attach
 // @Description Upload attach
@@ -161,65 +123,20 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
 // @Router /attach [post]
 func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	// for name, values := range r.Header {
-	// 	for _, value := range values {
-	// 		log.Printf("%s: %s\n", name, value)
-	// 	}
-	// }
-
 	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-	// err := r.ParseMultipartForm(10 << 20) // 10MB
-	// if err != nil {
-	// 	log.Println(m.StacktraceError(err))
-	// 	returnErrorJSON(w, m.ErrBadRequest400)
-	// 	//return
-	// 	//log.Println(err)
-	// 	//http.Error(w, "Failed to get project file", http.StatusInternalServerError)
-	// 	return
-	// }
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
 		log.Println(m.StacktraceError(err))
 		returnErrorJSON(w, m.ErrBadRequest400)
-		//return
-		//log.Println(err)
-		//http.Error(w, "Failed to get project file", http.StatusInternalServerError)
 		return
 	}
 	defer file.Close()
 
 	fileName := fileHeader.Filename
-	// fileBegin := make([]byte, 512)
-
-	// // Copy the headers into the FileHeader buffer
-	// if _, err := file.Read(fileBegin); err != nil {
-	// 	log.Println(m.StacktraceError(err))
-	// 	returnErrorJSON(w, m.ErrServerError500)
-	// 	return
-	// }
-
-	// // set position back to start.
-	// if _, err := file.Seek(0, 0); err != nil {
-	// 	log.Println(m.StacktraceError(err))
-	// 	returnErrorJSON(w, m.ErrServerError500)
-	// 	return
-	// }
-
-	// ext, err := validateFile(fileName, fileBegin)
-	// if err != nil {
-	// 	log.Println(m.StacktraceError(err))
-	// 	returnErrorJSON(w, m.ErrBadRequest400)
-	// 	//return
-	// 	//log.Println(err)
-	// 	//http.Error(w, "Failed to get project file", http.StatusInternalServerError)
-	// 	return
-	// }
-	// log.Println(ext)
 
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if ext != ".xlsx" && ext != ".docx" {
-		//return "", errors.New("invalid file extension")
 		log.Println("invalid file extension")
 		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file extension"), m.ErrServerError500))
 		return
@@ -231,10 +148,7 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		FileExt: ext,
 	})
 	if err != nil {
-		//log.Println(err)
 		log.Println(m.StacktraceError(err))
-		//returnErrorJSON(w, err)
-		//http.Error(w, "Failed to save project file", http.StatusInternalServerError)
 		returnErrorJSON(w, err)
 		return
 	}
