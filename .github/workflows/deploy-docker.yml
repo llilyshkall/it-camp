@@ -106,11 +106,19 @@ jobs:
             echo "Installing golang-migrate..."
             if ! command -v migrate >/dev/null 2>&1; then
               curl -L https://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-amd64.tar.gz | tar xvz
-              sudo mv migrate /usr/local/bin/migrate
+              mv migrate ~/migrate
+              export PATH=$HOME:$PATH
               echo "golang-migrate installed successfully"
             else
               echo "golang-migrate already installed"
             fi
+            
+            # Проверяем, что golang-migrate доступен
+            if [ ! -f ~/migrate ]; then
+              echo "❌ golang-migrate installation failed"
+              exit 1
+            fi
+            echo "✅ golang-migrate is ready: $(~/migrate -version)"
             
             # Создаем файлы миграций на сервере
             echo "Creating migration files..."
@@ -163,11 +171,11 @@ jobs:
               exit 1
             fi
             
-            # Останавливаем старые контейнеры
+            # Останавливаем старые контейнеры (игнорируем ошибки для первого запуска)
             echo "Stopping old containers..."
-            docker-compose down || true
-            docker stop evaluation postgres || true
-            docker rm evaluation postgres || true
+            docker-compose down 2>/dev/null || echo "No existing docker-compose to stop"
+            docker stop evaluation postgres 2>/dev/null || echo "No existing containers to stop"
+            docker rm evaluation postgres 2>/dev/null || echo "No existing containers to remove"
             
             # Создаем docker-compose.yaml для продакшна
             echo "Creating production docker-compose.yaml..."
@@ -232,7 +240,7 @@ jobs:
             
             # Применяем миграции через golang-migrate
             echo "Applying database migrations..."
-            if ! migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" up; then
+            if ! ~/migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" up; then
               echo "❌ Failed to apply migrations"
               exit 1
             fi
@@ -251,7 +259,7 @@ jobs:
             
             # Проверяем статус миграций
             echo "Checking migration status..."
-            if ! migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" version; then
+            if ! ~/migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" version; then
               echo "❌ Failed to check migration status"
               exit 1
             fi
@@ -279,7 +287,7 @@ jobs:
             echo "Final verification:"
             echo "- PostgreSQL: $(docker-compose ps postgres | grep -c 'Up')/1 containers running"
             echo "- Evaluation: $(docker-compose ps evaluation | grep -c 'Up')/1 containers running"
-            echo "- Migration version: $(migrate -path ~/evaluation/migrations -database 'postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable' version)"
+            echo "- Migration version: $(~/migrate -path ~/evaluation/migrations -database 'postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable' version)"
 
       - name: Health Check
         run: |
