@@ -1,0 +1,57 @@
+basePath: /api
+definitions:
+  handler.Error:
+    properties:
+      error: {}
+    type: object
+  handler.Response:
+    properties:
+      body: {}
+    type: object
+host: 127.0.0.1:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: '... back server.'
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: API
+  version: "1.0"
+paths:
+  /attach:
+    post:
+      description: Upload attach
+      operationId: uploadAttach
+      parameters:
+      - description: attach
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 'type: excel or doc'
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: internal Server Error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Upload attach
+swagger: "2.0"

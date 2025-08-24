@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"evaluation/internal/config"
+
 	_ "github.com/lib/pq"
 )
 

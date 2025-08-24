@@ -9,6 +9,10 @@ import (
 	"evaluation/internal/handler"
 	"evaluation/internal/postgres"
 	"evaluation/internal/repository"
+
+	_ "evaluation/internal/handler/docs"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Server struct {
@@ -31,10 +35,14 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 	// API endpoints
 	mux.HandleFunc("/api/projects", handler.HandleProjects)
 	mux.HandleFunc("/api/projects/", handler.HandleProject)
-	mux.HandleFunc("/api/remarks", handler.HandleRemarks)
-	mux.HandleFunc("/api/remarks/", handler.HandleRemark)
+	//mux.HandleFunc("/api/remarks", handler.HandleRemarks)
+	//mux.HandleFunc("/api/remarks/", handler.HandleRemark)
 	mux.HandleFunc("/api/project-files", handler.HandleProjectFiles)
 	mux.HandleFunc("/api/project-files/", handler.HandleProjectFile)
+
+	mux.HandleFunc("/api/attach/", handler.UploadFile)
+	//mux.HandleFunc("/api/docs/", handler.UploadFile)
+	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
 
 	// Создаем HTTP сервер
 	httpServer := &http.Server{

@@ -224,7 +224,45 @@
     const apply=(data)=>{lastAssurance=data; downloadBtn.disabled=false; badge.textContent=data.title||'—'; badge.classList.remove('ok','fail'); badge.classList.add(data.verdict==='ok'?'ok':'fail'); reasonsUl.innerHTML=''; (data.reasons||[]).forEach(t=>{const li=document.createElement('li'); li.textContent=t; reasonsUl.appendChild(li);}); res.hidden=false; toast(data.title, data.verdict==='ok');};
 
     pickBtn.addEventListener('click',()=>input.click());
-    input.addEventListener('change',async()=>{const files=input.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
+    // input.addEventListener('change',async()=>{const files=input.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
+    input.addEventListener('change', async () => {
+      const files = input.files;
+      if (!files?.length) return;
+
+      showFiles(files);
+      try {
+        const response = await send(files);
+        // Предполагается, что send возвращает объект с данными
+        await apply(response);
+      } catch (error) {
+        // Предположим, что сервер возвращает JSON с причиной ошибки
+        let reasonText = 'Ошибка проверки';
+        if (error instanceof Response) {
+          try {
+            const errorData = await error.json();
+            reasonText = errorData.reasons ? errorData.reasons.join(', ') : reasonText;
+          } catch (_) {
+            // Если не удалось распарсить JSON
+          }
+        }
+        toast(reasonText, false);
+        badge.textContent = reasonText;
+        badge.classList.remove('ok');
+        badge.classList.add('fail');
+        reasonsUl.innerHTML = '';
+        if (error instanceof Response && error.status === 400) {
+          try {
+            const errorData = await error.json();
+            if (errorData.reasons) {
+              reasonsUl.innerHTML = errorData.reasons.map(reason => `<li>${reason}</li>`).join('');
+            }
+          } catch (_) {}
+        } else {
+          reasonsUl.innerHTML = '<li>Не удалось связаться с сервером</li>';
+        }
+        res.hidden = false;
+      }
+    });
 
     ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
     ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));

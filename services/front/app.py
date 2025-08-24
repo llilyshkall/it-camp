@@ -180,12 +180,33 @@ def index():
 #     }
 #     return jsonify(resp), 200
 
+@app.post("/assurance")
+def assurance():
+    files = request.files.getlist('files[]')
+    # Проверка каждого файла
+    for file in files:
+        filename = file.filename
+        if not filename.lower().endswith('.xlsx'):
+            return jsonify({
+                'verdict': 'fail',
+                'title': 'Некорректный тип файла',
+                'reasons': [f"Файл {filename} не является файлом Excel (.xlsx)"]
+            }), 400
+
+    #result = assurance_check(files)
+    resp = {
+        'verdict': 'ok',
+        'title': 'Подходит для ашуренса',
+    }
+    return jsonify(resp), 200
+
 
 @app.post("/remarks")
 def remarks():
     """
     Принимает 1 файл Excel (input name='remarks'), отдаёт обработанный Excel как attachment.
     """
+    url = f"http://127.0.0.1:8080/api/attach?type=excel"
     file = request.files.get('remarks')
     if not file or not file.filename:
         return jsonify({'error': 'Файл не передан'}), 400
@@ -194,12 +215,12 @@ def remarks():
 
 # with open(file_path, 'rb') as f:
 #     files = {'remarks': f}
-    response = requests.post('http://ваш_сервер/remarks', files=file)
+    #response = requests.post('http://ваш_сервер/remarks', files=file)
 
 
     try:
         #data = process_remarks_excel(file)
-        response = requests.post('http://ваш_сервер/remarks', files=file)
+        response = requests.post(url, files=file)
     except Exception as e:
         return jsonify({'error': f'Не удалось обработать файл: {e}'}), 400
     if response.status_code == 200:
