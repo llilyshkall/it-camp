@@ -67,3 +67,4 @@ vendor/
 # Frontend temp files
 services/front/.venv
 services/front/__pycache__
+services/front/js
