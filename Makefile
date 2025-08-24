@@ -33,6 +33,18 @@ docker-build: ## Собрать Docker образ
 docker-compose-up: ## Запустить сервисы через docker-compose
 	@echo "Starting services with docker-compose..."
 	docker-compose up -d
+	@echo "Waiting for PostgreSQL to be ready..."
+	sleep 15
+	@echo "Applying database migrations..."
+	@if command -v migrate >/dev/null 2>&1; then \
+		export PATH=$$PATH:$$(go env GOPATH)/bin; \
+		make migrate-up; \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		export PATH=$$PATH:$$(go env GOPATH)/bin; \
+		make migrate-up; \
+	fi
 	@echo "Services started! PostgreSQL and evaluation service are running."
 	@echo "Service available at http://localhost:8081"
 	@echo "Use 'make logs' to see logs"
@@ -72,6 +84,73 @@ vet: ## Проверить код
 dev: ## Запустить в режиме разработки
 	@echo "Starting development mode..."
 	cd services/$(SERVICE_NAME) && go run ./cmd/$(SERVICE_NAME)
+
+# Установка golang-migrate
+migrate-install: ## Установить golang-migrate
+	@echo "Installing golang-migrate..."
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	@echo "golang-migrate installed successfully!"
+
+# Команды для миграций
+migrate-up: ## Применить все миграции
+	@echo "Applying database migrations..."
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" up; \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" up; \
+	fi
+
+migrate-down: ## Откатить все миграции
+	@echo "Rolling back all migrations..."
+	@if command -v migrate >/dev/null 2>&1; then \
+		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" down; \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" down; \
+	fi
+
+migrate-force: ## Принудительно установить версию миграции
+	@echo "Force setting migration version..."
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" force $(version); \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" force $(version); \
+	fi
+
+migrate-status: ## Показать статус миграций
+	@echo "Checking migration status..."
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" version; \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" version; \
+	fi
+
+migrate-reset: ## Сбросить и пересоздать базу данных
+	@echo "Resetting database..."
+	docker-compose down -v
+	docker-compose up -d postgres
+	@echo "Waiting for PostgreSQL to be ready..."
+	sleep 15
+	make migrate-up
+	@echo "Database reset completed!"
+
+# Создание новой миграции
+migrate-create: ## Создать новую миграцию (usage: make migrate-create name=migration_name)
+	@echo "Creating new migration: $(name)"
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate create -ext sql -dir services/evaluation/db/migration -seq $(name); \
+	else \
+		echo "golang-migrate not found. Installing..."; \
+		make migrate-install; \
+		migrate create -ext sql -dir services/evaluation/db/migration -seq $(name); \
+	fi
 
 # Команды для очистки
 clean-all: ## Полная очистка

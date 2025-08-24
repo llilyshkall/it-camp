@@ -102,6 +102,61 @@ jobs:
             # Создаем директорию для приложения в домашней папке пользователя
             mkdir -p ~/evaluation
             
+            # Устанавливаем golang-migrate на сервере
+            echo "Installing golang-migrate..."
+            if ! command -v migrate >/dev/null 2>&1; then
+              curl -L https://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-amd64.tar.gz | tar xvz
+              mv migrate ~/migrate
+              export PATH=$HOME:$PATH
+              echo "golang-migrate installed successfully"
+            else
+              echo "golang-migrate already installed"
+            fi
+            
+            # Проверяем, что golang-migrate доступен
+            if [ ! -f ~/migrate ]; then
+              echo "❌ golang-migrate installation failed"
+              exit 1
+            fi
+            echo "✅ golang-migrate is ready: $(~/migrate -version)"
+            
+            # Создаем файлы миграций на сервере
+            echo "Creating migration files..."
+            mkdir -p ~/evaluation/migrations
+            cat > ~/evaluation/migrations/000001_create_tables.up.sql << 'MIGRATION_EOF'
+            BEGIN;
+            
+            CREATE TABLE IF NOT EXISTS projects (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                in_progress BOOLEAN DEFAULT FALSE NOT NULL
+            );
+            
+            CREATE TABLE IF NOT EXISTS project_files (
+                id SERIAL PRIMARY KEY,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                filename VARCHAR(255) NOT NULL,
+                original_name VARCHAR(255) NOT NULL,
+                file_path VARCHAR(500) NOT NULL,
+                file_size BIGINT NOT NULL,
+                mime_type VARCHAR(100),
+                uploaded_at TIMESTAMP DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS remarks (
+                id SERIAL PRIMARY KEY,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                direction VARCHAR(255) NOT NULL,
+                section VARCHAR(255) NOT NULL,
+                subsection VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            
+            COMMIT;
+            MIGRATION_EOF
+            
             # Проверяем, что пользователь в группе docker
             if ! groups | grep -q docker; then
               echo "User not in docker group. Adding to docker group..."
@@ -116,17 +171,15 @@ jobs:
               exit 1
             fi
             
-            # Останавливаем старые контейнеры
+            # Останавливаем старые контейнеры (игнорируем ошибки для первого запуска)
             echo "Stopping old containers..."
-            docker-compose down || true
-            docker stop evaluation postgres || true
-            docker rm evaluation postgres || true
+            docker-compose down 2>/dev/null || echo "No existing docker-compose to stop"
+            docker stop evaluation postgres 2>/dev/null || echo "No existing containers to stop"
+            docker rm evaluation postgres 2>/dev/null || echo "No existing containers to remove"
             
             # Создаем docker-compose.yaml для продакшна
             echo "Creating production docker-compose.yaml..."
             cat > ~/evaluation/docker-compose.yaml << 'EOF'
-            version: "3.9"
-            
             services:
               evaluation:
                 image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
@@ -142,12 +195,6 @@ jobs:
                   - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
                 depends_on:
                   - postgres
-                healthcheck:
-                  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-                  interval: 30s
-                  timeout: 10s
-                  retries: 3
-                  start_period: 40s
                 restart: unless-stopped
                 networks:
                   - evaluation-network
@@ -179,19 +226,45 @@ jobs:
               postgres_data:
             EOF
             
-            # Запускаем сервисы через docker-compose
-            echo "Starting services with docker-compose..."
+            # Запускаем только PostgreSQL сначала
+            echo "Starting PostgreSQL service..."
             cd ~/evaluation
-            if ! docker-compose up -d; then
-              echo "❌ Failed to start services with docker-compose"
+            if ! docker-compose up -d postgres; then
+              echo "❌ Failed to start PostgreSQL"
               exit 1
             fi
             
-            # Ждем готовности
-            echo "Waiting for services to be ready..."
+            # Ждем готовности PostgreSQL
+            echo "Waiting for PostgreSQL to be ready..."
             sleep 20
             
-            # Проверяем статус
+            # Применяем миграции через golang-migrate
+            echo "Applying database migrations..."
+            if ! ~/migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" up; then
+              echo "❌ Failed to apply migrations"
+              exit 1
+            fi
+            echo "✅ Migrations applied successfully"
+            
+            # Запускаем evaluation сервис
+            echo "Starting evaluation service..."
+            if ! docker-compose up -d evaluation; then
+              echo "❌ Failed to start evaluation service"
+              exit 1
+            fi
+            
+            # Ждем готовности evaluation сервиса
+            echo "Waiting for evaluation service to be ready..."
+            sleep 15
+            
+            # Проверяем статус миграций
+            echo "Checking migration status..."
+            if ! ~/migrate -path ~/evaluation/migrations -database "postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable" version; then
+              echo "❌ Failed to check migration status"
+              exit 1
+            fi
+            
+            # Проверяем статус сервисов
             echo "Services status:"
             if ! docker-compose ps; then
               echo "❌ Services are not running"
@@ -202,10 +275,19 @@ jobs:
             echo "Health check:"
             if ! curl -f http://localhost:8081/health; then
               echo "❌ Health check failed"
+              echo "Checking evaluation service logs:"
+              docker-compose logs evaluation --tail=20
               exit 1
             fi
             
+            echo "✅ Health check passed"
             echo "✅ Deployment completed successfully!"
+            
+            # Финальная проверка
+            echo "Final verification:"
+            echo "- PostgreSQL: $(docker-compose ps postgres | grep -c 'Up')/1 containers running"
+            echo "- Evaluation: $(docker-compose ps evaluation | grep -c 'Up')/1 containers running"
+            echo "- Migration version: $(~/migrate -path ~/evaluation/migrations -database 'postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable' version)"
 
       - name: Health Check
         run: |
