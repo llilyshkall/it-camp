@@ -22,6 +22,25 @@ type Server struct {
 	repo       *repository.Repository
 }
 
+// func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		log.Println(r.RequestURI, r.Method)
+// 		for header := range Headers {
+// 			w.Header().Set(header, Headers[header])
+// 		}
+
+// 		next.ServeHTTP(w, r)
+// 	})
+// }
+
+// var Headers = map[string]string{
+// 	//"Access-Control-Allow-Origin":      "http://127.0.0.1:8001",
+// 	"Access-Control-Allow-Credentials": "true",
+// 	"Access-Control-Allow-Headers":     "Origin, Content-Type, accept, csrf",
+// 	"Access-Control-Allow-Methods":     "GET, POST, PUT, DELETE, OPTIONS",
+// 	"Content-Type":                     "application/json",
+// }
+
 func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository) *Server {
 	// Создаем единый хендлер
 	handler := handler.New(pgClient, repo)
@@ -40,10 +59,10 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 	mux.HandleFunc("/api/project-files", handler.HandleProjectFiles)
 	mux.HandleFunc("/api/project-files/", handler.HandleProjectFile)
 
-	mux.HandleFunc("/api/attach/", handler.UploadFile)
+	mux.HandleFunc("/api/attach", handler.UploadFile)
 	//mux.HandleFunc("/api/docs/", handler.UploadFile)
 	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
-
+	//mux.Use(loggingAndCORSHeadersMiddleware)
 	// Создаем HTTP сервер
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

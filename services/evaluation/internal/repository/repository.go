@@ -7,7 +7,6 @@ import (
 	"evaluation/internal/postgres"
 	db "evaluation/internal/postgres/sqlc"
 	"io"
-	"net/http"
 	"os"
 
 	m "evaluation/internal/models"
@@ -177,6 +176,7 @@ func (r *Repository) DeleteProjectFile(ctx context.Context, id int32) error {
 //		}
 //		return uc.urlDomain + fileName, nil
 //	}
+
 func (r *Repository) SaveAttach(file *m.Attach) (string, error) {
 	filePath := ""
 	// switch file.Dest {
@@ -191,32 +191,22 @@ func (r *Repository) SaveAttach(file *m.Attach) (string, error) {
 	// }
 	dir, err := os.Getwd()
 	if err != nil {
-		m.StacktraceError(errors.New("error cant get dir"), m.ErrServerError500)
+		return "", m.StacktraceError(errors.New("error cant get dir"), m.ErrServerError500)
 	}
 	filePath = dir
-	fileHeader := make([]byte, 512)
 
-	// Copy the headers into the FileHeader buffer
-	if _, err := file.File.Read(fileHeader); err != nil {
-		return "", m.StacktraceError(err, m.ErrBadRequest400)
-	}
+	// log.Println(http.DetectContentType(fileHeader))
+	// fileExt := ""
+	// switch http.DetectContentType(fileHeader) {
+	// case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+	// 	fileExt = ".docx"
+	// case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+	// 	fileExt = ".xlsx"
+	// default:
+	// 	return "", m.StacktraceError(errors.New("error not allowed file extension"), m.ErrBadRequest400)
+	// }
 
-	// set position back to start.
-	if _, err := file.File.Seek(0, 0); err != nil {
-		return "", m.StacktraceError(err, m.ErrBadRequest400)
-	}
-
-	fileExt := ""
-	switch http.DetectContentType(fileHeader) {
-	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		fileExt = ".docx"
-	case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-		fileExt = ".xlsx"
-	default:
-		return "", m.StacktraceError(errors.New("error not allowed file extension"), m.ErrBadRequest400)
-	}
-
-	fileName := filePath + "/" + uuid.New().String() + fileExt
+	fileName := filePath + "/" + uuid.New().String() + file.FileExt
 	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return "", m.StacktraceError(err)

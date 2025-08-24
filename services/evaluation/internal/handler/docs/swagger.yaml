@@ -24,6 +24,8 @@ info:
 paths:
   /attach:
     post:
+      consumes:
+      - multipart/form-data
       description: Upload attach
       operationId: uploadAttach
       parameters:

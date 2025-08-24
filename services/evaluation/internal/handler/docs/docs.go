@@ -27,6 +27,9 @@ const docTemplate = `{
         "/attach": {
             "post": {
                 "description": "Upload attach",
+                "consumes": [
+                    "multipart/form-data"
+                ],
                 "produces": [
                     "application/json"
                 ],
