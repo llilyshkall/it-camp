@@ -214,8 +214,8 @@ def remarks():
 
     # file_path = 'путь_к_вашему_файлу.xlsx'
 
-# with open(file_path, 'rb') as f:
-#     files = {'remarks': f}
+    # with open(file_path, 'rb') as f:
+    #     files = {'remarks': f}
     #response = requests.post('http://ваш_сервер/remarks', files=file)
 
 

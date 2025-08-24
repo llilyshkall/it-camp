@@ -309,19 +309,51 @@
     btn.addEventListener('click', async () => {
       if (!input.files?.[0]) return;
       
-      const fd = new FormData();
-      fd.append('remarks', input.files[0], input.files[0].name);
-      
-      try {
-          const r = await fetch('/remarks', {
-              method: 'POST',
-              body: fd
-          });
-          
-          if (!r.ok) {
-              toast('Не удалось обработать файл (.xls/.xlsx)', false);
-              return;
-          }
+        const formData = new FormData();
+        formData.append('file', file); 
+    // Важно: первый параметр 'file' должен совпадать с тем, что ожидает сервер
+    // Второй параметр - сам файл, третий (необязательный) - имя файла
+    //fd.append('file', input.files[0], input.files[0].name);
+    
+    try {
+        let url = "http://127.0.0.1:8080/api/attach?type=excel";
+        const r = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            // Не нужно вручную устанавливать Content-Type для FormData!
+            // Браузер сделает это автоматически с правильным boundary
+        });
+        
+        if (!r.ok) {
+            const error = await r.text();
+            console.error('Ошибка сервера:', error);
+            toast('Не удалось обработать файл: ' + error, false);
+            return;
+        }
+          // url = f"http://127.0.0.1:8080/api/attach?type=excel"
+          // file = request.files.get('remarks')
+          // if not file or not file.filename:
+          //     print('Файл не передан')
+          //     return jsonify({'error': 'Файл не передан'}), 400
+
+          // # file_path = 'путь_к_вашему_файлу.xlsx'
+
+          // # with open(file_path, 'rb') as f:
+          // #     files = {'remarks': f}
+          // #response = requests.post('http://ваш_сервер/remarks', files=file)
+
+
+          // try:
+          //     #data = process_remarks_excel(file)
+          //     response = requests.post(url, files=file)
+          // except Exception as e:
+          //     return jsonify({'error': f'Не удалось обработать файл: {e}'}), 400
+          // if response.status_code == 200:
+          //     #with open('remarks_processed.xlsx', 'wb') as out_file:
+          //         #out_file.write(response.content)
+          //     print("Файл успешно получен и сохранен.")
+          // else:
+          //     print(f"Ошибка: {response.json().get('error')}")
           
           // // Обработка успешного ответа (скачивание файла)
           // const blob = await r.blob();
