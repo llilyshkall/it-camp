@@ -120,42 +120,18 @@ jobs:
             fi
             echo "✅ golang-migrate is ready: $(~/migrate -version)"
             
-            # Создаем файлы миграций на сервере
-            echo "Creating migration files..."
+            # Копируем папку migrations на сервер
+            echo "Copying migration files..."
             mkdir -p ~/evaluation/migrations
-            cat > ~/evaluation/migrations/000001_create_tables.up.sql << 'MIGRATION_EOF'
-            BEGIN;
+            cp -r ../../services/evaluation/db/migration/* ~/evaluation/migrations/
             
-            CREATE TABLE IF NOT EXISTS projects (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW(),
-                in_progress BOOLEAN DEFAULT FALSE NOT NULL
-            );
-            
-            CREATE TABLE IF NOT EXISTS project_files (
-                id SERIAL PRIMARY KEY,
-                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                filename VARCHAR(255) NOT NULL,
-                original_name VARCHAR(255) NOT NULL,
-                file_path VARCHAR(500) NOT NULL,
-                file_size BIGINT NOT NULL,
-                mime_type VARCHAR(100),
-                uploaded_at TIMESTAMP DEFAULT NOW()
-            );
-            
-            CREATE TABLE IF NOT EXISTS remarks (
-                id SERIAL PRIMARY KEY,
-                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                direction VARCHAR(255) NOT NULL,
-                section VARCHAR(255) NOT NULL,
-                subsection VARCHAR(255) NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            
-            COMMIT;
-            MIGRATION_EOF
+            # Проверяем, что файлы миграций скопировались
+            echo "Verifying migration files..."
+            if [ ! -f ~/evaluation/migrations/000001_create_tables.up.sql ]; then
+              echo "❌ Migration files not copied correctly"
+              exit 1
+            fi
+            echo "✅ Migration files copied successfully"
             
             # Проверяем, что пользователь в группе docker
             if ! groups | grep -q docker; then
@@ -193,8 +169,25 @@ jobs:
                   - DB_NAME=evaluation_db
                   - DB_USER=evaluation_user
                   - DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+                  - DB_SSLMODE=disable
+                  - DB_CONNECT_TIMEOUT=10s
+                  - DB_MAX_OPEN_CONNS=25
+                  - DB_MAX_IDLE_CONNS=5
+                  - DB_CONN_MAX_LIFETIME=5m
+                  - MINIO_ENDPOINT=minio:9000
+                  - MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}
+                  - MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}
+                  - MINIO_BUCKET_NAME=evaluation-files
+                  - MINIO_USE_SSL=false
+                  - MINIO_REGION=us-east-1
+                  - READ_TIMEOUT=10s
+                  - WRITE_TIMEOUT=10s
+                  - IDLE_TIMEOUT=60s
+                  - SHUTDOWN_TIMEOUT=30s
+                  - LOG_LEVEL=info
                 depends_on:
                   - postgres
+                  - minio
                 restart: unless-stopped
                 networks:
                   - evaluation-network
@@ -217,6 +210,26 @@ jobs:
                 restart: unless-stopped
                 networks:
                   - evaluation-network
+                  
+              minio:
+                image: minio/minio:latest
+                ports:
+                  - "9000:9000"
+                  - "9001:9001"
+                environment:
+                  - MINIO_ROOT_USER=${{ secrets.MINIO_ACCESS_KEY }}
+                  - MINIO_ROOT_PASSWORD=${{ secrets.MINIO_SECRET_KEY }}
+                command: server /data --console-address ":9001"
+                volumes:
+                  - minio_data:/data
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+                  interval: 30s
+                  timeout: 20s
+                  retries: 3
+                restart: unless-stopped
+                networks:
+                  - evaluation-network
             
             networks:
               evaluation-network:
@@ -224,19 +237,20 @@ jobs:
             
             volumes:
               postgres_data:
+              minio_data:
             EOF
             
-            # Запускаем только PostgreSQL сначала
-            echo "Starting PostgreSQL service..."
+            # Запускаем PostgreSQL и MinIO сначала
+            echo "Starting PostgreSQL and MinIO services..."
             cd ~/evaluation
-            if ! docker-compose up -d postgres; then
-              echo "❌ Failed to start PostgreSQL"
+            if ! docker-compose up -d postgres minio; then
+              echo "❌ Failed to start PostgreSQL or MinIO"
               exit 1
             fi
             
-            # Ждем готовности PostgreSQL
-            echo "Waiting for PostgreSQL to be ready..."
-            sleep 20
+            # Ждем готовности PostgreSQL и MinIO
+            echo "Waiting for PostgreSQL and MinIO to be ready..."
+            sleep 30
             
             # Применяем миграции через golang-migrate
             echo "Applying database migrations..."

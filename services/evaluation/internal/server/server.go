@@ -9,6 +9,7 @@ import (
 	"evaluation/internal/handler"
 	"evaluation/internal/postgres"
 	"evaluation/internal/repository"
+	"evaluation/internal/storage"
 
 	_ "evaluation/internal/handler/docs"
 
@@ -20,6 +21,7 @@ type Server struct {
 	config     *config.Config
 	pgClient   *postgres.Client
 	repo       *repository.Repository
+	storage    storage.FileStorage
 }
 
 // func loggingAndCORSHeadersMiddleware(next http.Handler) http.Handler {
@@ -41,9 +43,9 @@ type Server struct {
 // 	"Content-Type":                     "application/json",
 // }
 
-func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository) *Server {
+func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage) *Server {
 	// Создаем единый хендлер
-	handler := handler.New(pgClient, repo)
+	handler := handler.New(pgClient, repo, fileStorage)
 
 	// Настраиваем роутинг
 	mux := http.NewServeMux()
@@ -77,6 +79,7 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 		config:     cfg,
 		pgClient:   pgClient,
 		repo:       repo,
+		storage:    fileStorage,
 	}
 }
 
