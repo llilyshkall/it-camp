@@ -42,18 +42,18 @@ type LoggingConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Server: ServerConfig{
-			Port:            getEnv("PORT", "8080"),
+			Port:            getEnv("PORT", "8081"),
 			ReadTimeout:     getEnvAsDuration("READ_TIMEOUT", 10*time.Second),
 			WriteTimeout:    getEnvAsDuration("WRITE_TIMEOUT", 10*time.Second),
 			IdleTimeout:     getEnvAsDuration("IDLE_TIMEOUT", 60*time.Second),
 			ShutdownTimeout: getEnvAsDuration("SHUTDOWN_TIMEOUT", 30*time.Second),
 		},
 		Postgres: PostgresConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "password"),
-			//Password:        getEnv("DB_PASSWORD", "12345"),
+			Host: getEnv("DB_HOST", "localhost"),
+			Port: getEnvAsInt("DB_PORT", 5432),
+			User: getEnv("DB_USER", "postgres"),
+			//Password: getEnv("DB_PASSWORD", "password"),
+			Password:        getEnv("DB_PASSWORD", "12345"),
 			DBName:          getEnv("DB_NAME", "remarks"),
 			SSLMode:         getEnv("DB_SSLMODE", "disable"),
 			ConnectTimeout:  getEnvAsDuration("DB_CONNECT_TIMEOUT", 10*time.Second),

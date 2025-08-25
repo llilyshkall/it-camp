@@ -28,7 +28,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host 127.0.0.1:8080
+// @host 127.0.0.1:8081
 // @BasePath  /api
 
 type File interface {
@@ -123,6 +123,17 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
 // @Router /attach [post]
 func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
+	// Разрешить CORS для всех источников (для разработки)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Обработка preflight-запроса
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 
 	file, fileHeader, err := r.FormFile("file")
@@ -154,6 +165,14 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(&m.UploadAttachResponse{File: fileName})
+	// var Headers = map[string]string{
+	// 	"Access-Control-Allow-Origin":      "http://127.0.0.1:8001",
+	// 	"Access-Control-Allow-Credentials": "true",
+	// 	"Access-Control-Allow-Headers":     "Origin, Content-Type, accept, csrf",
+	// 	"Access-Control-Allow-Methods":     "GET, POST, PUT, DELETE, OPTIONS",
+	// 	"Content-Type":                     "application/json",
+	// }
+	//w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5000")
 }
 
 // HandleProjects обрабатывает запросы к /api/projects

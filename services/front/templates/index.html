@@ -296,8 +296,17 @@
     const pick=document.getElementById('remarks-pick'); const info=document.getElementById('remarks-info');
     const btn=document.getElementById('download-remarks'); const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
     const show=(file)=>{info.textContent=`${file.name} — ${(file.size/1024).toFixed(1)} КБ`; info.hidden=false; btn.disabled=false;};
+    //const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
+    //const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false;};
+    //const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await fetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
+    //const apply=(data)=>{lastAssurance=data; downloadBtn.disabled=false; badge.textContent=data.title||'—'; badge.classList.remove('ok','fail'); badge.classList.add(data.verdict==='ok'?'ok':'fail'); reasonsUl.innerHTML=''; (data.reasons||[]).forEach(t=>{const li=document.createElement('li'); li.textContent=t; reasonsUl.appendChild(li);}); res.hidden=false; toast(data.title, data.verdict==='ok');};
     pick.addEventListener('click',()=>input.click());
-    input.addEventListener('change',()=>{if(!input.files?.[0]) return; show(input.files[0]);});
+    //input.addEventListener('change',()=>{if(!input.files?.[0]) return; show(input.files[0]);});
+    input.addEventListener('change', async () => {
+      const files = input.files;
+      if (!files?.length) return;
+      show(files);
+    });
     ['dragenter','dragover','dragleave','drop'].forEach(ev=>zone.addEventListener(ev,stop,false));
     ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.add('hover'),false));
     ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.remove('hover'),false));
@@ -306,9 +315,11 @@
     // btn.addEventListener('click',async()=>{if(!input.files?.[0]) return; const fd=new FormData(); fd.append('remarks',input.files[0],input.files[0].name);
     //   const r=await fetch('/remarks',{method:'POST',body:fd}); if(!r.ok){toast('Не удалось обработать файл (.xls/.xlsx)',false); return;}
     //   const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='remarks_processed.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Реестр замечаний сформирован');});
+    btn.disabled=false;
     btn.addEventListener('click', async () => {
+      console.log('1123123')
       if (!input.files?.[0]) return;
-      
+        file = input.files?.[0];
         const formData = new FormData();
         formData.append('file', file); 
     // Важно: первый параметр 'file' должен совпадать с тем, что ожидает сервер
@@ -316,7 +327,7 @@
     //fd.append('file', input.files[0], input.files[0].name);
     
     try {
-        let url = "http://127.0.0.1:8080/api/attach?type=excel";
+        let url = "http://127.0.0.1:8081/api/attach?type=excel";
         const r = await fetch(url, {
             method: 'POST',
             body: formData,
