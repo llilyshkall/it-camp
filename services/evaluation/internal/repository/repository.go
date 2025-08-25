@@ -3,8 +3,15 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"evaluation/internal/postgres"
 	db "evaluation/internal/postgres/sqlc"
+	"io"
+	"os"
+
+	m "evaluation/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // Repository объединяет все операции с базой данных
@@ -40,7 +47,7 @@ func (r *Repository) CreateProject(ctx context.Context, name string, inProgress 
 		Name:       name,
 		InProgress: inProgress,
 	}
-	
+
 	project, err := r.querier.CreateProject(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -55,7 +62,7 @@ func (r *Repository) UpdateProject(ctx context.Context, id int32, name string, i
 		Name:       name,
 		InProgress: inProgress,
 	}
-	
+
 	project, err := r.querier.UpdateProject(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -93,7 +100,7 @@ func (r *Repository) CreateRemark(ctx context.Context, projectID int32, directio
 		Subsection: subsection,
 		Content:    content,
 	}
-	
+
 	remark, err := r.querier.CreateRemark(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -110,7 +117,7 @@ func (r *Repository) UpdateRemark(ctx context.Context, id int32, direction, sect
 		Subsection: subsection,
 		Content:    content,
 	}
-	
+
 	remark, err := r.querier.UpdateRemark(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -149,7 +156,7 @@ func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, fil
 		FileSize:     fileSize,
 		MimeType:     sql.NullString{String: mimeType, Valid: mimeType != ""},
 	}
-	
+
 	file, err := r.querier.CreateProjectFile(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -160,4 +167,56 @@ func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, fil
 // DeleteProjectFile удаляет файл проекта
 func (r *Repository) DeleteProjectFile(ctx context.Context, id int32) error {
 	return r.querier.DeleteProjectFile(ctx, id)
+}
+
+//	func (r *Repository) SaveAttach(file *m.Attach) (string, error) {
+//		fileName, err := uc.fileStore.UploadFile(file)
+//		if err != nil {
+//			return "", e.StacktraceError(err)
+//		}
+//		return uc.urlDomain + fileName, nil
+//	}
+
+func (r *Repository) SaveAttach(file *m.Attach) (string, error) {
+	filePath := ""
+	// switch file.Dest {
+	// case "homework":
+	// 	filePath = s.filestoragePath + s.homeworkFilesPath
+	// case "solution":
+	// 	filePath = s.filestoragePath + s.solutionFilesPath
+	// case "chat":
+	// 	filePath = s.filestoragePath + s.chatFilesPath
+	// default:
+	// 	return "", m.StacktraceError(errors.New("error wrong destination"), m.ErrBadRequest400)
+	// }
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", m.StacktraceError(errors.New("error cant get dir"), m.ErrServerError500)
+	}
+	filePath = dir
+
+	// log.Println(http.DetectContentType(fileHeader))
+	// fileExt := ""
+	// switch http.DetectContentType(fileHeader) {
+	// case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+	// 	fileExt = ".docx"
+	// case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+	// 	fileExt = ".xlsx"
+	// default:
+	// 	return "", m.StacktraceError(errors.New("error not allowed file extension"), m.ErrBadRequest400)
+	// }
+
+	fileName := filePath + "/" + uuid.New().String() + file.FileExt
+	f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return "", m.StacktraceError(err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, file.File)
+	if err != nil {
+		return "", m.StacktraceError(err)
+	}
+
+	return fileName, nil
 }

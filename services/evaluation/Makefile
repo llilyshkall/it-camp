@@ -19,3 +19,9 @@ sqlc-install:
 # Clean generated files
 clean:
 	rm -rf internal/database 
+
+# doc gen
+# swag init -g main.go
+# swag init -g ../../internal/handler/handler.go
+# swag init -g handler.go
+# swag init -g internal/handler/handler.go
