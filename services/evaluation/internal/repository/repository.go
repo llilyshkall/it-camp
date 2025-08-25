@@ -21,10 +21,10 @@ func New(pgClient *postgres.Client) *Repository {
 }
 
 // CreateProject создает новый проект
-func (r *Repository) CreateProject(ctx context.Context, name string, inProgress bool) (*db.Project, error) {
+func (r *Repository) CreateProject(ctx context.Context, name string) (*db.Project, error) {
 	arg := db.CreateProjectParams{
-		Name:       name,
-		InProgress: inProgress,
+		Name:   name,
+		Status: db.ProjectStatusReady, // По умолчанию статус "готов"
 	}
 
 	project, err := r.querier.CreateProject(ctx, arg)
