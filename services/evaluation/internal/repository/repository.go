@@ -39,6 +39,15 @@ func (r *Repository) ListProjects(ctx context.Context) ([]db.Project, error) {
 	return r.querier.ListProjects(ctx)
 }
 
+// GetProject получает проект по ID
+func (r *Repository) GetProject(ctx context.Context, id int32) (*db.Project, error) {
+	project, err := r.querier.GetProject(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 // SaveAttach сохраняет информацию о загруженном файле
 func (r *Repository) SaveAttach(file *models.Attach) (string, error) {
 	// Генерируем уникальное имя файла

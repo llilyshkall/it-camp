@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -191,6 +192,16 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleProject обрабатывает запросы к /api/projects/{id}
+func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetProject(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // ListProjects godoc
 // @Summary Get all projects
 // @Description Get list of all projects
@@ -218,6 +229,53 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(projects)
+}
+
+// GetProject godoc
+// @Summary Get project by ID
+// @Description Get specific project by its ID
+// @ID getProject
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} db.Project "Project found"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id} [get]
+func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID из URL
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 3 {
+		log.Println("Invalid project ID path")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	id, err := strconv.ParseInt(pathParts[2], 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Получаем проект
+	project, err := h.repo.GetProject(r.Context(), int32(id))
+	if err != nil {
+		log.Printf("Failed to get project %d: %v", id, err)
+		returnErrorJSON(w, m.ErrNotFound404)
+		return
+	}
+
+	// Возвращаем проект
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(project)
 }
 
 // CreateProject godoc
