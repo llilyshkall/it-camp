@@ -69,3 +69,6 @@ services/front/.venv
 services/front/__pycache__
 services/front/js
 c.txt
+services/ML/structuring_comments/Dirty.json
+services/ML/structuring_comments/synthesis_report_clustered.json
+services/ML/.venv1

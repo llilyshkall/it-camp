@@ -10,6 +10,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import itertools
 
+from fastapi import FastAPI, Body
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import os
+
+
 # ---  КОНФИГУРАЦИЯ ---
 LOCAL_API_URL = "http://89.108.116.240:11434/api/chat"
 LOCAL_MODEL_NAME = "qwen2.5:14b"
@@ -23,6 +29,25 @@ DATA_FILE = "Dirty.json"
 THEMES_FILE = "themes.json"
 CLUSTER_DISTANCE_THRESHOLD = 0.18
 NLP_CLASSIFICATION_THRESHOLD = 0.75
+
+
+
+app = FastAPI()
+
+async def main():
+    # Настройка CORS
+    app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    )
+
+# Эндпоинт для проверки работы сервера
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 # ---  ИНИЦИАЛИЗАЦИЯ ---
 print("Загрузка локальной модели для векторизации...")
@@ -76,14 +101,15 @@ def save_knowledge_base(themes_file, major_categories, sub_categories):
 
 
 # Разделяет замечания на две группы: уже классифицированные и те, что в "None"
-def load_and_partition_remarks(file_path):
+#def load_and_partition_remarks(file_path):
+def load_and_partition_remarks(data):
     preclassified_remarks = defaultdict(list)
     unclassified_remarks = []
     unique_texts = set()
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # with open(file_path, 'r', encoding='utf-8') as f:
+        #     data = json.load(f)
 
         # Сначала загрузим названия категорий из ключа 'keys'
         category_names = data.get("keys", {})
@@ -262,8 +288,8 @@ async def get_synthesized_groups(remarks_list, all_embeddings, semaphore):
 
     return final_groups_list, synthesis_report
 
-
-async def main():
+@app.post("/remarks")
+async def logic(data = Body(...)):
     print("\n---  ЗАПУСК ГИБРИДНОГО ПАЙПЛАЙНА ---")
     semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
 
@@ -271,7 +297,7 @@ async def main():
     major_categories_kb, sub_categories_kb = load_knowledge_base(THEMES_FILE)
 
     # ### ИЗМЕНЕНИЕ: Используем новую функцию для разделения данных ###
-    preclassified_remarks, unclassified_remarks = load_and_partition_remarks(DATA_FILE)
+    preclassified_remarks, unclassified_remarks = load_and_partition_remarks(data)
 
     all_remarks_list = list(itertools.chain.from_iterable(preclassified_remarks.values())) + unclassified_remarks
     if not all_remarks_list:
@@ -424,11 +450,23 @@ async def main():
 
     # Формируем и сохраняем финальный отчет
     final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
-    with open("report_final_classified.json", "w", encoding="utf-8") as f:
-        json.dump(final_report_list, f, ensure_ascii=False, indent=2)
+    # with open("report_final_classified.json", "w", encoding="utf-8") as f:
+    #     json.dump(final_report_list, f, ensure_ascii=False, indent=2)
     print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
     print("\n---  Пайплайн завершен! ---")
+    return {
+        "success": True,
+        "data": final_report_list
+    }
+
+
+# if __name__ == "__main__":
+#     asyncio.run(main())
+
+
+
+
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    uvicorn.run(app, host="127.0.0.1", port=8083)
