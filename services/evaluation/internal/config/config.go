@@ -64,7 +64,7 @@ func Load() (*Config, error) {
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "password"),
 			//Password:        getEnv("DB_PASSWORD", "12345"),
-			DBName:          getEnv("DB_NAME", "remarks"),
+			DBName:          getEnv("DB_NAME", "evaluation"),
 			SSLMode:         getEnv("DB_SSLMODE", "disable"),
 			ConnectTimeout:  getEnvAsDuration("DB_CONNECT_TIMEOUT", 10*time.Second),
 			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
