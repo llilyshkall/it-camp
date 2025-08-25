@@ -33,8 +33,8 @@ docker-build: ## Собрать Docker образ
 docker-compose-up: ## Запустить сервисы через docker-compose
 	@echo "Starting services with docker-compose..."
 	docker-compose up -d
-	@echo "Waiting for PostgreSQL to be ready..."
-	sleep 15
+	@echo "Waiting for PostgreSQL and MinIO to be ready..."
+	sleep 20
 	@echo "Applying database migrations..."
 	@if command -v migrate >/dev/null 2>&1; then \
 		export PATH=$$PATH:$$(go env GOPATH)/bin; \
@@ -45,8 +45,9 @@ docker-compose-up: ## Запустить сервисы через docker-compos
 		export PATH=$$PATH:$$(go env GOPATH)/bin; \
 		make migrate-up; \
 	fi
-	@echo "Services started! PostgreSQL and evaluation service are running."
+	@echo "Services started! PostgreSQL, MinIO and evaluation service are running."
 	@echo "Service available at http://localhost:8081"
+	@echo "MinIO Console available at http://localhost:9001 (minioadmin/minioadmin)"
 	@echo "Use 'make logs' to see logs"
 	@echo "Use 'make docker-compose-down' to stop"
 
@@ -159,3 +160,8 @@ clean-all: ## Полная очистка
 	docker-compose down -v
 	docker system prune -f
 	@echo "Cleanup completed"
+
+minio-status: ## Проверить статус MinIO
+	@echo "Checking MinIO status..."
+	@curl -f http://localhost:9000/minio/health/live || echo "MinIO not accessible"
+
