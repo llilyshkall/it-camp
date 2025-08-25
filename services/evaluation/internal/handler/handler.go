@@ -5,6 +5,7 @@ import (
 	"errors"
 	"evaluation/internal/postgres"
 	"evaluation/internal/repository"
+	"evaluation/internal/storage"
 	"io"
 	"log"
 	"net/http"
@@ -28,7 +29,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host 127.0.0.1:8080
+// @host 127.0.0.1:8081
 // @BasePath  /api
 
 type File interface {
@@ -66,13 +67,15 @@ func returnErrorJSON(w http.ResponseWriter, err error) {
 type Handler struct {
 	pgClient *postgres.Client
 	repo     *repository.Repository
+	storage  storage.FileStorage
 }
 
 // New создает новый экземпляр хендлера
-func New(pgClient *postgres.Client, repo *repository.Repository) *Handler {
+func New(pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage) *Handler {
 	return &Handler{
 		pgClient: pgClient,
 		repo:     repo,
+		storage:  fileStorage,
 	}
 }
 
@@ -134,14 +137,34 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	fileName := fileHeader.Filename
+	log.Printf("Received file: %s", fileName)
 
 	ext := strings.ToLower(filepath.Ext(fileName))
+	log.Printf("File extension: '%s'", ext)
+
 	if ext != ".xlsx" && ext != ".docx" {
-		log.Println("invalid file extension")
+		log.Printf("Invalid file extension: '%s'. Expected .xlsx or .docx", ext)
 		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file extension"), m.ErrServerError500))
 		return
 	}
 
+	// Определяем MIME тип файла
+	contentType := "application/octet-stream"
+	if ext == ".xlsx" {
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	} else if ext == ".docx" {
+		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	}
+
+	// Загружаем файл в MinIO
+	objectName, err := h.storage.UploadFile(r.Context(), file, fileName, contentType)
+	if err != nil {
+		log.Println(m.StacktraceError(err))
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Сохраняем информацию о файле в базе данных
 	fileName, err = h.repo.SaveAttach(&m.Attach{
 		Type:    r.URL.Query().Get("type"),
 		File:    file,
@@ -153,7 +176,7 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(&m.UploadAttachResponse{File: fileName})
+	json.NewEncoder(w).Encode(&m.UploadAttachResponse{File: objectName})
 }
 
 // HandleProjects обрабатывает запросы к /api/projects

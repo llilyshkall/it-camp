@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"evaluation/internal/app"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"evaluation/internal/app"
 )
 
 func main() {

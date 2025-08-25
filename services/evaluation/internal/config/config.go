@@ -12,6 +12,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Postgres PostgresConfig `yaml:"postgresql"`
 	Logging  LoggingConfig  `yaml:"logging"`
+	MinIO    MinIOConfig    `yaml:"minio"`
 }
 
 type ServerConfig struct {
@@ -35,6 +36,15 @@ type PostgresConfig struct {
 	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
 }
 
+type MinIOConfig struct {
+	Endpoint   string `yaml:"endpoint"`
+	AccessKey  string `yaml:"access_key"`
+	SecretKey  string `yaml:"secret_key"`
+	BucketName string `yaml:"bucket_name"`
+	UseSSL     bool   `yaml:"use_ssl"`
+	Region     string `yaml:"region"`
+}
+
 type LoggingConfig struct {
 	Level string `yaml:"level"`
 }
@@ -42,7 +52,7 @@ type LoggingConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Server: ServerConfig{
-			Port:            getEnv("PORT", "8080"),
+			Port:            getEnv("PORT", "8081"),
 			ReadTimeout:     getEnvAsDuration("READ_TIMEOUT", 10*time.Second),
 			WriteTimeout:    getEnvAsDuration("WRITE_TIMEOUT", 10*time.Second),
 			IdleTimeout:     getEnvAsDuration("IDLE_TIMEOUT", 60*time.Second),
@@ -60,6 +70,14 @@ func Load() (*Config, error) {
 			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
 			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
 			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute),
+		},
+		MinIO: MinIOConfig{
+			Endpoint:   getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey:  getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+			SecretKey:  getEnv("MINIO_SECRET_KEY", "minioadmin"),
+			BucketName: getEnv("MINIO_BUCKET_NAME", "evaluation-files"),
+			UseSSL:     getEnvAsBool("MINIO_USE_SSL", false),
+			Region:     getEnv("MINIO_REGION", "us-east-1"),
 		},
 		Logging: LoggingConfig{
 			Level: getEnv("LOG_LEVEL", "info"),
@@ -89,6 +107,15 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
 		}
 	}
 	return defaultValue
