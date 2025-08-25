@@ -79,4 +79,36 @@ paths:
           schema:
             $ref: '#/definitions/handler.Error'
       summary: Send file
+  /projects/{project_id}/remarks:
+    post:
+      consumes:
+      - application/json
+      description: Get remarks for specific project and forward to external service
+      operationId: sendProjectRemarks
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success response
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Send Project Remarks
 swagger: "2.0"

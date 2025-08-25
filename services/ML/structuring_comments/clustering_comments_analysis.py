@@ -10,7 +10,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import itertools
 
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, BackgroundTasks
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
@@ -288,8 +289,7 @@ async def get_synthesized_groups(remarks_list, all_embeddings, semaphore):
 
     return final_groups_list, synthesis_report
 
-@app.post("/remarks")
-async def logic(data = Body(...)):
+async def logic(data):
     print("\n---  ЗАПУСК ГИБРИДНОГО ПАЙПЛАЙНА ---")
     semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
 
@@ -444,22 +444,30 @@ async def logic(data = Body(...)):
     save_knowledge_base(THEMES_FILE, major_categories_kb, sub_categories_kb)
 
     # Сохраняем отчеты о синтезе
-    with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
-        json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
-    print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
+    # with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
+    #     json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
+    # print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
 
     # Формируем и сохраняем финальный отчет
-    final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
+    #final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
     # with open("report_final_classified.json", "w", encoding="utf-8") as f:
     #     json.dump(final_report_list, f, ensure_ascii=False, indent=2)
     print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
     print("\n---  Пайплайн завершен! ---")
     return {
         "success": True,
-        "data": final_report_list
+        "data": synthesis_reports
     }
 
 
+@app.post("/remarks")
+async def remarksHandler(
+    background_tasks: BackgroundTasks,
+    data: dict = Body(...)):
+    #print(await logic(data))
+    #return JSONResponse(content=None, status_code=202)
+    background_tasks.add_task(logic, data)
+    return JSONResponse(content=None, status_code=202)
 # if __name__ == "__main__":
 #     asyncio.run(main())
 

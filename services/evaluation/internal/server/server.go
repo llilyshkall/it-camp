@@ -63,6 +63,7 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 
 	mux.HandleFunc("/api/attach", handler.UploadFile)
 	mux.HandleFunc("/api/file", handler.SendFile)
+	mux.HandleFunc("/api/projects/{project_id}/remarks", handler.SendProjectRemarks)
 	//mux.HandleFunc("/api/docs/", handler.UploadFile)
 	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
 	//mux.Use(loggingAndCORSHeadersMiddleware)
