@@ -1,5 +1,22 @@
 .PHONY: help build test clean docker-build docker-compose-up docker-compose-down logs status health-check
 
+# Загружаем переменные из .env файла
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
+# Переменные для базы данных (с значениями по умолчанию)
+DB_HOST ?= localhost
+DB_PORT ?= 5432
+DB_USER ?= evaluation_user
+DB_PASSWORD ?= evaluation123
+DB_NAME ?= evaluation_db
+
+# Переменные для миграций (подключение к localhost)
+MIGRATE_HOST ?= localhost
+MIGRATE_PORT ?= 5432
+
 # Переменные
 SERVICE_NAME := evaluation
 IMAGE_NAME := ghcr.io/llilyshkall/evaluation
@@ -96,41 +113,41 @@ migrate-install: ## Установить golang-migrate
 migrate-up: ## Применить все миграции
 	@echo "Applying database migrations..."
 	@if command -v migrate >/dev/null 2>&1; then \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" up; \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" up; \
 	else \
 		echo "golang-migrate not found. Installing..."; \
 		make migrate-install; \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" up; \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" up; \
 	fi
 
 migrate-down: ## Откатить все миграции
 	@echo "Rolling back all migrations..."
 	@if command -v migrate >/dev/null 2>&1; then \
-		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" down; \
+		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" down; \
 	else \
 		echo "golang-migrate not found. Installing..."; \
 		make migrate-install; \
-		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" down; \
+		echo "y" | migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" down; \
 	fi
 
 migrate-force: ## Принудительно установить версию миграции
 	@echo "Force setting migration version..."
 	@if command -v migrate >/dev/null 2>&1; then \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" force $(version); \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" force $(version); \
 	else \
 		echo "golang-migrate not found. Installing..."; \
 		make migrate-install; \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" force $(version); \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" force $(version); \
 	fi
 
 migrate-status: ## Показать статус миграций
 	@echo "Checking migration status..."
 	@if command -v migrate >/dev/null 2>&1; then \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" version; \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" version; \
 	else \
 		echo "golang-migrate not found. Installing..."; \
 		make migrate-install; \
-		migrate -path services/evaluation/db/migration -database "postgres://evaluation_user:evaluation_password@localhost:5432/evaluation_db?sslmode=disable" version; \
+		migrate -path services/evaluation/db/migration -database "postgres://$(DB_USER):$(DB_PASSWORD)@$(MIGRATE_HOST):$(MIGRATE_PORT)/$(DB_NAME)?sslmode=disable" version; \
 	fi
 
 migrate-reset: ## Сбросить и пересоздать базу данных
