@@ -315,8 +315,8 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем проект (in_progress всегда false по умолчанию)
-	project, err := h.repo.CreateProject(r.Context(), req.Name, false)
+	// Создаем проект (статус "ready" по умолчанию)
+	project, err := h.repo.CreateProject(r.Context(), req.Name)
 	if err != nil {
 		log.Printf("Failed to create project: %v", err)
 		returnErrorJSON(w, m.ErrServerError500)
