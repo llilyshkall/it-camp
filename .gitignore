@@ -68,3 +68,4 @@ vendor/
 services/front/.venv
 services/front/__pycache__
 services/front/js
+c.txt
