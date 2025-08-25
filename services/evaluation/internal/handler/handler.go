@@ -272,142 +272,6 @@ func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request, id int32
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ========== REMARK HANDLERS ==========
-
-// HandleRemarks обрабатывает запросы к /api/remarks
-// func (h *Handler) HandleRemarks(w http.ResponseWriter, r *http.Request) {
-// 	switch r.Method {
-// 	case http.MethodGet:
-// 		h.ListRemarks(w, r)
-// 	case http.MethodPost:
-// 		h.CreateRemark(w, r)
-// 	default:
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 	}
-// }
-
-// // HandleRemark обрабатывает запросы к /api/remarks/{id}
-// func (h *Handler) HandleRemark(w http.ResponseWriter, r *http.Request) {
-// 	// Извлекаем ID из URL
-// 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-// 	if len(pathParts) < 3 {
-// 		http.Error(w, "Invalid remark ID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	id, err := strconv.ParseInt(pathParts[2], 10, 32)
-// 	if err != nil {
-// 		http.Error(w, "Invalid remark ID", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	switch r.Method {
-// 	case http.MethodGet:
-// 		h.GetRemark(w, r, int32(id))
-// 	case http.MethodPut:
-// 		h.UpdateRemark(w, r, int32(id))
-// 	case http.MethodDelete:
-// 		h.DeleteRemark(w, r, int32(id))
-// 	default:
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 	}
-// }
-
-// func (h *Handler) ListRemarks(w http.ResponseWriter, r *http.Request) {
-// 	// Получаем project_id из query параметров
-// 	projectIDStr := r.URL.Query().Get("project_id")
-// 	if projectIDStr == "" {
-// 		http.Error(w, "project_id is required", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
-// 	if err != nil {
-// 		http.Error(w, "Invalid project_id", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	remarks, err := h.repo.ListRemarksByProject(r.Context(), int32(projectID))
-// 	if err != nil {
-// 		http.Error(w, "Failed to list remarks", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(remarks)
-// }
-
-// func (h *Handler) GetRemark(w http.ResponseWriter, r *http.Request, id int32) {
-// 	remark, err := h.repo.GetRemark(r.Context(), id)
-// 	if err != nil {
-// 		http.Error(w, "Remark not found", http.StatusNotFound)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(remark)
-// }
-
-// func (h *Handler) CreateRemark(w http.ResponseWriter, r *http.Request) {
-// 	var req struct {
-// 		ProjectID  int32  `json:"project_id"`
-// 		Direction  string `json:"direction"`
-// 		Section    string `json:"section"`
-// 		Subsection string `json:"subsection"`
-// 		Content    string `json:"content"`
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	remark, err := h.repo.CreateRemark(r.Context(), req.ProjectID, req.Direction, req.Section, req.Subsection, req.Content)
-// 	if err != nil {
-// 		http.Error(w, "Failed to create remark", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusCreated)
-// 	json.NewEncoder(w).Encode(remark)
-// }
-
-// func (h *Handler) UpdateRemark(w http.ResponseWriter, r *http.Request, id int32) {
-// 	var req struct {
-// 		Direction  string `json:"direction"`
-// 		Section    string `json:"section"`
-// 		Subsection string `json:"subsection"`
-// 		Content    string `json:"content"`
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	remark, err := h.repo.UpdateRemark(r.Context(), id, req.Direction, req.Section, req.Subsection, req.Content)
-// 	if err != nil {
-// 		http.Error(w, "Failed to update remark", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(remark)
-// }
-
-// func (h *Handler) DeleteRemark(w http.ResponseWriter, r *http.Request, id int32) {
-// 	if err := h.repo.DeleteRemark(r.Context(), id); err != nil {
-// 		http.Error(w, "Failed to delete remark", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.WriteHeader(http.StatusNoContent)
-// }
-
 // ========== PROJECT FILE HANDLERS ==========
 
 // HandleProjectFiles обрабатывает запросы к /api/project-files
@@ -415,8 +279,8 @@ func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		h.ListProjectFiles(w, r)
-	case http.MethodPost:
-		h.CreateProjectFile(w, r)
+	// case http.MethodPost:
+	// 	h.CreateProjectFile(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -484,31 +348,31 @@ func (h *Handler) GetProjectFile(w http.ResponseWriter, r *http.Request, id int3
 	json.NewEncoder(w).Encode(file)
 }
 
-func (h *Handler) CreateProjectFile(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		ProjectID    int32  `json:"project_id"`
-		Filename     string `json:"filename"`
-		OriginalName string `json:"original_name"`
-		FilePath     string `json:"file_path"`
-		FileSize     int64  `json:"file_size"`
-		MimeType     string `json:"mime_type"`
-	}
+// func (h *Handler) CreateProjectFile(w http.ResponseWriter, r *http.Request) {
+// 	var req struct {
+// 		ProjectID    int32  `json:"project_id"`
+// 		Filename     string `json:"filename"`
+// 		OriginalName string `json:"original_name"`
+// 		FilePath     string `json:"file_path"`
+// 		FileSize     int64  `json:"file_size"`
+// 		MimeType     string `json:"mime_type"`
+// 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+// 		return
+// 	}
 
-	file, err := h.repo.CreateProjectFile(r.Context(), req.ProjectID, req.Filename, req.OriginalName, req.FilePath, req.FileSize, req.MimeType)
-	if err != nil {
-		http.Error(w, "Failed to create project file", http.StatusInternalServerError)
-		return
-	}
+// 	file, err := h.repo.CreateProjectFile(r.Context(), req.ProjectID, req.Filename, req.OriginalName, req.FilePath, req.FileSize, req.MimeType)
+// 	if err != nil {
+// 		http.Error(w, "Failed to create project file", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(file)
-}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusCreated)
+// 	json.NewEncoder(w).Encode(file)
+// }
 
 func (h *Handler) DeleteProjectFile(w http.ResponseWriter, r *http.Request, id int32) {
 	if err := h.repo.DeleteProjectFile(r.Context(), id); err != nil {
@@ -518,19 +382,3 @@ func (h *Handler) DeleteProjectFile(w http.ResponseWriter, r *http.Request, id i
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// type File interface {
-// 	io.Reader
-// 	io.ReaderAt
-// 	io.Seeker
-// 	io.Closer
-// }
-
-// type Attach struct {
-// 	Type string
-// 	File File
-// }
-
-// type UploadAttachResponse struct {
-// 	File string `json:"file"`
-// }
