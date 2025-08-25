@@ -56,4 +56,27 @@ paths:
           schema:
             $ref: '#/definitions/handler.Error'
       summary: Upload attach
+  /file:
+    get:
+      consumes:
+      - application/json
+      description: Send file
+      operationId: sendFile
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: File attachment
+          schema:
+            type: file
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: internal Server Error - Request is valid but operation failed
+            at server side
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Send file
 swagger: "2.0"

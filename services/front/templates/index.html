@@ -270,24 +270,75 @@
     dz.addEventListener('drop',async(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
     dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
 
-    // Скачать TXT-отчёт проверки
-    downloadBtn.addEventListener('click', () => {
-      if (!lastAssurance) return;
-      const lines = [
-        'ПРОВЕРКА ПО ЧЕК-ЛИСТУ',
-        '======================',
-        `Вердикт: ${lastAssurance.title || ''}`,
-        '',
-        'Пояснения:',
-        ...(lastAssurance.reasons || []).map((r,i)=>`${i+1}. ${r}`)
-      ];
-      const blob = new Blob([lines.join('\r\n')], {type: 'text/plain;charset=utf-8'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'assurance_report.txt';
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      toast('Отчёт по чек-листу сохранён');
+    // // Скачать TXT-отчёт проверки
+    // downloadBtn.addEventListener('click', () => {
+    //   if (!lastAssurance) return;
+    //   const lines = [
+    //     'ПРОВЕРКА ПО ЧЕК-ЛИСТУ',
+    //     '======================',
+    //     `Вердикт: ${lastAssurance.title || ''}`,
+    //     '',
+    //     'Пояснения:',
+    //     ...(lastAssurance.reasons || []).map((r,i)=>`${i+1}. ${r}`)
+    //   ];
+    //   const blob = new Blob([lines.join('\r\n')], {type: 'text/plain;charset=utf-8'});
+    //   const url = URL.createObjectURL(blob);
+    //   const a = document.createElement('a');
+    //   a.href = url; a.download = 'assurance_report.txt';
+    //   document.body.appendChild(a); a.click(); a.remove();
+    //   URL.revokeObjectURL(url);
+    //   toast('Отчёт по чек-листу сохранён');
+    // });
+      downloadBtn.disabled=false;
+      downloadBtn.addEventListener('click', async () => {
+      try {
+          // Показываем индикатор загрузки
+          downloadBtn.disabled = true;
+          downloadBtn.textContent = 'Загрузка...';
+          
+          // Отправляем запрос на сервер
+          const response = await fetch('http://127.0.0.1:8081/api/file', {
+              method: 'GET',
+              headers: {
+                  'Accept': 'application/octet-stream'
+              }
+          });
+          
+          if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          // Получаем имя файла из заголовков
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let filename = 'report.xlsx'; // значение по умолчанию  
+          if (contentDisposition) {
+              const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+              if (filenameMatch) filename = filenameMatch[1];
+          }
+          
+          // Создаем Blob из ответа  
+          const blob = await response.blob();
+          
+          // Скачиваем файл
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Очистка
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+      } catch (error) {
+          console.error('Ошибка при загрузке файла:', error);
+          alert('Не удалось загрузить файл');
+      } finally {
+          // Восстанавливаем кнопку
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = 'Скачать отчет';
+      }
     });
   })();
 

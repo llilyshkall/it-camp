@@ -72,6 +72,39 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/file": {
+            "get": {
+                "description": "Send file",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "summary": "Send file",
+                "operationId": "sendFile",
+                "responses": {
+                    "200": {
+                        "description": "File attachment",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal Server Error - Request is valid but operation failed at server side",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
