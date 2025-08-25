@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -106,12 +105,11 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		Database:  dbStatus,
 	}
 
-	//w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
-// ========== PROJECT HANDLERS ==========
+// ========== FILE UPLOAD HANDLER ==========
 
 // UploadAttach godoc
 // @Summary Upload attach
@@ -179,11 +177,11 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&m.UploadAttachResponse{File: objectName})
 }
 
+// ========== PROJECT HANDLERS ==========
+
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodGet:
-		h.ListProjects(w, r)
 	case http.MethodPost:
 		h.CreateProject(w, r)
 	default:
@@ -191,217 +189,58 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleProject обрабатывает запросы к /api/projects/{id}
-func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем ID из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 3 {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.ParseInt(pathParts[2], 10, 32)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		h.GetProject(w, r, int32(id))
-	case http.MethodPut:
-		h.UpdateProject(w, r, int32(id))
-	case http.MethodDelete:
-		h.DeleteProject(w, r, int32(id))
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.repo.ListProjects(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to list projects", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(projects)
-}
-
-func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request, id int32) {
-	project, err := h.repo.GetProject(r.Context(), id)
-	if err != nil {
-		http.Error(w, "Project not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(project)
-}
-
+// CreateProject godoc
+// @Summary Create new project
+// @Description Create a new project with name
+// @ID createProject
+// @Accept  json
+// @Produce  json
+// @Param project body CreateProjectRequest true "Project data"
+// @Success 201 {object} db.Project "Project created successfully"
+// @Failure 400 {object} Error "Bad request - invalid input data"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects [post]
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name       string `json:"name"`
-		InProgress bool   `json:"in_progress"`
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
+	var req CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Printf("Failed to decode request body: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	project, err := h.repo.CreateProject(r.Context(), req.Name, req.InProgress)
+	// Валидация входных данных
+	if req.Name == "" {
+		log.Println("Project name is required")
+		returnErrorJSON(w, m.StacktraceError(errors.New("project name is required"), m.ErrBadRequest400))
+		return
+	}
+
+	if len(req.Name) > 255 {
+		log.Println("Project name too long")
+		returnErrorJSON(w, m.StacktraceError(errors.New("project name too long (max 255 characters)"), m.ErrBadRequest400))
+		return
+	}
+
+	// Создаем проект (in_progress всегда false по умолчанию)
+	project, err := h.repo.CreateProject(r.Context(), req.Name, false)
 	if err != nil {
-		http.Error(w, "Failed to create project", http.StatusInternalServerError)
+		log.Printf("Failed to create project: %v", err)
+		returnErrorJSON(w, m.ErrServerError500)
 		return
 	}
 
+	// Возвращаем созданный проект
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(project)
 }
 
-func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request, id int32) {
-	var req struct {
-		Name       string `json:"name"`
-		InProgress bool   `json:"in_progress"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	project, err := h.repo.UpdateProject(r.Context(), id, req.Name, req.InProgress)
-	if err != nil {
-		http.Error(w, "Failed to update project", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(project)
-}
-
-func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request, id int32) {
-	if err := h.repo.DeleteProject(r.Context(), id); err != nil {
-		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// ========== PROJECT FILE HANDLERS ==========
-
-// HandleProjectFiles обрабатывает запросы к /api/project-files
-func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		h.ListProjectFiles(w, r)
-	// case http.MethodPost:
-	// 	h.CreateProjectFile(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// HandleProjectFile обрабатывает запросы к /api/project-files/{id}
-func (h *Handler) HandleProjectFile(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем ID из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 3 {
-		http.Error(w, "Invalid project file ID", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.ParseInt(pathParts[2], 10, 32)
-	if err != nil {
-		http.Error(w, "Invalid project file ID", http.StatusBadRequest)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		h.GetProjectFile(w, r, int32(id))
-	case http.MethodDelete:
-		h.DeleteProjectFile(w, r, int32(id))
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *Handler) ListProjectFiles(w http.ResponseWriter, r *http.Request) {
-	// Получаем project_id из query параметров
-	projectIDStr := r.URL.Query().Get("project_id")
-	if projectIDStr == "" {
-		http.Error(w, "project_id is required", http.StatusBadRequest)
-		return
-	}
-
-	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
-	if err != nil {
-		http.Error(w, "Invalid project_id", http.StatusBadRequest)
-		return
-	}
-
-	files, err := h.repo.ListProjectFiles(r.Context(), int32(projectID))
-	if err != nil {
-		http.Error(w, "Failed to list project files", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(files)
-}
-
-func (h *Handler) GetProjectFile(w http.ResponseWriter, r *http.Request, id int32) {
-	file, err := h.repo.GetProjectFile(r.Context(), id)
-	if err != nil {
-		http.Error(w, "Project file not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(file)
-}
-
-// func (h *Handler) CreateProjectFile(w http.ResponseWriter, r *http.Request) {
-// 	var req struct {
-// 		ProjectID    int32  `json:"project_id"`
-// 		Filename     string `json:"filename"`
-// 		OriginalName string `json:"original_name"`
-// 		FilePath     string `json:"file_path"`
-// 		FileSize     int64  `json:"file_size"`
-// 		MimeType     string `json:"mime_type"`
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	file, err := h.repo.CreateProjectFile(r.Context(), req.ProjectID, req.Filename, req.OriginalName, req.FilePath, req.FileSize, req.MimeType)
-// 	if err != nil {
-// 		http.Error(w, "Failed to create project file", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusCreated)
-// 	json.NewEncoder(w).Encode(file)
-// }
-
-func (h *Handler) DeleteProjectFile(w http.ResponseWriter, r *http.Request, id int32) {
-	if err := h.repo.DeleteProjectFile(r.Context(), id); err != nil {
-		http.Error(w, "Failed to delete project file", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+// CreateProjectRequest структура запроса для создания проекта
+type CreateProjectRequest struct {
+	Name string `json:"name" validate:"required,max=255"`
 }
