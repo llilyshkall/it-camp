@@ -182,11 +182,42 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case http.MethodGet:
+		h.ListProjects(w, r)
 	case http.MethodPost:
 		h.CreateProject(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// ListProjects godoc
+// @Summary Get all projects
+// @Description Get list of all projects
+// @ID listProjects
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} db.Project "List of projects"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects [get]
+func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем список проектов
+	projects, err := h.repo.ListProjects(r.Context())
+	if err != nil {
+		log.Printf("Failed to list projects: %v", err)
+		returnErrorJSON(w, m.ErrServerError500)
+		return
+	}
+
+	// Возвращаем список проектов
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(projects)
 }
 
 // CreateProject godoc

@@ -34,6 +34,11 @@ func (r *Repository) CreateProject(ctx context.Context, name string, inProgress 
 	return &project, nil
 }
 
+// ListProjects получает список всех проектов
+func (r *Repository) ListProjects(ctx context.Context) ([]db.Project, error) {
+	return r.querier.ListProjects(ctx)
+}
+
 // SaveAttach сохраняет информацию о загруженном файле
 func (r *Repository) SaveAttach(file *models.Attach) (string, error) {
 	// Генерируем уникальное имя файла
