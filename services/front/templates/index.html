@@ -781,6 +781,18 @@
       const downloadBtn=document.getElementById('download-assurance'); const checkResultBtn=document.getElementById('check-result');
       let lastAssurance=null;
 
+      const STORAGE_KEY = 'projects';
+      const SELECTED_KEY = 'currentProjectId';
+      function readProjects(){
+        try { const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); return Array.isArray(arr) ? arr : []; } catch { return []; }
+      }
+      function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+      function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
+      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
+
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
       const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await apiFetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
@@ -812,7 +824,7 @@
 
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startAssurance(event, {
-          projectID: window.currentProject || currentProject()
+          projectID: currentProject()
         });
       });
 

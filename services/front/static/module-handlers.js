@@ -58,15 +58,69 @@ async function createProject(name, desc) {
   
 
 
-/**
- * Обработчик кнопки "Начать проверку"
- * @param {Event} event - Событие клика
- * @param {String} options - Дополнительные параметры
- */
-function handleStartAssurance(event, options = {}) {
+// /**
+//  * Обработчик кнопки "Начать проверку"
+//  * @param {Event} event - Событие клика
+//  * @param {String} options - Дополнительные параметры
+//  */
+// function handleStartAssurance(event, options = {}) {
+//   console.log('🔄 Начинаем проверку по чек-листу...');
+  
+//   // Получаем выбранные файлы
+//   const fileInput = document.getElementById('file-input');
+//   const files = fileInput.files;
+  
+//   if (!files || files.length === 0) {
+//     showToast('Выберите файлы для проверки', false);
+//     return;
+//   }
+  
+//   // Показываем индикатор загрузки
+//   const loadingIndicator = document.getElementById('assurance-loading');
+//   const startBtn = document.getElementById('start-assurance');
+  
+//   startBtn.disabled = true;
+//   startBtn.classList.add('loading');
+//   loadingIndicator.hidden = false;
+
+//   if (!files?.[0]){
+//       console.error('❌ Нет файлов в приложении:', error);
+//       showToast('Нет файлов в приложении', false);
+//       return;
+//   }
+      
+//   let file = files?.[0];
+//   const formData = new FormData();
+//   formData.append('file', file); 
+  
+//   //let url = "http://127.0.0.1:8081/api/projects/"+projectId+"/files?type=excel";
+//   //let url = "http://127.0.0.1:8081/api/attach?type=excel";
+
+//     fetch(endpoints.loadFile + options['projectID'] + "/files?type=documentation", {
+//             method: 'POST',
+//             body: formData,
+//   }).then(response => {
+//       console.log('✅ Ответ от backend:', response);
+//       showToast('Проверка запущена успешно');
+      
+//       // Активируем кнопки для следующих действий
+//       document.getElementById('check-result').disabled = false;
+//       document.getElementById('download-assurance').disabled = false;
+//     })
+//     .catch(error => {
+//       console.error('❌ Ошибка при отправке файла:', error);
+//       showToast('Ошибка при отправке файла:', false);
+//     })
+//     .finally(() => {
+//       startBtn.disabled = false;
+//       startBtn.classList.remove('loading');
+//       loadingIndicator.hidden = true;
+//     });
+// }
+
+async function handleStartAssurance(event, options = {}) {
   console.log('🔄 Начинаем проверку по чек-листу...');
   
-  // Получаем выбранные файлы
   const fileInput = document.getElementById('file-input');
   const files = fileInput.files;
   
@@ -75,47 +129,78 @@ function handleStartAssurance(event, options = {}) {
     return;
   }
   
-  // Показываем индикатор загрузки
   const loadingIndicator = document.getElementById('assurance-loading');
   const startBtn = document.getElementById('start-assurance');
+  const progressBar = document.getElementById('upload-progress'); // Добавьте элемент прогресса
   
   startBtn.disabled = true;
   startBtn.classList.add('loading');
   loadingIndicator.hidden = false;
-
-  if (!files?.[0]){
-      console.error('❌ Нет файлов в приложении:', error);
-      showToast('Нет файлов в приложении', false);
-      return;
+  if (progressBar) {
+    progressBar.max = files.length;
+    progressBar.value = 0;
+    progressBar.hidden = false;
   }
-      
-  let file = files?.[0];
-  const formData = new FormData();
-  formData.append('file', file); 
-  
-  //let url = "http://127.0.0.1:8081/api/projects/"+projectId+"/files?type=excel";
-  //let url = "http://127.0.0.1:8081/api/attach?type=excel";
 
-    fetch(endpoints.loadFile + options['projectID'] + "/files?type=documentation", {
-            method: 'POST',
-            body: formData,
-  }).then(response => {
-      console.log('✅ Ответ от backend:', response);
-      showToast('Проверка запущена успешно');
+  try {
+    // Последовательно отправляем все файлы
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       
-      // Активируем кнопки для следующих действий
-      document.getElementById('check-result').disabled = false;
-      document.getElementById('download-assurance').disabled = false;
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при отправке файла:', error);
-      showToast('Ошибка при отправке файла:', false);
-    })
-    .finally(() => {
-      startBtn.disabled = false;
-      startBtn.classList.remove('loading');
-      loadingIndicator.hidden = true;
-    });
+      if (!file) {
+        console.warn(`Файл ${i} не существует`);
+        continue;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Обновляем статус загрузки
+      if (progressBar) {
+        progressBar.value = i;
+        progressBar.textContent = `${i+1}/${files.length} ${file.name}`;
+      }
+      
+      console.log(`📤 Отправка файла ${i+1}/${files.length}: ${file.name}`);
+      showToast(`Отправка файла ${i+1}/${files.length}...`, true);
+      
+      const response = await fetch(
+        `${endpoints.loadFile}${options.projectID}/files?type=documentation`, 
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Ошибка файла ${file.name}: ${errorData.message || response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Файл ${file.name} успешно обработан:`, result);
+    }
+    
+    showToast(`Все файлы (${files.length}) успешно отправлены`, true);
+    console.log('✅ Все файлы успешно обработаны');
+    
+    // Активируем кнопки для следующих действий
+    document.getElementById('check-result').disabled = false;
+    document.getElementById('download-assurance').disabled = false;
+    
+  } catch (error) {
+    console.error('❌ Ошибка при отправке файлов:', error);
+    showToast(error.message || 'Ошибка при отправке файлов', false);
+    throw error;
+    
+  } finally {
+    startBtn.disabled = false;
+    startBtn.classList.remove('loading');
+    loadingIndicator.hidden = true;
+    if (progressBar) {
+      progressBar.hidden = true;
+    }
+  }
 }
 
 /**
