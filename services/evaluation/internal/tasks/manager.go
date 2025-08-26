@@ -67,7 +67,7 @@ func (tm *taskManager) SubmitTask(task Task) error {
 	case tm.taskQueue <- taskItem:
 		tm.stats.TotalTasks++
 		tm.stats.PendingTasks++
-		log.Printf("Task submitted: %s for project %d, priority: %d",
+		log.Printf("Task submitted for project %d, priority: %d",
 			task.GetProjectID(), task.GetPriority())
 		return nil
 	default:
@@ -166,7 +166,7 @@ func (tm *taskManager) worker(ctx context.Context, workerID int) {
 func (tm *taskManager) executeTask(ctx context.Context, taskItem taskItem, workerID int) {
 	startTime := time.Now()
 
-	log.Printf("Worker %d executing task %s for project %d",
+	log.Printf("Worker %d executing task for project %d",
 		workerID, taskItem.task.GetProjectID())
 
 	// Выполняем задачу
@@ -179,11 +179,11 @@ func (tm *taskManager) executeTask(ctx context.Context, taskItem taskItem, worke
 	tm.stats.PendingTasks--
 	if err != nil {
 		tm.stats.FailedTasks++
-		log.Printf("Worker %d failed task %s for project %d: %v",
+		log.Printf("Worker %d failed task for project %d: %v",
 			workerID, taskItem.task.GetProjectID(), err)
 	} else {
 		tm.stats.CompletedTasks++
-		log.Printf("Worker %d completed task %s for project %d in %dms",
+		log.Printf("Worker %d completed task for project %d in %dms",
 			workerID, taskItem.task.GetProjectID(), duration)
 	}
 	tm.mu.Unlock()
