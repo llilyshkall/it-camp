@@ -1,0 +1,620 @@
+/* ===== СПЕЦИФИЧНЫЕ СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ ===== */
+
+/* Дополнительные CSS переменные для мобильных */
+:root {
+  --mobile-scale: 1;
+  --touch-target-size: 36px;
+  --mobile-border-radius: 16px;
+  --mobile-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  --mobile-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Базовые стили для мобильных устройств */
+@media (max-width: 768px) {
+  /* Улучшенная типографика */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    font-size: 16px; /* Предотвращает масштабирование на iOS */
+  }
+  
+  /* Улучшенные ссылки */
+  a {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+  
+  /* Улучшенные кнопки */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    cursor: pointer;
+    outline: none;
+  }
+  
+  /* Улучшенные input'ы */
+  input, textarea, select {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0;
+    font-family: inherit;
+    font-size: inherit;
+  }
+  
+  /* Убираем стрелки у input[type="number"] на iOS */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+  
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  
+  /* Улучшенные скроллбары */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--bg-2);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--panel-bd);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--blue-300);
+  }
+  
+  /* Улучшенные выделения */
+  ::selection {
+    background: var(--blue-500);
+    color: white;
+  }
+  
+  ::-moz-selection {
+    background: var(--blue-500);
+    color: white;
+  }
+}
+
+/* Специфичные стили для очень маленьких экранов */
+@media (max-width: 360px) {
+  :root {
+    --mobile-scale: 0.9;
+    --touch-target-size: 48px;
+    --mobile-border-radius: 12px;
+  }
+  
+  /* Уменьшаем размеры шрифтов */
+  .card h3 {
+    font-size: 18px;
+  }
+  
+  .step-title {
+    font-size: 15px;
+  }
+  
+  .step-desc {
+    font-size: 13px;
+  }
+  
+  .sublead {
+    font-size: 14px;
+  }
+  
+  /* Уменьшаем отступы */
+  .card {
+    padding: 14px;
+  }
+  
+  .card-lg {
+    padding: 18px;
+  }
+  
+  .hero {
+    padding: 20px 0;
+  }
+  
+  .section {
+    padding: 20px 0;
+  }
+  
+  .stack {
+    gap: 14px;
+  }
+}
+
+/* Специфичные стили для планшетов */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --mobile-scale: 0.95;
+    --touch-target-size: 40px;
+    --mobile-border-radius: 18px;
+  }
+  
+  /* Оптимизируем для планшетов */
+  .container {
+    padding: 0 24px;
+  }
+  
+  .card {
+    padding: 24px;
+  }
+  
+  .card-lg {
+    padding: 32px;
+  }
+  
+  .hero {
+    padding: 60px 0;
+  }
+  
+  .section {
+    padding: 48px 0;
+  }
+  
+  .stack {
+    gap: 28px;
+  }
+}
+
+/* Специфичные стили для ландшафтной ориентации на мобильных */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Уменьшаем высоту hero секции */
+  .hero {
+    padding: 24px 0;
+  }
+  
+  .hero h1 {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+  
+  .hero .lead {
+    font-size: 15px;
+  }
+  
+  /* Оптимизируем навигацию */
+  .nav-dropdown {
+    padding: 12px;
+  }
+  
+  .nav-menu {
+    padding: 8px 0;
+  }
+  
+  .nav-menu-link {
+    padding: 10px 16px;
+  }
+  
+  /* Оптимизируем карточки */
+  .card {
+    padding: 16px;
+  }
+  
+  .card-lg {
+    padding: 20px;
+  }
+  
+  /* Оптимизируем шаги */
+  .steps {
+    padding: 20px 0;
+  }
+  
+  .step {
+    padding: 16px;
+  }
+  
+  .step-num {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Специфичные стили для устройств с высоким DPI */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Улучшенные границы */
+  .card,
+  .btn,
+  .dropzone,
+  .modal-dialog {
+    border-width: 0.5px;
+  }
+  
+  /* Улучшенные тени */
+  .card:hover,
+  .btn:hover,
+  .step:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Улучшенные градиенты */
+  .btn-primary,
+  .step-num,
+  .card-icon {
+    background-image: linear-gradient(135deg, var(--blue-600), var(--blue-500));
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой hover */
+@media (hover: hover) and (pointer: fine) {
+  /* Улучшенные hover эффекты только для устройств с мышью */
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--mobile-shadow);
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+  
+  .step:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--mobile-shadow);
+  }
+  
+  .nav-menu-link:hover {
+    background: var(--bg-2);
+    transform: translateX(4px);
+  }
+  
+  .custom-select-option:hover {
+    background: var(--bg-2);
+  }
+  
+  .proj-item:hover {
+    background: var(--bg-2);
+  }
+}
+
+/* Специфичные стили для устройств без поддержки hover */
+@media (hover: none) and (pointer: coarse) {
+  /* Убираем hover эффекты для touch устройств */
+  .card:hover,
+  .btn:hover,
+  .step:hover,
+  .nav-menu-link:hover,
+  .custom-select-option:hover,
+  .proj-item:hover {
+    transform: none;
+    box-shadow: none;
+    background: none;
+  }
+  
+  /* Добавляем активные состояния для touch */
+  .card:active,
+  .btn:active,
+  .step:active {
+    transform: scale(0.98);
+  }
+  
+  .nav-menu-link:active,
+  .custom-select-option:active,
+  .proj-item:active {
+    background: var(--bg-2);
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .nav-dropdown,
+  .modal-dialog,
+  .card,
+  .step {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+  /* Автоматическая темная тема для систем, которые её поддерживают */
+  html:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #0b1220;
+    --bg-2: #0f172a;
+    --panel: rgba(18, 26, 40, 0.76);
+    --panel-bd: rgba(120, 180, 255, 0.20);
+    --text: #edf2ff;
+    --muted: #a8b3cf;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  /* Автоматическая светлая тема для систем, которые её поддерживают */
+  html:not([data-theme="dark"]):not([data-theme="light"]) {
+    --bg: #f7fbff;
+    --bg-2: #eef5ff;
+    --panel: rgba(255, 255, 255, 0.98);
+    --panel-bd: rgba(10, 80, 170, 0.10);
+    --text: #0a1f33;
+    --muted: #5a6b82;
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой safe-area-inset */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    /* Учитываем безопасные области (notch, home indicator) */
+    .nav-dropdown {
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+    
+    .container {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+    
+    .modal {
+      padding: max(16px, env(safe-area-inset-top)) 
+               max(16px, env(safe-area-inset-right))
+               max(16px, env(safe-area-inset-bottom))
+               max(16px, env(safe-area-inset-left));
+    }
+    
+    .toast {
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: max(20px, env(safe-area-inset-left));
+      right: max(20px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой viewport-fit */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    /* Учитываем viewport-fit для устройств с notch */
+    .nav-dropdown {
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Дополнительные утилитарные классы для мобильных */
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-visible {
+    display: block !important;
+  }
+  
+  .mobile-text-center {
+    text-align: center !important;
+  }
+  
+  .mobile-text-left {
+    text-align: left !important;
+  }
+  
+  .mobile-text-right {
+    text-align: right !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .mobile-no-margin {
+    margin: 0 !important;
+  }
+  
+  .mobile-no-padding {
+    padding: 0 !important;
+  }
+  
+  .mobile-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+  
+  .mobile-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .mobile-flex-center {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  
+  .mobile-flex-between {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  
+  .mobile-flex-start {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+  }
+  
+  .mobile-flex-end {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Grid */
+@supports (display: grid) {
+  @media (max-width: 768px) {
+    .mobile-grid-auto-fit {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+      gap: 16px !important;
+    }
+    
+    .mobile-grid-2 {
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 16px !important;
+    }
+    
+    .mobile-grid-3 {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 16px !important;
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Flexbox */
+@supports (display: flex) {
+  @media (max-width: 768px) {
+    .mobile-flex-wrap {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 16px !important;
+    }
+    
+    .mobile-flex-column {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+    }
+    
+    .mobile-flex-row {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 16px !important;
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Custom Properties */
+@supports (--custom: property) {
+  @media (max-width: 768px) {
+    .mobile-scale {
+      transform: scale(var(--mobile-scale)) !important;
+    }
+    
+    .mobile-touch-target {
+      min-height: var(--touch-target-size) !important;
+      min-width: var(--touch-target-size) !important;
+    }
+    
+    .mobile-border-radius {
+      border-radius: var(--mobile-border-radius) !important;
+    }
+    
+    .mobile-shadow {
+      box-shadow: var(--mobile-shadow) !important;
+    }
+    
+    .mobile-transition {
+      transition: var(--mobile-transition) !important;
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Backdrop Filter */
+@supports (backdrop-filter: blur(10px)) {
+  @media (max-width: 768px) {
+    .mobile-backdrop {
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+    }
+    
+    .nav-dropdown {
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+    }
+    
+    .modal {
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Scroll Snap */
+@supports (scroll-snap-type: y mandatory) {
+  @media (max-width: 768px) {
+    .mobile-scroll-snap {
+      scroll-snap-type: y mandatory !important;
+      scroll-behavior: smooth !important;
+    }
+    
+    .mobile-scroll-snap-item {
+      scroll-snap-align: start !important;
+    }
+    
+    .nav-menu {
+      scroll-snap-type: y mandatory !important;
+      scroll-behavior: smooth !important;
+    }
+    
+    .nav-menu-item {
+      scroll-snap-align: start !important;
+    }
+  }
+}
+
+/* Специфичные стили для устройств с поддержкой CSS Container Queries */
+@supports (container-type: inline-size) {
+  @media (max-width: 768px) {
+    .mobile-container {
+      container-type: inline-size !important;
+    }
+    
+    @container (max-width: 400px) {
+      .mobile-responsive {
+        font-size: 14px !important;
+        padding: 12px !important;
+      }
+    }
+    
+    @container (max-width: 300px) {
+      .mobile-responsive {
+        font-size: 12px !important;
+        padding: 8px !important;
+      }
+    }
+  }
+}

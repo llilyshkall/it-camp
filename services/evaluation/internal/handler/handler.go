@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"evaluation/internal/services"
 	"evaluation/internal/tasks"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -99,10 +101,188 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// SendFile godoc
+// @Summary Send file
+// @Description Send file
+// @ID sendFile
+// @Accept  json
+// @Produce  octet-stream
+// @Success 200 {file} file "File attachment"
+// @Failure 400 {object} Error "bad request"
+// @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
+// @Router /file [get]
+func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
+	// Разрешить CORS для всех источников (для разработки)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Обработка preflight-запроса
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file location"), m.ErrServerError500))
+	}
+	filename := "aed85cd5-53d7-4eb6-a106-4deee07ed2a1.xlsx"
+	filePath := dir + "/" + filename
+	//filepath = ""
+	log.Println(filePath)
+	// // Проверяем существование файла
+	// if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	// 	http.Error(w, "File not found", http.StatusNotFound)
+	// 	return
+	// }
+
+	// // Получаем имя файла из пути
+	// _, fileName := filepath.Split(filePath)
+
+	//json.NewEncoder(w).Encode(&m.Response{Body: filePath})
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Header().Set("Content-Transfer-Encoding", "binary")
+	w.Header().Set("Expires", "0")
+	http.ServeFile(w, r, filePath)
+}
+
+// SendProjectRemarks godoc
+// @Summary Send Project Remarks
+// @Description Get remarks for specific project and forward to external service
+// @ID sendProjectRemarks
+// @Accept  json
+// @Produce json
+// @Param project_id path string true "Project ID"
+// @Success 200 {object} Response "Success response"
+// @Failure 400 {object} Error "bad request"
+// @Failure 404 {object} Error "project not found"
+// @Failure 500 {object} Error "internal server error"
+// @Router /projects/{project_id}/remarks [post]
+func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
+	// CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Handle preflight request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	// Extract project_id from path
+	// vars := mux.Vars(r)
+	// projectID := vars["project_id"]
+	if projectID == 0 {
+		returnErrorJSON(w, m.StacktraceError(errors.New("project_id is required"), m.ErrBadRequest400))
+		return
+	}
+
+	// Get project data from database
+	// projectRemarks, err := h.Repository.GetProjectByID(projectID)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("project %s not found", projectID), m.ErrNotFound404))
+	// 	} else {
+	// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+	// 	}
+	// 	return
+	// }
+	projectRemarks := map[string]interface{}{
+		"None": []string{
+			"Показать, как прогнозируется распространение водонасыщенных линз в геологической модели и их влияние на НГЗ",
+			"ТРебуется более криичное рассмотрение геологии в районе грабена",
+		},
+		"development": []string{
+			"Система ППД необоснована",
+		},
+		"geological": []string{
+			"Неочевидно влияние переходной зоны",
+		},
+		"hydrodynamic_integrated": []string{
+			"моделей нет почему",
+		},
+		"petrophysical": []string{
+			"Запланировать исследования керна по скважине 8306 на расклинивающий эффект",
+			"Привести данные лабораторных исследований параметра пористости на графике Рп-Кп по скважине 8306 в пластовых условиях",
+			"Провести сравнительный анализ результатов комплекса ГИС \"новых\" и \"исторических\" скважин.",
+		},
+		"reassessment": []string{
+			"Привести на отдельном слайде сравнение плановых и фактических показателей по скважинам ОПР. Показать плановые и фактические показатели Кпрод на исторических скважинах.",
+			"При обосновании контактов по блокам на планшетах показать фактические притоки по испытаниям в колонне или открытом стволе",
+		},
+		"seismogeological": []string{
+			"Провести ретроспективный анализ прогнозной способности куба АИ эффективных толщин по циклитам. Сравнить плановые показатели песчанистости из ГМ 2022 г и фактические показатели, полученные в скважинах ОПР. Показать отклонения в цифрах.",
+		},
+		// Вложенная карта для ключей
+		"keys": map[string]string{
+			"reassessment":            "Программа доизучения (ГРР и ОПР)",
+			"seismogeological":        "Сейсмогеологическая модель",
+			"petrophysical":           "Петрофизическая модель",
+			"geological":              "Геологическая модель",
+			"development":             "Разработка и прогноз технологических показателей добычи",
+			"hydrodynamic_integrated": "Гидродинамическая и интегрированная модели",
+		},
+	}
+	// Prepare request to external service
+	externalURL := "http://127.0.0.1:8083/remarks"
+	jsonData, err := json.Marshal(projectRemarks)
+	if err != nil {
+		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+		return
+	}
+
+	// Send request to external service
+	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("failed to send remarks to external service: %v", err), m.ErrServerError500))
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check external service response
+	if resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		returnErrorJSON(w, m.StacktraceError(
+			fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body)),
+			m.ErrServerError500,
+		))
+		return
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Remarks for project %s processed successfully", projectID),
+	})
+}
+
 // ========== PROJECT HANDLERS ==========
 
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.ListProjects(w, r)
@@ -115,6 +295,13 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 
 // HandleProject обрабатывает запросы к /api/projects/{id}
 func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.GetProject(w, r)
@@ -125,6 +312,13 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 
 // HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
 func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodPost:
 		h.UploadProjectFile(w, r)
