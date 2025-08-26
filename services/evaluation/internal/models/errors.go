@@ -13,6 +13,9 @@ var ErrForbidden403 = errors.New("forbidden")
 var ErrNotFound404 = errors.New("not found - Requested entity is not found in database")
 var ErrConflict409 = errors.New("conflict - UserDB already exists")
 var ErrProjectAlreadyProcessing = errors.New("project is already being processed - cannot upload files while processing")
+var ErrChecklistStillGenerating = errors.New("checklist is still being generated - please wait")
+var ErrRemarksStillProcessing = errors.New("remarks are still being processed - please wait")
+var ErrFinalReportStillGenerating = errors.New("final report is still being generated - please wait")
 var ErrServerError500 = errors.New("internal server error - Request is valid but operation failed at server side")
 var ErrServerError503 = errors.New("service unavailable")
 
@@ -51,6 +54,18 @@ func CheckError(err error) (int, string) {
 
 	if errors.Is(err, ErrProjectAlreadyProcessing) {
 		return 409, ErrProjectAlreadyProcessing.Error()
+	}
+
+	if errors.Is(err, ErrChecklistStillGenerating) {
+		return 409, ErrChecklistStillGenerating.Error()
+	}
+
+	if errors.Is(err, ErrRemarksStillProcessing) {
+		return 409, ErrRemarksStillProcessing.Error()
+	}
+
+	if errors.Is(err, ErrFinalReportStillGenerating) {
+		return 409, ErrFinalReportStillGenerating.Error()
 	}
 
 	if errors.Is(err, ErrBadRequest400) {

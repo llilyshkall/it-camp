@@ -15,6 +15,7 @@ type Repository interface {
 	CreateProjectFile(ctx context.Context, projectID int32, filename, originalName, filePath string, fileSize int64, extension string, fileType db.FileType) (*db.ProjectFile, error)
 	CheckAndUpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error)
 	UpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error)
+	GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error)
 	SaveAttach(file *models.Attach) (string, error)
 }
 
@@ -37,6 +38,9 @@ type ProjectService interface {
 type FileService interface {
 	UploadProjectFile(ctx context.Context, projectID int32, file io.Reader, filename, fileType string, fileSize int64) (*db.ProjectFile, error)
 	GenerateFinalReport(ctx context.Context, projectID int32) error
+	GetChecklist(ctx context.Context, projectID int32) (interface{}, error)
+	GetRemarksClustered(ctx context.Context, projectID int32) (interface{}, error)
+	GetFinalReport(ctx context.Context, projectID int32) (interface{}, error)
 }
 
 // HealthService интерфейс для проверки состояния сервиса

@@ -168,6 +168,42 @@ paths:
           schema:
             $ref: '#/definitions/handler.Error'
       summary: Get project by ID
+  /projects/{id}/checklist:
+    get:
+      consumes:
+      - application/json
+      description: Get checklist result for a specific project
+      operationId: getChecklist
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Checklist result
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad request - invalid project ID
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "409":
+          description: Checklist is still being generated
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Get project checklist
   /projects/{id}/files:
     post:
       consumes:
@@ -212,6 +248,41 @@ paths:
             $ref: '#/definitions/handler.Error'
       summary: Upload file to project
   /projects/{id}/final_report:
+    get:
+      consumes:
+      - application/json
+      description: Get final report result for a specific project
+      operationId: getFinalReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Final report result
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad request - invalid project ID
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "409":
+          description: Final report is still being generated
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Get final report for project
     post:
       consumes:
       - application/json
@@ -247,4 +318,40 @@ paths:
           schema:
             $ref: '#/definitions/handler.Error'
       summary: Generate final report for project
+  /projects/{id}/remarks_clustered:
+    get:
+      consumes:
+      - application/json
+      description: Get clustered remarks result for a specific project
+      operationId: getRemarksClustered
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Clustered remarks result
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad request - invalid project ID
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "409":
+          description: Remarks are still being processed
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Get clustered remarks for project
 swagger: "2.0"

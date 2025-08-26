@@ -8,9 +8,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	m "evaluation/internal/models"
+
+	"github.com/gorilla/mux"
 )
 
 // @title API
@@ -162,22 +163,16 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлекаем ID проекта из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 4 {
-		log.Println("Invalid project files path")
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Проверяем, что путь содержит /files
-	if pathParts[3] != "files" {
-		log.Printf("Invalid path segment: expected 'files', got '%s'", pathParts[3])
-		returnErrorJSON(w, m.ErrBadRequest400)
-		return
-	}
-
-	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid project ID format: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
@@ -264,15 +259,16 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлекаем ID из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 3 {
-		log.Println("Invalid project ID path")
+	// Извлекаем ID из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	id, err := strconv.ParseInt(pathParts[2], 10, 32)
+	id, err := strconv.ParseInt(projectIDStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid project ID format: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
@@ -350,22 +346,16 @@ func (h *Handler) GenerateFinalReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлекаем ID проекта из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 4 {
-		log.Println("Invalid final report path")
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Проверяем, что путь содержит /final_report
-	if pathParts[3] != "final_report" {
-		log.Printf("Invalid path segment: expected 'final_report', got '%s'", pathParts[3])
-		returnErrorJSON(w, m.ErrBadRequest400)
-		return
-	}
-
-	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid project ID format: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
@@ -388,5 +378,173 @@ func (h *Handler) GenerateFinalReport(w http.ResponseWriter, r *http.Request) {
 			"message":    "Final report generation started",
 			"project_id": projectID,
 		},
+	})
+}
+
+// HandleGetChecklist обрабатывает запросы к /api/projects/{id}/checklist
+func (h *Handler) HandleGetChecklist(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetChecklist(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleGetRemarksClustered обрабатывает запросы к /api/projects/{id}/remarks_clustered
+func (h *Handler) HandleGetRemarksClustered(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetRemarksClustered(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleGetFinalReport обрабатывает запросы к /api/projects/{id}/final_report
+func (h *Handler) HandleGetFinalReport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetFinalReport(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// GetChecklist godoc
+// @Summary Get project checklist
+// @Description Get checklist result for a specific project
+// @ID getChecklist
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Checklist result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Checklist is still being generated"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/checklist [get]
+func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения чеклиста
+	result, err := h.fileService.GetChecklist(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get checklist for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
+	})
+}
+
+// GetRemarksClustered godoc
+// @Summary Get clustered remarks for project
+// @Description Get clustered remarks result for a specific project
+// @ID getRemarksClustered
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Clustered remarks result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Remarks are still being processed"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/remarks_clustered [get]
+func (h *Handler) GetRemarksClustered(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения кластеризированных замечаний
+	result, err := h.fileService.GetRemarksClustered(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get clustered remarks for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
+	})
+}
+
+// GetFinalReport godoc
+// @Summary Get final report for project
+// @Description Get final report result for a specific project
+// @ID getFinalReport
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Final report result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Final report is still being generated"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/final_report [get]
+func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения финального отчета
+	result, err := h.fileService.GetFinalReport(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get final report for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
 	})
 }

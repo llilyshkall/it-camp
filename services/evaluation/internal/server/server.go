@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"evaluation/internal/config"
 	"evaluation/internal/handler"
@@ -13,6 +12,7 @@ import (
 
 	_ "evaluation/internal/handler/docs"
 
+	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -29,42 +29,32 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	// Создаем единый хендлер
 	handler := handler.New(projectService, fileService, healthService, taskManager)
 
-	// Настраиваем роутинг
-	mux := http.NewServeMux()
+	// Создаем роутер с gorilla/mux
+	r := mux.NewRouter()
 
 	// Health check endpoint
-	mux.HandleFunc("/health", handler.Health)
+	r.HandleFunc("/health", handler.Health).Methods("GET")
 
 	// API endpoints
-	mux.HandleFunc("/api/projects", handler.HandleProjects)
+	r.HandleFunc("/api/projects", handler.HandleProjects).Methods("GET", "POST")
 
-	// Для работы с конкретным проектом используем более специфичные пути
-	mux.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
-		// Извлекаем путь и определяем, какой хендлер использовать
-		path := r.URL.Path
+	// Специфичные пути для проектов с поддержкой параметров
+	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST")
 
-		// Если путь заканчивается на /files, используем HandleProjectFiles
-		if strings.HasSuffix(path, "/files") {
-			handler.HandleProjectFiles(w, r)
-			return
-		}
+	// GET ручки для получения результатов обработки
+	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleGetChecklist).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks_clustered", handler.HandleGetRemarksClustered).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGetFinalReport).Methods("GET")
 
-		// Если путь заканчивается на /final_report, используем HandleGenerateFinalReport
-		if strings.HasSuffix(path, "/final_report") {
-			handler.HandleGenerateFinalReport(w, r)
-			return
-		}
-
-		// Иначе используем HandleProject для получения/обновления проекта
-		handler.HandleProject(w, r)
-	})
-
-	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
+	// Swagger docs
+	r.PathPrefix("/api/docs/").Handler(httpSwagger.WrapHandler)
 
 	// Создаем HTTP сервер
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
-		Handler:      mux,
+		Handler:      r,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,

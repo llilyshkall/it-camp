@@ -153,6 +153,105 @@ func (s *fileService) GenerateFinalReport(ctx context.Context, projectID int32) 
 	return nil
 }
 
+// GetChecklist получает результат проверки чеклиста для проекта
+func (s *fileService) GetChecklist(ctx context.Context, projectID int32) (interface{}, error) {
+	// Проверяем статус проекта
+	project, err := s.repo.GetProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если проект в процессе генерации чеклиста, возвращаем ошибку
+	if project.Status == db.ProjectStatusProcessingChecklist {
+		return nil, models.ErrChecklistStillGenerating
+	}
+
+	// Получаем файлы чеклиста
+	files, err := s.repo.GetProjectFilesByType(ctx, projectID, db.FileTypeChecklist)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если файлов нет, возвращаем ошибку
+	if len(files) == 0 {
+		return nil, models.ErrNotFound404
+	}
+
+	// Возвращаем результат
+	return map[string]interface{}{
+		"project_id": projectID,
+		"status":     project.Status,
+		"files":      files,
+		"message":    "Checklist files found",
+	}, nil
+}
+
+// GetRemarksClustered получает кластеризированные замечания для проекта
+func (s *fileService) GetRemarksClustered(ctx context.Context, projectID int32) (interface{}, error) {
+	// Проверяем статус проекта
+	project, err := s.repo.GetProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если проект в процессе обработки замечаний, возвращаем ошибку
+	if project.Status == db.ProjectStatusProcessingRemarks {
+		return nil, models.ErrRemarksStillProcessing
+	}
+
+	// Получаем файлы кластеризированных замечаний
+	files, err := s.repo.GetProjectFilesByType(ctx, projectID, db.FileTypeRemarksClustered)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если файлов нет, возвращаем ошибку
+	if len(files) == 0 {
+		return nil, models.ErrNotFound404
+	}
+
+	// Возвращаем результат
+	return map[string]interface{}{
+		"project_id": projectID,
+		"status":     project.Status,
+		"files":      files,
+		"message":    "Clustered remarks files found",
+	}, nil
+}
+
+// GetFinalReport получает финальный отчет для проекта
+func (s *fileService) GetFinalReport(ctx context.Context, projectID int32) (interface{}, error) {
+	// Проверяем статус проекта
+	project, err := s.repo.GetProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если проект в процессе генерации финального отчета, возвращаем ошибку
+	if project.Status == db.ProjectStatusGeneratingFinalReport {
+		return nil, models.ErrFinalReportStillGenerating
+	}
+
+	// Получаем файлы финального отчета
+	files, err := s.repo.GetProjectFilesByType(ctx, projectID, db.FileTypeFinalReport)
+	if err != nil {
+		return nil, err
+	}
+
+	// Если файлов нет, возвращаем ошибку
+	if len(files) == 0 {
+		return nil, models.ErrNotFound404
+	}
+
+	// Возвращаем результат
+	return map[string]interface{}{
+		"project_id": projectID,
+		"status":     project.Status,
+		"files":      files,
+		"message":    "Final report files found",
+	}, nil
+}
+
 // getContentType определяет MIME тип файла по расширению
 func (s *fileService) getContentType(ext string) string {
 	switch ext {

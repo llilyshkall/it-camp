@@ -77,6 +77,20 @@ func (r *Repository) UpdateProjectStatus(ctx context.Context, projectID int32, n
 	return &project, nil
 }
 
+// GetProjectFilesByType получает файлы проекта по типу
+func (r *Repository) GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error) {
+	arg := db.GetProjectFilesByTypeParams{
+		ProjectID: projectID,
+		FileType:  fileType,
+	}
+
+	files, err := r.querier.GetProjectFilesByType(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
 // CreateProjectFile создает запись о файле проекта
 func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, filename, originalName, filePath string, fileSize int64, extension string, fileType db.FileType) (*db.ProjectFile, error) {
 	arg := db.CreateProjectFileParams{
