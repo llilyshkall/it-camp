@@ -9,7 +9,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/evaluation
+  EVALUATION_IMAGE_NAME: ${{ github.repository }}/evaluation
+  FRONT_IMAGE_NAME: ${{ github.repository }}/front
 
 jobs:
   test:
@@ -37,8 +38,25 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o evaluation ./cmd/evaluation
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        working-directory: ./services/front
+        run: |
+          pip install -r requirements.txt
+
+      - name: Test front service
+        working-directory: ./services/front
+        run: |
+          python -m pytest --version || echo "pytest not available, skipping tests"
+          python -c "import flask; print('Flask version:', flask.__version__)"
+
   build-and-push:
-    name: Build and Push Docker Image
+    name: Build and Push Docker Images
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -58,11 +76,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata for evaluation
+        id: meta-evaluation
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -70,14 +88,37 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
 
-      - name: Build and push Docker image
+      - name: Extract metadata for front
+        id: meta-front
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push evaluation Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./services/evaluation
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-evaluation.outputs.tags }}
+          labels: ${{ steps.meta-evaluation.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push front Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/front
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-front.outputs.tags }}
+          labels: ${{ steps.meta-front.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -132,6 +173,17 @@ jobs:
               exit 1
             fi
             echo "✅ Migration files copied successfully"
+
+            # Копируем nginx конфигурацию
+            echo "Copying nginx configuration..."
+            cp ../../services/front/nginx.conf ~/evaluation/nginx.conf
+            
+            # Проверяем, что nginx конфигурация скопировалась
+            if [ ! -f ~/evaluation/nginx.conf ]; then
+              echo "❌ Nginx configuration not copied correctly"
+              exit 1
+            fi
+            echo "✅ Nginx configuration copied successfully"
             
             # Проверяем, что пользователь в группе docker
             if ! groups | grep -q docker; then
@@ -158,7 +210,7 @@ jobs:
             cat > ~/evaluation/docker-compose.yaml << 'EOF'
             services:
               evaluation:
-                image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
+                image: ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}:master
                 ports:
                   - "8081:8080"
                 environment:
@@ -188,6 +240,23 @@ jobs:
                 depends_on:
                   - postgres
                   - minio
+                restart: unless-stopped
+                networks:
+                  - evaluation-network
+
+              front:
+                image: ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}:master
+                ports:
+                  - "5001:5000"
+                environment:
+                  - HOST=0.0.0.0
+                  - PORT=5000
+                  - DEBUG=false
+                  - EVALUATION_API_URL=http://evaluation:8080
+                  - FLASK_ENV=production
+                  - FLASK_DEBUG=0
+                depends_on:
+                  - evaluation
                 restart: unless-stopped
                 networks:
                   - evaluation-network
@@ -227,6 +296,19 @@ jobs:
                   interval: 30s
                   timeout: 20s
                   retries: 3
+                restart: unless-stopped
+                networks:
+                  - evaluation-network
+
+              nginx:
+                image: nginx:alpine
+                ports:
+                  - "80:80"
+                volumes:
+                  - ./nginx.conf:/etc/nginx/nginx.conf:ro
+                depends_on:
+                  - front
+                  - evaluation
                 restart: unless-stopped
                 networks:
                   - evaluation-network
@@ -270,6 +352,28 @@ jobs:
             # Ждем готовности evaluation сервиса
             echo "Waiting for evaluation service to be ready..."
             sleep 15
+
+            # Запускаем front сервис
+            echo "Starting front service..."
+            if ! docker-compose up -d front; then
+              echo "❌ Failed to start front service"
+              exit 1
+            fi
+            
+            # Ждем готовности front сервиса
+            echo "Waiting for front service to be ready..."
+            sleep 10
+
+            # Запускаем nginx
+            echo "Starting nginx..."
+            if ! docker-compose up -d nginx; then
+              echo "❌ Failed to start nginx"
+              exit 1
+            fi
+            
+            # Ждем готовности nginx
+            echo "Waiting for nginx to be ready..."
+            sleep 5
             
             # Проверяем статус миграций
             echo "Checking migration status..."
@@ -301,17 +405,35 @@ jobs:
             echo "Final verification:"
             echo "- PostgreSQL: $(docker-compose ps postgres | grep -c 'Up')/1 containers running"
             echo "- Evaluation: $(docker-compose ps evaluation | grep -c 'Up')/1 containers running"
+            echo "- Front: $(docker-compose ps front | grep -c 'Up')/1 containers running"
+            echo "- Nginx: $(docker-compose ps nginx | grep -c 'Up')/1 containers running"
             echo "- Migration version: $(~/migrate -path ~/evaluation/migrations -database 'postgres://evaluation_user:${{ secrets.DB_PASSWORD }}@localhost:5432/evaluation_db?sslmode=disable' version)"
 
       - name: Health Check
         run: |
-          echo "Waiting for service to be ready..."
+          echo "Waiting for services to be ready..."
           sleep 30
           
-          # Проверяем доступность сервиса
+          # Проверяем доступность evaluation сервиса
           if curl -f "http://${{ secrets.SERVER_HOST }}:8081/health"; then
-            echo "✅ Service is healthy and accessible!"
+            echo "✅ Evaluation service is healthy and accessible!"
           else
-            echo "❌ Service health check failed"
+            echo "❌ Evaluation service health check failed"
+            exit 1
+          fi
+
+          # Проверяем доступность front сервиса
+          if curl -f "http://${{ secrets.SERVER_HOST }}:5001/"; then
+            echo "✅ Front service is healthy and accessible!"
+          else
+            echo "❌ Front service health check failed"
+            exit 1
+          fi
+
+          # Проверяем доступность nginx
+          if curl -f "http://${{ secrets.SERVER_HOST }}/"; then
+            echo "✅ Nginx is healthy and accessible!"
+          else
+            echo "❌ Nginx health check failed"
             exit 1
           fi

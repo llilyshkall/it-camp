@@ -1,0 +1,5 @@
+torch
+sentence-transformers
+aiohttp
+scikit-learn
+numpy

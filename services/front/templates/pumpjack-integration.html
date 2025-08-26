@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Интеграция Pumpjack</title>
+  
+  <!-- Подключаем стили компонента -->
+  <link rel="stylesheet" href="/static/pumpjack.css">
+  
+  <style>
+    /* Стили вашего основного сайта */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f0f0;
+    }
+    
+    .header {
+      background: #333;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .section {
+      background: white;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .section h2 {
+      color: #333;
+      border-bottom: 2px solid #0a7;
+      padding-bottom: 10px;
+    }
+    
+    .pumpjack-wrapper {
+      margin: 20px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .controls-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .controls-info h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    
+    .controls-info ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .controls-info li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>Ваш сайт</h1>
+    <p>Демонстрация интеграции компонента Pumpjack</p>
+  </div>
+  
+  <div class="content">
+    <div class="section">
+      <h2>О нас</h2>
+      <p>Это пример интеграции анимации pumpjack в ваш существующий сайт. Компонент полностью изолирован и не влияет на ваши стили.</p>
+    </div>
+    
+    <div class="section">
+      <h2>Анимация Pumpjack</h2>
+      <p>Ниже представлена анимация нефтяной качалки с настраиваемыми параметрами:</p>
+      
+      <div class="controls-info">
+        <h4>Управление анимацией:</h4>
+        <ul>
+          <li><strong>Start/Pause</strong> - запуск/остановка анимации</li>
+          <li><strong>Reset</strong> - сброс в начальное положение</li>
+          <li><strong>Speed</strong> - настройка скорости (0.3 - 1.2 циклов/сек)</li>
+          <li><strong>Stroke</strong> - настройка хода качалки (10° - 22°)</li>
+          <li><strong>Show pivots</strong> - показ точек поворота</li>
+        </ul>
+      </div>
+      
+      <!-- Контейнер для анимации -->
+      <div class="pumpjack-wrapper" id="main-pumpjack"></div>
+    </div>
+    
+    <div class="section">
+      <h2>Технические характеристики</h2>
+      <p>Компонент включает в себя:</p>
+      <ul>
+        <li>Полную кинематику механизма</li>
+        <li>Плавную анимацию 60 FPS</li>
+        <li>Адаптивный дизайн</li>
+        <li>Изолированные CSS стили</li>
+        <li>JavaScript API для управления</li>
+      </ul>
+    </div>
+    
+    <div class="section">
+      <h2>Дополнительная анимация</h2>
+      <p>Второй экземпляр с другими настройками:</p>
+      
+      <!-- Второй контейнер для демонстрации -->
+      <div class="pumpjack-wrapper" id="secondary-pumpjack"></div>
+    </div>
+  </div>
+
+  <!-- Подключаем JavaScript компонент -->
+  <script src="/static/pumpjack.js"></script>
+  
+  <script>
+    // Инициализация компонентов после загрузки страницы
+    document.addEventListener('DOMContentLoaded', function() {
+      // Основной экземпляр
+      const mainPumpjack = new PumpjackAnimation('#main-pumpjack', {
+        speed: 0.5,
+        stroke: 18,
+        showPivots: false,
+        autoStart: true
+      });
+      
+      // Дополнительный экземпляр
+      const secondaryPumpjack = new PumpjackAnimation('#secondary-pumpjack', {
+        speed: 0.3,
+        stroke: 22,
+        showPivots: true,
+        autoStart: false
+      });
+      
+      // Пример программного управления
+      setTimeout(() => {
+        secondaryPumpjack.start();
+      }, 3000);
+      
+      // Пример изменения параметров
+      setTimeout(() => {
+        mainPumpjack.setSpeed(0.8);
+        secondaryPumpjack.setStroke(15);
+      }, 8000);
+      
+      // Сохраняем ссылки в глобальной области для отладки
+      window.pumpjacks = {
+        main: mainPumpjack,
+        secondary: secondaryPumpjack
+      };
+      
+      console.log('Pumpjack компоненты инициализированы:', window.pumpjacks);
+    });
+  </script>
+</body>
+</html>
