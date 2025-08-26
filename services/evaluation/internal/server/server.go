@@ -32,6 +32,24 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	// Создаем роутер с gorilla/mux
 	r := mux.NewRouter()
 
+	// Добавляем CORS middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Разрешаем все origin для разработки
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			// Обрабатываем preflight OPTIONS запросы
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// Health check endpoint
 	r.HandleFunc("/health", handler.Health).Methods("GET")
 
