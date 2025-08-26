@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"evaluation/internal/postgres"
+	db "evaluation/internal/postgres/sqlc"
 	"evaluation/internal/repository"
 	"evaluation/internal/storage"
 	"io"
@@ -15,6 +16,8 @@ import (
 	"time"
 
 	m "evaluation/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // @title API
@@ -200,6 +203,149 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
+func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.UploadProjectFile(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// UploadProjectFile godoc
+// @Summary Upload file to project
+// @Description Upload a file to a specific project with specified type
+// @ID uploadProjectFile
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Param file formData file true "File to upload"
+// @Param type query string true "Type of file: documentation, remarks, checklist, final_report, remarks_clustered"
+// @Success 201 {object} db.ProjectFile "File uploaded successfully"
+// @Failure 400 {object} Error "Bad request - invalid input data"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/files [post]
+func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		log.Println("Invalid project files path")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Проверяем, что путь содержит /files
+	if pathParts[3] != "files" {
+		log.Printf("Invalid path segment: expected 'files', got '%s'", pathParts[3])
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Проверяем, что проект существует
+	_, err = h.repo.GetProject(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Project %d not found: %v", projectID, err)
+		returnErrorJSON(w, m.ErrNotFound404)
+		return
+	}
+
+	// Получаем тип файла из query параметров
+	fileTypeStr := r.URL.Query().Get("type")
+	if fileTypeStr == "" {
+		fileTypeStr = "documentation" // По умолчанию документация
+	}
+
+	// Валидируем тип файла
+	var fileType db.FileType
+	switch fileTypeStr {
+	case "documentation":
+		fileType = db.FileTypeDocumentation
+	case "remarks":
+		fileType = db.FileTypeRemarks
+	default:
+		log.Printf("Invalid file type: %s", fileTypeStr)
+		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file type"), m.ErrBadRequest400))
+		return
+	}
+
+	// Ограничиваем размер файла
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
+
+	// Получаем файл из формы
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("Failed to get file: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+	defer file.Close()
+
+	fileName := fileHeader.Filename
+	fileSize := fileHeader.Size
+	log.Printf("Received file: %s, size: %d bytes", fileName, fileSize)
+
+	// Получаем расширение файла
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext == "" {
+		log.Println("File has no extension")
+		returnErrorJSON(w, m.StacktraceError(errors.New("file must have an extension"), m.ErrBadRequest400))
+		return
+	}
+
+	// Определяем MIME тип файла
+	contentType := "application/octet-stream"
+	switch ext {
+	case ".pdf":
+		contentType = "application/pdf"
+	case ".docx":
+		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xlsx":
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".txt":
+		contentType = "text/plain"
+	}
+
+	// Генерируем уникальное имя файла
+	uniqueFileName := uuid.New().String() + ext
+
+	// Загружаем файл в MinIO
+	objectName, err := h.storage.UploadFile(r.Context(), file, uniqueFileName, contentType)
+	if err != nil {
+		log.Printf("Failed to upload file to MinIO: %v", err)
+		returnErrorJSON(w, m.ErrServerError500)
+		return
+	}
+
+	// Создаем запись о файле в базе данных
+	projectFile, err := h.repo.CreateProjectFile(r.Context(), int32(projectID), uniqueFileName, fileName, objectName, fileSize, ext, fileType)
+	if err != nil {
+		log.Printf("Failed to create project file record: %v", err)
+		returnErrorJSON(w, m.ErrServerError500)
+		return
+	}
+
+	// Возвращаем информацию о загруженном файле
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(projectFile)
+
+	// TODO: отправка запроса в llm
 }
 
 // ListProjects godoc

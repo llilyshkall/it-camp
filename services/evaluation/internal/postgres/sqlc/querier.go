@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error)
 	GetProject(ctx context.Context, id int32) (Project, error)
 	ListProjects(ctx context.Context) ([]Project, error)
 }

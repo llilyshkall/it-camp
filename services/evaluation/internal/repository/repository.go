@@ -48,6 +48,25 @@ func (r *Repository) GetProject(ctx context.Context, id int32) (*db.Project, err
 	return &project, nil
 }
 
+// CreateProjectFile создает запись о файле проекта
+func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, filename, originalName, filePath string, fileSize int64, extension string, fileType db.FileType) (*db.ProjectFile, error) {
+	arg := db.CreateProjectFileParams{
+		ProjectID:    projectID,
+		Filename:     filename,
+		OriginalName: originalName,
+		FilePath:     filePath,
+		FileSize:     fileSize,
+		Extension:    extension,
+		FileType:     fileType,
+	}
+
+	file, err := r.querier.CreateProjectFile(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	return &file, nil
+}
+
 // SaveAttach сохраняет информацию о загруженном файле
 func (r *Repository) SaveAttach(file *models.Attach) (string, error) {
 	// Генерируем уникальное имя файла
