@@ -36,7 +36,7 @@ func NewProjectProcessorTask(
 
 // Execute выполняет задачу обработки проекта
 func (pt *ProjectProcessorTask) Execute(ctx context.Context) error {
-	log.Printf("Starting project processing task for project %d, type: %s", pt.projectID)
+	log.Printf("Starting project processing task for project %d", pt.projectID)
 
 	// Получаем информацию о проекте
 	project, err := pt.getProject(ctx)
