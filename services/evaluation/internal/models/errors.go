@@ -12,6 +12,7 @@ var ErrUnauthorized401 = errors.New("unauthorized - Access token is missing or i
 var ErrForbidden403 = errors.New("forbidden")
 var ErrNotFound404 = errors.New("not found - Requested entity is not found in database")
 var ErrConflict409 = errors.New("conflict - UserDB already exists")
+var ErrProjectAlreadyProcessing = errors.New("project is already being processed - cannot upload files while processing")
 var ErrServerError500 = errors.New("internal server error - Request is valid but operation failed at server side")
 var ErrServerError503 = errors.New("service unavailable")
 
@@ -46,6 +47,10 @@ func CheckError(err error) (int, string) {
 
 	if errors.Is(err, ErrConflict409) {
 		return 409, ErrConflict409.Error()
+	}
+
+	if errors.Is(err, ErrProjectAlreadyProcessing) {
+		return 409, ErrProjectAlreadyProcessing.Error()
 	}
 
 	if errors.Is(err, ErrBadRequest400) {

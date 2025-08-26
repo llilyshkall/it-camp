@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"evaluation/internal/config"
 	"evaluation/internal/handler"
-	"evaluation/internal/postgres"
-	"evaluation/internal/repository"
-	"evaluation/internal/storage"
+	"evaluation/internal/services"
 	"evaluation/internal/tasks"
 
 	_ "evaluation/internal/handler/docs"
@@ -18,17 +17,17 @@ import (
 )
 
 type Server struct {
-	httpServer  *http.Server
-	config      *config.Config
-	pgClient    *postgres.Client
-	repo        *repository.Repository
-	storage     storage.FileStorage
-	taskManager tasks.TaskManager
+	httpServer     *http.Server
+	config         *config.Config
+	projectService services.ProjectService
+	fileService    services.FileService
+	healthService  services.HealthService
+	taskManager    tasks.TaskManager
 }
 
-func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage, taskManager tasks.TaskManager) *Server {
+func New(cfg *config.Config, projectService services.ProjectService, fileService services.FileService, healthService services.HealthService, taskManager tasks.TaskManager) *Server {
 	// Создаем единый хендлер
-	handler := handler.New(pgClient, repo, fileStorage, taskManager)
+	handler := handler.New(projectService, fileService, healthService, taskManager)
 
 	// Настраиваем роутинг
 	mux := http.NewServeMux()
@@ -37,10 +36,29 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 	mux.HandleFunc("/health", handler.Health)
 
 	// API endpoints
-	mux.HandleFunc("/api/attach", handler.UploadFile)
 	mux.HandleFunc("/api/projects", handler.HandleProjects)
-	mux.HandleFunc("/api/projects/", handler.HandleProject)
-	mux.HandleFunc("/api/projects/", handler.HandleProjectFiles)
+
+	// Для работы с конкретным проектом используем более специфичные пути
+	mux.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
+		// Извлекаем путь и определяем, какой хендлер использовать
+		path := r.URL.Path
+
+		// Если путь заканчивается на /files, используем HandleProjectFiles
+		if strings.HasSuffix(path, "/files") {
+			handler.HandleProjectFiles(w, r)
+			return
+		}
+
+		// Если путь заканчивается на /final_report, используем HandleGenerateFinalReport
+		if strings.HasSuffix(path, "/final_report") {
+			handler.HandleGenerateFinalReport(w, r)
+			return
+		}
+
+		// Иначе используем HandleProject для получения/обновления проекта
+		handler.HandleProject(w, r)
+	})
+
 	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
 
 	// Создаем HTTP сервер
@@ -53,11 +71,12 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 	}
 
 	return &Server{
-		httpServer: httpServer,
-		config:     cfg,
-		pgClient:   pgClient,
-		repo:       repo,
-		storage:    fileStorage,
+		httpServer:     httpServer,
+		config:         cfg,
+		projectService: projectService,
+		fileService:    fileService,
+		healthService:  healthService,
+		taskManager:    taskManager,
 	}
 }
 

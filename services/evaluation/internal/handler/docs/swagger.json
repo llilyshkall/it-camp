@@ -15,51 +15,238 @@
         },
         "version": "1.0"
     },
-    "host": "127.0.0.1:8080",
+    "host": "127.0.0.1:8081",
     "basePath": "/api",
     "paths": {
-        "/attach": {
+        "/projects": {
+            "get": {
+                "description": "Get list of all projects",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get all projects",
+                "operationId": "listProjects",
+                "responses": {
+                    "200": {
+                        "description": "List of projects",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/db.Project"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            },
             "post": {
-                "description": "Upload attach",
+                "description": "Create a new project with name",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create new project",
+                "operationId": "createProject",
+                "parameters": [
+                    {
+                        "description": "Project data",
+                        "name": "project",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Project created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{id}": {
+            "get": {
+                "description": "Get specific project by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get project by ID",
+                "operationId": "getProject",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project found",
+                        "schema": {
+                            "$ref": "#/definitions/db.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid project ID",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{id}/files": {
+            "post": {
+                "description": "Upload a file to a specific project with specified type",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Upload attach",
-                "operationId": "uploadAttach",
+                "summary": "Upload file to project",
+                "operationId": "uploadProjectFile",
                 "parameters": [
                     {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "type": "file",
-                        "description": "attach",
+                        "description": "File to upload",
                         "name": "file",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "type: excel or doc",
+                        "description": "Type of file: documentation, remarks, checklist, final_report, remarks_clustered",
                         "name": "type",
                         "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "ok",
+                    "202": {
+                        "description": "File uploaded successfully",
                         "schema": {
-                            "$ref": "#/definitions/handler.Response"
+                            "$ref": "#/definitions/db.ProjectFile"
                         }
                     },
                     "400": {
-                        "description": "bad request",
+                        "description": "Bad request - invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/handler.Error"
                         }
                     },
                     "500": {
-                        "description": "internal Server Error - Request is valid but operation failed at server side",
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{id}/final_report": {
+            "post": {
+                "description": "Generate final report for a specific project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Generate final report for project",
+                "operationId": "generateFinalReport",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Final report generation started",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid project ID",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Project is already being processed",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.Error"
                         }
@@ -69,6 +256,87 @@
         }
     },
     "definitions": {
+        "db.FileType": {
+            "type": "string",
+            "enum": [
+                "documentation",
+                "checklist",
+                "remarks",
+                "remarks_clustered",
+                "final_report"
+            ],
+            "x-enum-varnames": [
+                "FileTypeDocumentation",
+                "FileTypeChecklist",
+                "FileTypeRemarks",
+                "FileTypeRemarksClustered",
+                "FileTypeFinalReport"
+            ]
+        },
+        "db.Project": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/db.ProjectStatus"
+                }
+            }
+        },
+        "db.ProjectFile": {
+            "type": "object",
+            "properties": {
+                "extension": {
+                    "type": "string"
+                },
+                "file_path": {
+                    "type": "string"
+                },
+                "file_size": {
+                    "type": "integer"
+                },
+                "file_type": {
+                    "$ref": "#/definitions/db.FileType"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "original_name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "uploaded_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "db.ProjectStatus": {
+            "type": "string",
+            "enum": [
+                "ready",
+                "processing_remarks",
+                "processing_checklist",
+                "generating_final_report"
+            ],
+            "x-enum-varnames": [
+                "ProjectStatusReady",
+                "ProjectStatusProcessingRemarks",
+                "ProjectStatusProcessingChecklist",
+                "ProjectStatusGeneratingFinalReport"
+            ]
+        },
         "handler.Error": {
             "type": "object",
             "properties": {
@@ -79,6 +347,18 @@
             "type": "object",
             "properties": {
                 "body": {}
+            }
+        },
+        "models.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                }
             }
         }
     }

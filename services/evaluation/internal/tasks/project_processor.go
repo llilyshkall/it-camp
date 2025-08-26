@@ -100,15 +100,6 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 
 	// TODO: process remarks
 
-	// Обновляем статус проекта
-	querier := db.New(pt.pgClient.DB)
-	_, err := querier.UpdateProjectStatus(ctx, db.UpdateProjectStatusParams{
-		ID:     pt.projectID,
-		Status: db.ProjectStatusProcessingChecklist,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update project status: %w", err)
-	}
 
 	log.Printf("Successfully processed remarks for project %d", pt.projectID)
 	return nil
@@ -123,16 +114,6 @@ func (pt *ProjectProcessorTask) generateChecklist(ctx context.Context, project *
 
 	// TODO: generate checklist
 
-	// Обновляем статус проекта
-	querier := db.New(pt.pgClient.DB)
-	_, err := querier.UpdateProjectStatus(ctx, db.UpdateProjectStatusParams{
-		ID:     pt.projectID,
-		Status: db.ProjectStatusGeneratingFinalReport,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update project status: %w", err)
-	}
-
 	log.Printf("Successfully generated checklist for project %d", pt.projectID)
 	return nil
 }
@@ -145,16 +126,6 @@ func (pt *ProjectProcessorTask) generateFinalReport(ctx context.Context, project
 	time.Sleep(4 * time.Second)
 
 	// TODO: generate final report
-
-	// Обновляем статус проекта на завершенный
-	querier := db.New(pt.pgClient.DB)
-	_, err := querier.UpdateProjectStatus(ctx, db.UpdateProjectStatusParams{
-		ID:     pt.projectID,
-		Status: db.ProjectStatusReady,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update project status: %w", err)
-	}
 
 	log.Printf("Successfully generated final report for project %d", pt.projectID)
 	return nil

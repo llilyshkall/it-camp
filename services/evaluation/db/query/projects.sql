@@ -18,3 +18,11 @@ UPDATE projects
 SET status = $2
 WHERE id = $1
 RETURNING id, name, created_at, status;
+
+-- name: CheckAndUpdateProjectStatus :one
+-- Атомарно проверяет статус проекта и обновляет его, если он "ready"
+-- Возвращает ошибку, если статус не "ready"
+UPDATE projects 
+SET status = $2
+WHERE id = $1 AND status = 'ready'
+RETURNING id, name, created_at, status;

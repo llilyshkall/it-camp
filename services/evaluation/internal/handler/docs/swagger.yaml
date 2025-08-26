@@ -1,5 +1,63 @@
 basePath: /api
 definitions:
+  db.FileType:
+    enum:
+    - documentation
+    - checklist
+    - remarks
+    - remarks_clustered
+    - final_report
+    type: string
+    x-enum-varnames:
+    - FileTypeDocumentation
+    - FileTypeChecklist
+    - FileTypeRemarks
+    - FileTypeRemarksClustered
+    - FileTypeFinalReport
+  db.Project:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/db.ProjectStatus'
+    type: object
+  db.ProjectFile:
+    properties:
+      extension:
+        type: string
+      file_path:
+        type: string
+      file_size:
+        type: integer
+      file_type:
+        $ref: '#/definitions/db.FileType'
+      filename:
+        type: string
+      id:
+        type: integer
+      original_name:
+        type: string
+      project_id:
+        type: integer
+      uploaded_at:
+        type: string
+    type: object
+  db.ProjectStatus:
+    enum:
+    - ready
+    - processing_remarks
+    - processing_checklist
+    - generating_final_report
+    type: string
+    x-enum-varnames:
+    - ProjectStatusReady
+    - ProjectStatusProcessingRemarks
+    - ProjectStatusProcessingChecklist
+    - ProjectStatusGeneratingFinalReport
   handler.Error:
     properties:
       error: {}
@@ -8,7 +66,15 @@ definitions:
     properties:
       body: {}
     type: object
-host: 127.0.0.1:8080
+  models.CreateProjectRequest:
+    properties:
+      name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    type: object
+host: 127.0.0.1:8081
 info:
   contact:
     email: support@swagger.io
@@ -22,19 +88,105 @@ info:
   title: API
   version: "1.0"
 paths:
-  /attach:
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all projects
+      operationId: listProjects
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of projects
+          schema:
+            items:
+              $ref: '#/definitions/db.Project'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Get all projects
+    post:
+      consumes:
+      - application/json
+      description: Create a new project with name
+      operationId: createProject
+      parameters:
+      - description: Project data
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Project created successfully
+          schema:
+            $ref: '#/definitions/db.Project'
+        "400":
+          description: Bad request - invalid input data
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Create new project
+  /projects/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get specific project by its ID
+      operationId: getProject
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project found
+          schema:
+            $ref: '#/definitions/db.Project'
+        "400":
+          description: Bad request - invalid project ID
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Get project by ID
+  /projects/{id}/files:
     post:
       consumes:
       - multipart/form-data
-      description: Upload attach
-      operationId: uploadAttach
+      description: Upload a file to a specific project with specified type
+      operationId: uploadProjectFile
       parameters:
-      - description: attach
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: File to upload
         in: formData
         name: file
         required: true
         type: file
-      - description: 'type: excel or doc'
+      - description: 'Type of file: documentation, remarks, checklist, final_report,
+          remarks_clustered'
         in: query
         name: type
         required: true
@@ -42,18 +194,57 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: ok
+        "202":
+          description: File uploaded successfully
           schema:
-            $ref: '#/definitions/handler.Response'
+            $ref: '#/definitions/db.ProjectFile'
         "400":
-          description: bad request
+          description: Bad request - invalid input data
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
           schema:
             $ref: '#/definitions/handler.Error'
         "500":
-          description: internal Server Error - Request is valid but operation failed
-            at server side
+          description: Internal server error
           schema:
             $ref: '#/definitions/handler.Error'
-      summary: Upload attach
+      summary: Upload file to project
+  /projects/{id}/final_report:
+    post:
+      consumes:
+      - application/json
+      description: Generate final report for a specific project
+      operationId: generateFinalReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Final report generation started
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad request - invalid project ID
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "409":
+          description: Project is already being processed
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: Generate final report for project
 swagger: "2.0"

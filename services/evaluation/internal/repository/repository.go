@@ -48,6 +48,35 @@ func (r *Repository) GetProject(ctx context.Context, id int32) (*db.Project, err
 	return &project, nil
 }
 
+// CheckAndUpdateProjectStatus атомарно проверяет и обновляет статус проекта
+// Возвращает ошибку, если проект не найден или статус не "ready"
+func (r *Repository) CheckAndUpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error) {
+	arg := db.CheckAndUpdateProjectStatusParams{
+		ID:     projectID,
+		Status: newStatus,
+	}
+
+	project, err := r.querier.CheckAndUpdateProjectStatus(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
+// UpdateProjectStatus обновляет статус проекта
+func (r *Repository) UpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error) {
+	arg := db.UpdateProjectStatusParams{
+		ID:     projectID,
+		Status: newStatus,
+	}
+
+	project, err := r.querier.UpdateProjectStatus(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 // CreateProjectFile создает запись о файле проекта
 func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, filename, originalName, filePath string, fileSize int64, extension string, fileType db.FileType) (*db.ProjectFile, error) {
 	arg := db.CreateProjectFileParams{

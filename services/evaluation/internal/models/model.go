@@ -26,3 +26,8 @@ type Error struct {
 type Response struct {
 	Body interface{} `json:"body,omitempty"`
 }
+
+// CreateProjectRequest структура запроса для создания проекта
+type CreateProjectRequest struct {
+	Name string `json:"name" validate:"required,max=255"`
+}

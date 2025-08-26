@@ -9,6 +9,32 @@ import (
 	"context"
 )
 
+const checkAndUpdateProjectStatus = `-- name: CheckAndUpdateProjectStatus :one
+UPDATE projects 
+SET status = $2
+WHERE id = $1 AND status = 'ready'
+RETURNING id, name, created_at, status
+`
+
+type CheckAndUpdateProjectStatusParams struct {
+	ID     int32         `json:"id"`
+	Status ProjectStatus `json:"status"`
+}
+
+// Атомарно проверяет статус проекта и обновляет его, если он "ready"
+// Возвращает ошибку, если статус не "ready"
+func (q *Queries) CheckAndUpdateProjectStatus(ctx context.Context, arg CheckAndUpdateProjectStatusParams) (Project, error) {
+	row := q.db.QueryRowContext(ctx, checkAndUpdateProjectStatus, arg.ID, arg.Status)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Status,
+	)
+	return i, err
+}
+
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (name, status)
 VALUES ($1, $2)
