@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pumpjack — PyScript + SVG</title>
+
+  <!-- PyScript 2024 (CDN) -->
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.6.2/core.css">
+  <script defer src="https://pyscript.net/releases/2024.6.2/core.js"></script>
+
+  <style>
+    :root { --fg:#111; --muted:#666; --accent:#0a7; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin:0; color:var(--fg); background:#fafafa; }
+    header { padding:14px 16px 8px; background:#fff; border-bottom:1px solid #e6e6e6; position:sticky; top:0; z-index:2; }
+    .controls { display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center; }
+    .controls .group { display:flex; align-items:center; gap:8px; }
+    button { padding:7px 14px; border:1px solid #ccc; background:#fff; border-radius:8px; cursor:pointer; }
+    button:active { transform:translateY(1px); }
+    input[type="range"] { width:220px; }
+    label { font-size:14px; color:var(--fg); }
+    small.hint { color:var(--muted); margin-left:6px; }
+    .wrap { max-width:980px; margin:0 auto; padding:12px 16px 24px; }
+    svg { width:100%; height:auto; display:block; background:linear-gradient(180deg,#f6f6f8 0,#f7f7f9 60%,#f2f2f2 100%); border:1px solid #e6e6e6; border-radius:10px; }
+    .silhouette { fill:#000; stroke:none; }
+    .line { stroke:#000; fill:none; stroke-width:6; vector-effect:non-scaling-stroke; }
+    .thin  { stroke-width:3; vector-effect:non-scaling-stroke; }
+    .pivot { fill:#0ab; stroke:none; }
+    .hidden { display:none; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="controls">
+        <div class="group">
+          <button id="btnStart">Start</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnReset">Reset</button>
+        </div>
+
+        <div class="group">
+          <label for="speed">Speed</label>
+          <input id="speed" type="range" min="0.3" max="1.2" step="0.01" value="0.40">
+          <output id="speedOut">0.40</output><small class="hint">cycles/s</small>
+        </div>
+
+        <div class="group">
+          <label for="stroke">Stroke</label>
+          <input id="stroke" type="range" min="10" max="22" step="0.1" value="18">
+          <output id="strokeOut">18.0</output><small class="hint">deg swing</small>
+        </div>
+
+        <div class="group">
+          <label><input id="showPivots" type="checkbox"> Show pivots</label>
+        </div>
+      </div>
+    </header>
+
+    <!-- 900×600 canvas; scales with viewBox -->
+    <svg id="scene" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet" aria-label="Pumpjack animation">
+      <!-- GROUND -->
+      <rect x="0" y="540" width="900" height="60" class="silhouette" opacity="0.15"></rect>
+
+      <!-- TOWER -->
+      <g id="tower" class="silhouette">
+        <!-- Base plinth -->
+        <rect x="350" y="520" width="200" height="20"></rect>
+        <!-- Truss tower -->
+        <polygon points="380,520 520,520 480,260 420,260" />
+        <!-- Braces -->
+        <path d="M398 520 L438 260 M502 520 L462 260 M380 520 L520 520 M420 260 L438 260 M462 260 L480 260" fill="none" stroke="#000" stroke-width="6" vector-effect="non-scaling-stroke"/>
+      </g>
+
+      <!-- BEAM + HORSEHEAD (rotates around pivot Ox,Oy) -->
+      <g id="beam">
+        <!-- main walking beam body -->
+        <rect id="beamBody" x="280" y="220" width="360" height="30" rx="6" ry="6" class="silhouette"></rect>
+        <!-- bolted plates -->
+        <rect x="430" y="220" width="60" height="30" class="silhouette" opacity="0.75"></rect>
+        <rect x="500" y="220" width="40" height="30" class="silhouette" opacity="0.75"></rect>
+
+        <!-- HORSEHEAD at left end -->
+        <g id="horsehead" class="silhouette">
+          <path d="M280,221 
+                   C260,210 230,205 210,230 
+                   L210,240 
+                   C235,270 270,255 280,250 Z" />
+          <!-- clamp for polished rod -->
+          <rect x="265" y="232" width="14" height="8"></rect>
+        </g>
+      </g>
+
+      <!-- CRANK (disc + arm) -->
+      <g id="crank" class="silhouette">
+        <circle id="crankDisc" cx="740" cy="420" r="32"></circle>
+        <rect x="736" y="385" width="8" height="35"></rect>
+      </g>
+
+      <!-- PITMAN (connecting rod) -->
+      <line id="pitman" class="line" x1="740" y1="420" x2="620" y2="235"></line>
+
+      <!-- POLISHED ROD (vertical) + shoe -->
+      <g id="rod">
+        <line id="polished" class="line" x1="240" y1="240" x2="240" y2="535"></line>
+        <polygon id="shoe" class="silhouette" points="215,540 265,540 240,560"></polygon>
+      </g>
+
+      <!-- Pivots / joints (hidden by default) -->
+      <g id="pivots" class="hidden">
+        <circle id="pivotO" class="pivot" r="6" cx="450" cy="235"></circle>
+        <circle id="pivotC" class="pivot" r="6" cx="740" cy="420"></circle>
+        <circle id="pivotB" class="pivot" r="6" cx="620" cy="235"></circle>
+        <circle id="pivotP" class="pivot" r="6" cx="740" cy="388"></circle>
+      </g>
+
+      <!-- labels (very faint) -->
+      <text x="12" y="24" fill="#999" font-size="12">PyScript + SVG pumpjack demo</text>
+    </svg>
+
+    <p style="margin-top:10px;color:#666;font-size:13px;">Подсказка: Сохраните этот файл как <b>index.html</b> и откройте в браузере. Всё работает офлайн (интернет нужен только для PyScript CDN).</p>
+  </div>
+
+  <py-script>
+from dataclasses import dataclass
+from math import cos, sin, pi, sqrt, atan2, degrees
+from js import document, window
+from pyodide.ffi import create_proxy
+
+# ------------------------------
+# Geometry & configuration
+# ------------------------------
+@dataclass
+class Config:
+    # Key pivots (SVG pixels)
+    OX: float = 450.0   # beam pivot (top of tower)
+    OY: float = 235.0
+    CX: float = 740.0   # crank center
+    CY: float = 420.0
+
+    # Beam geometry: distances from O along beam axis
+    beam_right: float = 210.0  # attachment point to pitman (right of O)
+    beam_left: float  = 210.0  # horsehead distance to left end (for polished rod)
+
+    # Crank-pitman geometry
+    crank_R: float = 56.0      # crank radius (will be auto-calibrated to match stroke)
+    pitman_L: float = 315.0    # pitman length (pin to beam-attach)
+
+    # Polished rod shoe Y
+    rod_bottom_y: float = 540.0
+
+    # Easing time constant for polished-rod top (s)
+    ease_tau: float = 0.09
+
+cfg = Config()
+
+# ------------------------------
+# DOM references
+# ------------------------------
+q = document.getElementById
+g_beam   = q("beam")
+g_hh     = q("horsehead")
+g_crank  = q("crank")
+ln_pit   = q("pitman")
+g_rod    = q("rod")
+ln_pol   = q("polished")
+g_pivots = q("pivots")
+cO = q("pivotO"); cC = q("pivotC"); cB = q("pivotB"); cP = q("pivotP")
+
+# UI
+btnStart  = q("btnStart")
+btnPause  = q("btnPause")
+btnReset  = q("btnReset")
+sl_speed  = q("speed")
+sl_stroke = q("stroke")
+out_speed = q("speedOut")
+out_stroke= q("strokeOut")
+cb_show   = q("showPivots")
+
+# Default runtime state
+running  = True
+freq     = float(sl_speed.value)     # cycles/s
+omega    = 2.0*pi*freq               # rad/s for crank
+stroke_target_deg = float(sl_stroke.value)  # desired swing (+/- deg)
+phi      = 0.0                       # crank angle
+last_ts  = None
+last_theta = 0.0                     # good initial guess
+rod_top_y = cfg.OY                   # smoothed y of polished-rod head
+
+# ------------------------------
+# Kinematics helpers
+# ------------------------------
+def beam_attach(theta: float):
+    """Point on beam (right side) where pitman connects."""
+    bx = cfg.OX + cfg.beam_right * cos(theta)
+    by = cfg.OY + cfg.beam_right * sin(theta)
+    return bx, by
+
+def left_end(theta: float):
+    """Left end (horsehead clamp) point for polished rod."""
+    hx = cfg.OX - cfg.beam_left * cos(theta)
+    hy = cfg.OY - cfg.beam_left * sin(theta)
+    return hx, hy
+
+def crank_pin(phi: float):
+    """Crank-end pin position for given angle."""
+    px = cfg.CX + cfg.crank_R * cos(phi)
+    py = cfg.CY + cfg.crank_R * sin(phi)
+    return px, py
+
+def solve_theta(phi: float, theta0: float):
+    """
+    Solve constraint |B(theta) - P(phi)| = L
+    using 1D Newton iterations on f(theta) = |B - P|^2 - L^2 = 0
+    """
+    px, py = crank_pin(phi)
+    th = theta0
+    for _ in range(8):
+        bx = cfg.OX + cfg.beam_right * cos(th)
+        by = cfg.OY + cfg.beam_right * sin(th)
+        dx = bx - px
+        dy = by - py
+        f  = dx*dx + dy*dy - cfg.pitman_L*cfg.pitman_L
+        if abs(f) < 1e-7:
+            break
+        # derivative: 2*(B - P) • dB/dθ ;  dB/dθ = (-br*sinθ, br*cosθ)
+        dBx = -cfg.beam_right * sin(th)
+        dBy =  cfg.beam_right * cos(th)
+        fp = 2.0*(dx*dBx + dy*dBy)
+        # avoid zero derivative
+        if abs(fp) < 1e-9:
+            fp = 1e-9 if fp >= 0 else -1e-9
+        th -= f / fp
+    return th
+
+def compute_theta_range():
+    """Return (min_theta, max_theta) over one crank cycle for current cfg."""
+    th_min =  1e9
+    th_max = -1e9
+    th = 0.0
+    # sample uniformly
+    for i in range(200):
+        ph = 2*pi * (i/200.0)
+        th = solve_theta(ph, th)
+        if th < th_min: th_min = th
+        if th > th_max: th_max = th
+    return th_min, th_max
+
+def calibrate_crank_radius(target_deg: float):
+    """
+    Binary-search crank_R to match desired swing amplitude (deg).
+    Assumes monotonic relation (larger R -> larger beam swing).
+    Keeps pitman length constant.
+    """
+    global last_theta
+    target = target_deg * pi/180.0
+    # search bounds (pixels)
+    lo, hi = 24.0, 110.0
+    bestR, bestErr = cfg.crank_R, 1e9
+    saveR = cfg.crank_R
+    for _ in range(22):  # ~microsecond work
+        mid = 0.5*(lo+hi)
+        cfg.crank_R = mid
+        tmin, tmax = compute_theta_range()
+        amp = 0.5*(tmax - tmin)
+        err = abs(amp - target)
+        if err < bestErr:
+            bestErr = err
+            bestR = mid
+        if amp < target:
+            lo = mid
+        else:
+            hi = mid
+    cfg.crank_R = bestR
+    # after changing geometry, update last_theta using current phi
+    last_theta = solve_theta(phi, last_theta)
+
+# Initial calibration for default stroke
+calibrate_crank_radius(stroke_target_deg)
+
+# ------------------------------
+# DOM update
+# ------------------------------
+def update_dom(theta: float, px: float, py: float, bx: float, by: float, dt: float):
+    # Update BEAM rotation
+    deg = degrees(theta)
+    g_beam.setAttribute("transform", f"rotate({deg} {cfg.OX} {cfg.OY})")
+
+    # Update CRANK (decorate: rotate whole crank disc for visual spin)
+    g_crank.setAttribute("transform", f"rotate({degrees(phi)} {cfg.CX} {cfg.CY})")
+
+    # Update PITMAN
+    ln_pit.setAttribute("x1", f"{px:.3f}")
+    ln_pit.setAttribute("y1", f"{py:.3f}")
+    ln_pit.setAttribute("x2", f"{bx:.3f}")
+    ln_pit.setAttribute("y2", f"{by:.3f}")
+
+    # Polished rod: eased vertical motion (cosine ease-in-out)
+    global rod_top_y
+    hx, hy = left_end(theta)
+    # easing factor alpha in [0..1]
+    s = min(1.0, dt / max(1e-6, cfg.ease_tau))
+    alpha = 0.5 * (1.0 - cos(pi * s))  # cosine smooth
+    rod_top_y = rod_top_y + (hy - rod_top_y) * alpha
+
+    ln_pol.setAttribute("x1", f"{hx:.3f}")
+    ln_pol.setAttribute("x2", f"{hx:.3f}")
+    ln_pol.setAttribute("y1", f"{rod_top_y:.3f}")
+    ln_pol.setAttribute("y2", f"{cfg.rod_bottom_y:.3f}")
+
+    # Update optional pivot markers
+    cB.setAttribute("cx", f"{bx:.3f}")
+    cB.setAttribute("cy", f"{by:.3f}")
+    cP.setAttribute("cx", f"{px:.3f}")
+    cP.setAttribute("cy", f"{py:.3f}")
+
+# ------------------------------
+# Animation loop
+# ------------------------------
+def frame(ts_ms):
+    global last_ts, phi, last_theta
+    if last_ts is None:
+        last_ts = ts_ms
+    dt = (ts_ms - last_ts) / 1000.0
+    last_ts = ts_ms
+
+    if running:
+        phi += omega * dt
+
+    # Solve for beam theta given crank angle
+    last_theta = solve_theta(phi, last_theta)
+    bx, by = beam_attach(last_theta)
+    px, py = crank_pin(phi)
+
+    update_dom(last_theta, px, py, bx, by, dt)
+
+    window.requestAnimationFrame(raf_cb)
+
+raf_cb = create_proxy(frame)
+window.requestAnimationFrame(raf_cb)
+
+# ------------------------------
+# UI handlers
+# ------------------------------
+def on_start(evt=None):
+    global running
+    running = True
+
+def on_pause(evt=None):
+    global running
+    running = not running  # toggle
+
+def on_reset(evt=None):
+    global phi, last_theta, rod_top_y, last_ts
+    phi = 0.0
+    last_ts = None
+    last_theta = solve_theta(phi, last_theta)
+    _, hy = left_end(last_theta)
+    rod_top_y = hy
+
+def on_speed(evt=None):
+    global freq, omega
+    freq = float(sl_speed.value)
+    omega = 2.0*pi*freq
+    out_speed.textContent = f"{freq:.2f}"
+
+def on_stroke(evt=None):
+    global stroke_target_deg
+    stroke_target_deg = float(sl_stroke.value)
+    out_stroke.textContent = f"{stroke_target_deg:.1f}"
+    calibrate_crank_radius(stroke_target_deg)
+
+def on_showpivots(evt=None):
+    show = cb_show.checked
+    g_pivots.classList.remove("hidden") if show else g_pivots.classList.add("hidden")
+
+# Bind
+btnStart.addEventListener("click", create_proxy(on_start))
+btnPause.addEventListener("click", create_proxy(on_pause))
+btnReset.addEventListener("click", create_proxy(on_reset))
+sl_speed.addEventListener("input", create_proxy(on_speed))
+sl_stroke.addEventListener("input", create_proxy(on_stroke))
+cb_show.addEventListener("change", create_proxy(on_showpivots))
+
+# Initialize UI readouts and pivots
+out_speed.textContent  = f"{float(sl_speed.value):.2f}"
+out_stroke.textContent = f"{float(sl_stroke.value):.1f}"
+on_showpivots()
+
+# Ensure pivot markers for fixed points are correct
+cO.setAttribute("cx", f"{cfg.OX}"); cO.setAttribute("cy", f"{cfg.OY}")
+cC.setAttribute("cx", f"{cfg.CX}"); cC.setAttribute("cy", f"{cfg.CY}")
+  </py-script>
+</body>
+</html>

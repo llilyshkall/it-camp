@@ -2,9 +2,18 @@
 <html lang="ru" data-theme="">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a73b7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Газпром Проект" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
   <title>{{ page_title }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile-specific.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='oil-rig-animation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='pumpjack.css') }}">
 </head>
 <body>
 <a class="skip-link" href="#main">К содержанию</a>
@@ -23,7 +32,118 @@
 
   <div class="main-nav-wrapper">
     <div class="container header-row">
+      <!-- Кнопка навигации слева -->
+      <div class="left-nav">
+        <button class="nav-toggle btn btn-ghost" id="nav-toggle" aria-haspopup="true" aria-expanded="false" title="Открыть навигацию" aria-label="Открыть меню навигации">
+          <span class="nav-toggle-icon" aria-hidden="true">☰</span>
+        </button>
+        <!-- Всплывающий список навигации -->
+        <div class="nav-dropdown" id="nav-dropdown" hidden>
+          <ul class="nav-menu" id="nav-menu" role="menu">
+            <!-- Основные рабочие вкладки -->
+            <li class="nav-menu-item active">
+              <a href="#assurance-card" class="nav-menu-link" data-target="#assurance-card">
+                <span class="nav-menu-text">Обработка ашуренса</span>
+              </a>
+            </li>
+            <li class="nav-menu-item active">
+              <a href="/dashboards" class="nav-menu-link">
+                <span class="nav-menu-text">Дашборды по проектам</span>
+              </a>
+            </li>
+
+            <li class="nav-menu-item inactive">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Аналитика (скоро)</span>
+              </a>
+            </li>
+            
+            <!-- Разделитель -->
+            <li class="nav-menu-separator"></li>
+            
+            <!-- Системные вкладки (неактивные) -->
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Новости</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Техническая политика</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Технические ашурансы</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Календарь</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Проекты</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Рекомендации</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Библиотека знаний</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Вопрос эксперту</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Извлеченные уроки</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Термины</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Функции</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Пользователи</span>
+              </a>
+            </li>
+            <li class="nav-menu-item system">
+              <a href="#" class="nav-menu-link" onclick="return false;">
+                <span class="nav-menu-text">Полезные ссылки</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div class="wordmark"><a class="wordmark-link" href="#top">ПРОЕКТ ДЛЯ ГАЗПРОМА</a></div>
+
+      <div class="project-ctl" aria-label="Выбор проекта">
+        <div class="proj-dropdown" id="proj-dropdown">
+          <button class="proj-toggle btn btn-outline" id="proj-toggle" aria-haspopup="listbox" aria-expanded="false" title="Нажмите для выбора проекта">
+            <span id="proj-current">Выберите проект</span>
+            <span class="proj-toggle-arrow" aria-hidden="true">▼</span>
+          </button>
+          <ul class="proj-menu" id="proj-menu" role="listbox" tabindex="-1" hidden></ul>
+        </div>
+        <button class="btn btn-primary" id="add-project-btn" type="button">Добавить проект</button>
+      </div>
+
       <nav class="main-nav" aria-label="Основная навигация">
         <a href="#top" data-target="#top" class="nav-link" aria-current="page">Главная</a>
         <a href="#assurance-card" data-target="#assurance-card" class="nav-link">Чек-лист</a>
@@ -37,11 +157,23 @@
 <main id="main">
   <span id="top" class="anchor-offset" aria-hidden="true"></span>
 
-  <!-- HERO без кнопок -->
+  <!-- HERO с анимированной нефтяной вышкой -->
   <section class="hero">
     <div class="container">
-      <h1>Чистая стартовая страница</h1>
-      <p class="lead">Заглушка интерфейса с эстетикой «сине-белого» корпоративного стиля. Без логотипов и товарных знаков. Готово к наполнению.</p>
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1>Чистая стартовая страница</h1>
+          <p class="lead">Заглушка интерфейса с эстетикой «сине-белого» корпоративного стиля. Без логотипов и товарных знаков. Готово к наполнению.</p>
+        </div>
+        <div class="hero-visual">
+          <!-- Анимация Pumpjack -->
+          <div class="pumpjack-container" id="hero-pumpjack">
+            <div class="pumpjack-canvas-container">
+              <canvas id="hero-pumpjack-canvas" width="900" height="600"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -49,9 +181,28 @@
   <section class="steps">
     <div class="container">
       <ol class="steps-grid" aria-label="Этапы процесса">
-        <li class="step" data-target="#assurance-card"><div class="step-num">1</div><div class="step-body"><div class="step-title">Проверка по чек-листу</div><div class="step-desc">Быстрая проверка для ашуранса.</div></div></li>
-        <li class="step" data-target="#remarks-card"><div class="step-num">2</div><div class="step-body"><div class="step-title">Обработка замечаний</div><div class="step-desc">Нормализация Excel и выгрузка.</div></div></li>
-        <li class="step" data-target="#protocol-card"><div class="step-num">3</div><div class="step-body"><div class="step-title">Формирование протокола</div><div class="step-desc">Генерация протокола.</div></div></li>
+        <li class="step" data-target="#assurance-card">
+          <div class="step-num" aria-label="Шаг 1">1</div>
+          <div class="step-body">
+            <div class="step-title">Проверка по чек-листу</div>
+            <div class="step-desc">Быстрая проверка для ашуранса.</div>
+          </div>
+        </li>
+        <li class="step" data-target="#remarks-card">
+          <div class="step-num" aria-label="Шаг 2">2</div>
+          <div class="step-body">
+            <div class="step-title">Обработка замечаний</div>
+            <div class="step-desc">Нормализация Excel и выгрузка.</div>
+          </div>
+        </li>
+        <li class="step" data-target="#protocol-card">
+          <div class="step-num" aria-label="Шаг 3">3</div>
+          <div class="step-body">
+            <div class="step-title">Формирование протокола</div>
+            <div class="step-desc">Генерация протокола.</div>
+          </div>
+        </li>
+
       </ol>
     </div>
   </section>
@@ -69,8 +220,8 @@
           </div>
           <p class="sublead">Загрузите файлы. Допустимые типы: <strong>PDF, DOC(X), XLS(X), CSV, TXT</strong>. До <strong>25&nbsp;МБ</strong> суммарно.</p>
 
-          <div id="dropzone" class="dropzone" aria-label="Зона загрузки файлов" tabindex="0">
-            <input id="file-input" type="file" name="files[]" multiple aria-hidden="true" />
+          <div id="dropzone" class="dropzone" aria-label="Зона загрузки файлов" tabindex="0" role="button" aria-pressed="false">
+            <input id="file-input" type="file" name="files[]" multiple aria-hidden="true" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" />
             <div class="dz-in">
               <strong>Перетащите файлы сюда</strong>
               <span class="dz-sep">или</span>
@@ -85,8 +236,27 @@
             <ul id="verdict-reasons" class="reasons"></ul>
           </div>
 
-          <div class="actions actions--spaced">
-            <button class="btn btn-primary" id="download-assurance" disabled>Отправить чек-лист</button>
+          <!-- Индикатор загрузки с нефтяной вышкой -->
+          <div class="loading-indicator" id="assurance-loading" hidden>
+            <div class="oil-rig-container loading" style="height: 120px; margin: 1rem 0;">
+              <!-- Мини-версия нефтяной вышки для загрузки -->
+            </div>
+            <p class="loading-text">Обрабатываем файлы...</p>
+          </div>
+
+          <div class="actions actions--stacked">
+            <button class="btn btn-primary btn-large" id="start-assurance" disabled>
+              <span class="btn-icon" aria-hidden="true">🚀</span>
+              Начать проверку
+            </button>
+            <button class="btn btn-outline" id="check-result" disabled>
+              <span class="btn-icon" aria-hidden="true">🔍</span>
+              Проверить результат
+            </button>
+            <button class="btn btn-ghost" id="download-assurance" disabled>
+              <span class="btn-icon" aria-hidden="true">📥</span>
+              Скачать отчёт
+            </button>
           </div>
         </div>
 
@@ -96,21 +266,36 @@
             <div class="card-icon" aria-hidden="true">🧾</div>
             <h3>Обработка замечаний</h3>
           </div>
-          <p class="sublead">Загрузите Excel с замечаниями эксперта после ашуранса (<strong>.xls/.xlsx</strong>). Мы подготовим «обработанный реестр замечаний».</p>
+          <p class="sublead">Загрузите Excel файлы с замечаниями эксперта после ашуранса (<strong>.xls/.xlsx</strong>). Мы подготовим «обработанный реестр замечаний» для всех файлов.</p>
 
-          <div id="remarks-zone" class="dropzone" aria-label="Файл замечаний" tabindex="0">
-            <input id="remarks-input" type="file" name="remarks" accept=".xls,.xlsx" aria-hidden="true" />
+          <div id="remarks-zone" class="dropzone" aria-label="Файл замечаний" tabindex="0" role="button" aria-pressed="false">
+            <input id="remarks-input" type="file" name="remarks[]" multiple accept=".xls,.xlsx" aria-hidden="true" />
             <div class="dz-in">
-              <strong>Перетащите Excel сюда</strong>
+              <strong>Перетащите Excel файлы сюда</strong>
               <span class="dz-sep">или</span>
-              <button type="button" id="remarks-pick" class="btn btn-ghost">Выбрать файл</button>
+              <button type="button" id="remarks-pick" class="btn btn-ghost">Выбрать файлы</button>
             </div>
           </div>
 
           <div id="remarks-info" class="upload-info" hidden></div>
 
-          <div class="actions actions--spaced">
-            <button class="btn btn-primary" id="download-remarks" disabled>Отправить реестр замечаний</button>
+          <!-- Индикатор загрузки с нефтяной вышкой -->
+          <div class="loading-indicator" id="remarks-loading" hidden>
+            <div class="oil-rig-container loading" style="height: 120px; margin: 1rem 0;">
+              <!-- Мини-версия нефтяной вышки для загрузки -->
+            </div>
+            <p class="loading-text">Обрабатываем замечания...</p>
+          </div>
+
+          <div class="actions actions--stacked">
+            <button class="btn btn-primary btn-large" id="start-remarks" disabled>
+              <span class="btn-icon" aria-hidden="true">⚙️</span>
+              Обработать замечания
+            </button>
+            <button class="btn btn-outline" id="download-remarks" disabled>
+              <span class="btn-icon" aria-hidden="true">📥</span>
+              Скачать реестр
+            </button>
           </div>
         </div>
 
@@ -120,11 +305,25 @@
             <div class="card-icon" aria-hidden="true">📄</div>
             <h3>Формирование протокола</h3>
           </div>
-          <p class="sublead">Нажмите «Сформировать», и система подготовит  файл протокола.</p>
+          <p class="sublead">Нажмите «Сформировать», и система подготовит файл протокола.</p>
+          
+          <!-- Индикатор загрузки с нефтяной вышкой -->
+          <div class="loading-indicator" id="protocol-loading" hidden>
+            <div class="oil-rig-container loading" style="height: 120px; margin: 1rem 0;">
+              <!-- Мини-версия нефтяной вышки для загрузки -->
+            </div>
+            <p class="loading-text">Формируем протокол...</p>
+          </div>
+          
           <div class="actions">
-            <button class="btn btn-primary" id="make-protocol">Сформировать</button>
+            <button class="btn btn-primary btn-large" id="make-protocol">
+              <span class="btn-icon" aria-hidden="true">📄</span>
+              Сформировать протокол
+            </button>
           </div>
         </div>
+
+
 
       </div>
     </div>
@@ -133,312 +332,528 @@
 
 <footer class="footer">
   <div class="container">
-    <div>
-      <div class="wordmark-sm">Проект для Газпрома</div>
-      <small>Демо-стиль без официальной символики.</small>
+    <div class="footer-content">
+      <div class="footer-main">
+        <div class="wordmark-sm">Проект для Газпрома</div>
+        <small>Демо-стиль без официальной символики.</small>
+      </div>
+      <nav class="footer-nav" aria-label="Вторичная навигация">
+        <a href="#top">Политика</a>
+        <a href="#top">Условия</a>
+        <a href="#top">Контакты</a>
+      </nav>
     </div>
-    <nav class="footer-nav" aria-label="Вторичная навигация">
-      <a href="#top">Политика</a>
-      <a href="#top">Условия</a>
-      <a href="#top">Контакты</a>
-    </nav>
+    <!-- Декоративная нефтяная вышка в футере -->
+    <div class="footer-oil-rig">
+      <div class="oil-rig-container" style="height: 80px; opacity: 0.6;">
+        <!-- Мини-версия нефтяной вышки -->
+      </div>
+    </div>
   </div>
 </footer>
+
+<!-- Modal: Добавить проект -->
+<div id="project-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title" hidden>
+  <div class="modal-backdrop" data-close="modal"></div>
+  <div class="modal-dialog">
+    <div class="modal-head">
+      <h3 id="project-modal-title">Добавить проект</h3>
+    </div>
+    <div class="modal-body">
+      <form id="project-form">
+        <label class="field">
+          <span class="field-label">Название проекта<span aria-hidden="true">*</span></span>
+          <input type="text" id="project-name" required placeholder="Например: Ягодное" />
+        </label>
+        <label class="field">
+          <span class="field-label">Описание проекта</span>
+          <textarea id="project-desc" rows="3" placeholder="Краткое описание или метрики"></textarea>
+        </label>
+      </form>
+    </div>
+    <div class="modal-actions actions">
+      <button class="btn btn-outline" id="cancel-project" type="button" data-close="modal">Отмена</button>
+      <button class="btn btn-primary" id="save-project" type="button">Сохранить</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden>
   <div id="toast-msg"></div>
 </div>
 
+ <!-- Подключение мобильных улучшений -->
+ <script src="{{ url_for('static', filename='mobile-enhancements.js') }}"></script>
+ <!-- Подключение анимации нефтяной вышки -->
+ <script src="{{ url_for('static', filename='oil-rig-animation.js') }}"></script>
+ <!-- Подключение анимации Pumpjack -->
+ <script src="{{ url_for('static', filename='pumpjack.js') }}"></script>
+ <!-- Подключение обработчиков модулей -->
+ <script src="{{ url_for('static', filename='module-handlers.js') }}"></script>
+
 <script>
-  // ===== Переключатель темы (auto → light → dark) =====
-  (function(){
-    const root = document.documentElement;
-    const btn = document.getElementById('theme-toggle');
-    const apply = (mode) => {
-      if (!mode) { root.removeAttribute('data-theme'); btn.textContent='🌙'; return; }
-      root.setAttribute('data-theme', mode);
-      btn.textContent = mode === 'light' ? '🌞' : '🌙';
-    };
-    const saved = localStorage.getItem('theme');
-    apply(saved);
-    btn.addEventListener('click', () => {
-      const current = root.getAttribute('data-theme');
-      let next;
-      if (!current) next = 'light';
-      else if (current === 'light') next = 'dark';
-      else next = null;
-      if (next) localStorage.setItem('theme', next); else localStorage.removeItem('theme');
-      apply(next);
-    });
-  })();
+  document.addEventListener('DOMContentLoaded', function() {
+    // ===== Переключатель темы (auto → light → dark) =====
+    (function(){
+      const root = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const apply = (mode) => {
+        if (!mode) { root.removeAttribute('data-theme'); btn.textContent='🌙'; return; }
+        root.setAttribute('data-theme', mode);
+        btn.textContent = mode === 'light' ? '🌞' : '🌙';
+      };
+      const saved = localStorage.getItem('theme');
+      apply(saved);
+      btn.addEventListener('click', () => {
+        const current = root.getAttribute('data-theme');
+        let next;
+        if (!current) next = 'light';
+        else if (current === 'light') next = 'dark';
+        else next = null;
+        if (next) localStorage.setItem('theme', next); else localStorage.removeItem('theme');
+        apply(next);
+      });
+    })();
 
-  // Плавный скролл
-  function scrollToTarget(sel){const el=document.querySelector(sel); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});}
+    // ===== Левая навигация =====
+    (function(){
+      const navToggle = document.getElementById('nav-toggle');
+      const navDropdown = document.getElementById('nav-dropdown');
+      const navMenu = document.getElementById('nav-menu');
 
-  // Сжатие шапки
-  document.addEventListener('scroll',()=>{const w=document.querySelector('.main-nav-wrapper'); if(w) w.classList.toggle('compact',window.scrollY>16);},{passive:true});
-
-  // Меню и «Ступени»
-  document.querySelectorAll('.nav-link').forEach(a=>{
-    a.addEventListener('click',(e)=>{e.preventDefault(); scrollToTarget(a.getAttribute('data-target')||a.getAttribute('href'));});
-  });
-  document.querySelectorAll('.steps .step').forEach(s=>{
-    s.addEventListener('click',()=> scrollToTarget(s.getAttribute('data-target')));
-  });
-
-  // Подсветка активного пункта меню и шага
-  const anchors=['#top','#assurance-card','#remarks-card','#protocol-card'].map(s=>document.querySelector(s)).filter(Boolean);
-  const nav=[...document.querySelectorAll('.nav-link')];
-  const steps=[...document.querySelectorAll('.steps .step')];
-  const isInView=(el)=>{const r=el.getBoundingClientRect(); return r.top<=140 && r.bottom>=140;};
-  const updateActive=()=>{
-    for(const s of anchors){
-      if(isInView(s)){
-        const id='#'+(s.id||'top');
-        nav.forEach(a=>a.toggleAttribute('aria-current',(a.getAttribute('data-target')===id)||(a.getAttribute('href')===id)));
-        steps.forEach(st=>st.classList.toggle('active', st.getAttribute('data-target')===id));
-        break;
-      }
-    }
-  };
-  updateActive(); document.addEventListener('scroll',()=>requestAnimationFrame(updateActive),{passive:true});
-
-  // Тост
-  function toast(msg, ok=true){
-    const el=document.getElementById('toast'); const text=document.getElementById('toast-msg');
-    text.textContent=msg; el.classList.toggle('bad', !ok); el.hidden=false; el.classList.add('show');
-    setTimeout(()=>el.classList.remove('show'), 2400);
-  }
-
-  // ===== 1) Ашуренс =====
-  (()=>{const dz=document.getElementById('dropzone'); const input=document.getElementById('file-input');
-    const pickBtn=document.getElementById('pick-btn'); const info=document.getElementById('upload-info');
-    const res=document.getElementById('assurance-result'); const badge=document.getElementById('verdict-badge');
-    const reasonsUl=document.getElementById('verdict-reasons'); const downloadBtn=document.getElementById('download-assurance');
-    let lastAssurance=null;
-
-    const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
-    const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false;};
-    const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await fetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
-    const apply=(data)=>{lastAssurance=data; downloadBtn.disabled=false; badge.textContent=data.title||'—'; badge.classList.remove('ok','fail'); badge.classList.add(data.verdict==='ok'?'ok':'fail'); reasonsUl.innerHTML=''; (data.reasons||[]).forEach(t=>{const li=document.createElement('li'); li.textContent=t; reasonsUl.appendChild(li);}); res.hidden=false; toast(data.title, data.verdict==='ok');};
-
-    pickBtn.addEventListener('click',()=>input.click());
-    // input.addEventListener('change',async()=>{const files=input.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
-    input.addEventListener('change', async () => {
-      const files = input.files;
-      if (!files?.length) return;
-
-      showFiles(files);
-      try {
-        const response = await send(files);
-        // Предполагается, что send возвращает объект с данными
-        await apply(response);
-      } catch (error) {
-        // Предположим, что сервер возвращает JSON с причиной ошибки
-        let reasonText = 'Ошибка проверки';
-        if (error instanceof Response) {
-          try {
-            const errorData = await error.json();
-            reasonText = errorData.reasons ? errorData.reasons.join(', ') : reasonText;
-          } catch (_) {
-            // Если не удалось распарсить JSON
-          }
-        }
-        toast(reasonText, false);
-        badge.textContent = reasonText;
-        badge.classList.remove('ok');
-        badge.classList.add('fail');
-        reasonsUl.innerHTML = '';
-        if (error instanceof Response && error.status === 400) {
-          try {
-            const errorData = await error.json();
-            if (errorData.reasons) {
-              reasonsUl.innerHTML = errorData.reasons.map(reason => `<li>${reason}</li>`).join('');
-            }
-          } catch (_) {}
-        } else {
-          reasonsUl.innerHTML = '<li>Не удалось связаться с сервером</li>';
-        }
-        res.hidden = false;
-      }
-    });
-
-    ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
-    ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
-    ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
-    dz.addEventListener('drop',async(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; showFiles(files); try{apply(await send(files));}catch{toast('Ошибка проверки',false); badge.textContent='Ошибка проверки'; badge.classList.remove('ok'); badge.classList.add('fail'); reasonsUl.innerHTML='<li>Не удалось связаться с сервером</li>'; res.hidden=false; }});
-    dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
-
-    // // Скачать TXT-отчёт проверки
-    // downloadBtn.addEventListener('click', () => {
-    //   if (!lastAssurance) return;
-    //   const lines = [
-    //     'ПРОВЕРКА ПО ЧЕК-ЛИСТУ',
-    //     '======================',
-    //     `Вердикт: ${lastAssurance.title || ''}`,
-    //     '',
-    //     'Пояснения:',
-    //     ...(lastAssurance.reasons || []).map((r,i)=>`${i+1}. ${r}`)
-    //   ];
-    //   const blob = new Blob([lines.join('\r\n')], {type: 'text/plain;charset=utf-8'});
-    //   const url = URL.createObjectURL(blob);
-    //   const a = document.createElement('a');
-    //   a.href = url; a.download = 'assurance_report.txt';
-    //   document.body.appendChild(a); a.click(); a.remove();
-    //   URL.revokeObjectURL(url);
-    //   toast('Отчёт по чек-листу сохранён');
-    // });
-      downloadBtn.disabled=false;
-      downloadBtn.addEventListener('click', async () => {
-      try {
-          // Показываем индикатор загрузки
-          downloadBtn.disabled = true;
-          downloadBtn.textContent = 'Загрузка...';
-          
-          // Отправляем запрос на сервер
-          const response = await fetch('http://127.0.0.1:8081/api/file', {
-              method: 'GET',
-              headers: {
-                  'Accept': 'application/octet-stream'
-              }
-          });
-          
-          if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          // Получаем имя файла из заголовков
-          const contentDisposition = response.headers.get('Content-Disposition');
-          let filename = 'report.xlsx'; // значение по умолчанию  
-          if (contentDisposition) {
-              const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
-              if (filenameMatch) filename = filenameMatch[1];
-          }
-          
-          // Создаем Blob из ответа  
-          const blob = await response.blob();
-          
-          // Скачиваем файл
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          
-          // Очистка
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          
-      } catch (error) {
-          console.error('Ошибка при загрузке файла:', error);
-          alert('Не удалось загрузить файл');
-      } finally {
-          // Восстанавливаем кнопку
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = 'Скачать отчет';
-      }
-    });
-  })();
-
-  // ===== 2) Обработка замечаний =====
-  (()=>{const zone=document.getElementById('remarks-zone'); const input=document.getElementById('remarks-input');
-    const pick=document.getElementById('remarks-pick'); const info=document.getElementById('remarks-info');
-    const btn=document.getElementById('download-remarks'); const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
-    const show=(file)=>{info.textContent=`${file.name} — ${(file.size/1024).toFixed(1)} КБ`; info.hidden=false; btn.disabled=false;};
-    //const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
-    //const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false;};
-    //const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await fetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
-    //const apply=(data)=>{lastAssurance=data; downloadBtn.disabled=false; badge.textContent=data.title||'—'; badge.classList.remove('ok','fail'); badge.classList.add(data.verdict==='ok'?'ok':'fail'); reasonsUl.innerHTML=''; (data.reasons||[]).forEach(t=>{const li=document.createElement('li'); li.textContent=t; reasonsUl.appendChild(li);}); res.hidden=false; toast(data.title, data.verdict==='ok');};
-    pick.addEventListener('click',()=>input.click());
-    //input.addEventListener('change',()=>{if(!input.files?.[0]) return; show(input.files[0]);});
-    input.addEventListener('change', async () => {
-      const files = input.files;
-      if (!files?.length) return;
-      show(files);
-    });
-    ['dragenter','dragover','dragleave','drop'].forEach(ev=>zone.addEventListener(ev,stop,false));
-    ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.add('hover'),false));
-    ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.remove('hover'),false));
-    zone.addEventListener('drop',(e)=>{const file=e.dataTransfer.files?.[0]; if(!file) return; input.files=e.dataTransfer.files; show(file);});
-    zone.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
-    // btn.addEventListener('click',async()=>{if(!input.files?.[0]) return; const fd=new FormData(); fd.append('remarks',input.files[0],input.files[0].name);
-    //   const r=await fetch('/remarks',{method:'POST',body:fd}); if(!r.ok){toast('Не удалось обработать файл (.xls/.xlsx)',false); return;}
-    //   const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='remarks_processed.xlsx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Реестр замечаний сформирован');});
-    btn.disabled=false;
-    btn.addEventListener('click', async () => {
-      console.log('1123123')
-      if (!input.files?.[0]) return;
-        file = input.files?.[0];
-        const formData = new FormData();
-        formData.append('file', file); 
-    // Важно: первый параметр 'file' должен совпадать с тем, что ожидает сервер
-    // Второй параметр - сам файл, третий (необязательный) - имя файла
-    //fd.append('file', input.files[0], input.files[0].name);
-    
-    try {
-        let url = "http://127.0.0.1:8081/api/attach?type=excel";
-        const r = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            // Не нужно вручную устанавливать Content-Type для FormData!
-            // Браузер сделает это автоматически с правильным boundary
+      function openNavMenu() {
+        navDropdown.hidden = false;
+        navToggle.setAttribute('aria-expanded', 'true');
+        
+        // Проверяем и корректируем позицию меню
+        adjustMenuPosition();
+        
+        // Добавляем класс для анимации
+        requestAnimationFrame(() => {
+          navDropdown.classList.add('open');
         });
         
-        if (!r.ok) {
-            const error = await r.text();
-            console.error('Ошибка сервера:', error);
-            toast('Не удалось обработать файл: ' + error, false);
-            return;
-        }
-          // url = f"http://127.0.0.1:8080/api/attach?type=excel"
-          // file = request.files.get('remarks')
-          // if not file or not file.filename:
-          //     print('Файл не передан')
-          //     return jsonify({'error': 'Файл не передан'}), 400
-
-          // # file_path = 'путь_к_вашему_файлу.xlsx'
-
-          // # with open(file_path, 'rb') as f:
-          // #     files = {'remarks': f}
-          // #response = requests.post('http://ваш_сервер/remarks', files=file)
-
-
-          // try:
-          //     #data = process_remarks_excel(file)
-          //     response = requests.post(url, files=file)
-          // except Exception as e:
-          //     return jsonify({'error': f'Не удалось обработать файл: {e}'}), 400
-          // if response.status_code == 200:
-          //     #with open('remarks_processed.xlsx', 'wb') as out_file:
-          //         #out_file.write(response.content)
-          //     print("Файл успешно получен и сохранен.")
-          // else:
-          //     print(f"Ошибка: {response.json().get('error')}")
-          
-          // // Обработка успешного ответа (скачивание файла)
-          // const blob = await r.blob();
-          // const url = window.URL.createObjectURL(blob);
-          // const a = document.createElement('a');
-          // a.href = url;
-          // a.download = 'processed_' + input.files[0].name;
-          // document.body.appendChild(a);
-          // a.click();
-          // a.remove();
-          
-      } catch (error) {
-          toast('Ошибка сети', false);
-          console.error(error);
+        // Фокус на первый элемент меню для доступности
+        setTimeout(() => {
+          const firstLink = navMenu.querySelector('.nav-menu-link');
+          if (firstLink) firstLink.focus();
+        }, 100);
       }
-  });
-  })();
 
-  // ===== 3) Формирование протокола =====
-  (()=>{const btn=document.getElementById('make-protocol');
-    btn.addEventListener('click',async()=>{const r=await fetch('/protocol',{method:'POST'}); if(!r.ok){toast('Не удалось сформировать протокол',false); return;}
-      const blob=await r.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='protocol.docx'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Протокол готов');});
-  })();
+      function adjustMenuPosition() {
+        const rect = navDropdown.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        
+        // Если меню выходит за левый край экрана
+        if (rect.left < 0) {
+          navDropdown.style.right = 'auto';
+          navDropdown.style.left = '0';
+          navDropdown.style.transformOrigin = 'top left';
+        } else {
+          navDropdown.style.right = '0';
+          navDropdown.style.left = 'auto';
+          navDropdown.style.transformOrigin = 'top right';
+        }
+        
+        // Если меню слишком широкое для экрана
+        if (rect.width > viewportWidth - 24) {
+          navDropdown.style.width = 'calc(100vw - 24px)';
+          navDropdown.style.maxWidth = 'calc(100vw - 24px)';
+        }
+      }
+
+      function closeNavMenu() {
+        navDropdown.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+        
+        // Ждем окончания анимации перед скрытием
+        setTimeout(() => {
+          navDropdown.hidden = true;
+        }, 300);
+        
+        navToggle.focus();
+      }
+
+      // Переключение меню по клику на кнопку
+      navToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (navDropdown.hidden) {
+          openNavMenu();
+        } else {
+          closeNavMenu();
+        }
+      });
+
+      // Улучшенное закрытие при клике вне меню
+      document.addEventListener('click', (e) => {
+        if (!navToggle.contains(e.target) && !navDropdown.contains(e.target)) {
+          closeNavMenu();
+        }
+      });
+
+      // Закрытие по Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !navDropdown.hidden) {
+          closeNavMenu();
+        }
+      });
+
+      // Закрытие при скролле
+      let scrollTimeout;
+      document.addEventListener('scroll', () => {
+        if (!navDropdown.hidden) {
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => {
+            closeNavMenu();
+          }, 100);
+        }
+      }, { passive: true });
+
+      // Закрытие при изменении размера окна
+      window.addEventListener('resize', () => {
+        if (!navDropdown.hidden) {
+          closeNavMenu();
+        } else {
+          // Если меню закрыто, все равно корректируем позицию для следующего открытия
+          adjustMenuPosition();
+        }
+      });
+
+      // Обработка кликов по ссылкам в меню
+      navMenu.addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-menu-link');
+        if (link) {
+          const target = link.getAttribute('data-target');
+          if (target) {
+            e.preventDefault();
+            closeNavMenu();
+            // Плавный скролл к цели
+            const targetElement = document.querySelector(target);
+            if (targetElement) {
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        }
+      });
+    })();
+
+    // ===== Проекты: хранение, выбор, модалка =====
+    (function(){
+      const STORAGE_KEY = 'projects';
+      const SELECTED_KEY = 'currentProjectId';
+      const defaults = [
+        { id: 'yagodnoe', name: 'Ягодное', description: '' },
+        { id: 'brusnichnoe', name: 'Брусничное', description: '' },
+      ];
+
+      const byId = (id)=>document.getElementById(id);
+      const projToggle = byId('proj-toggle');
+      const projMenu = byId('proj-menu');
+      const projCurrent = byId('proj-current');
+      const addBtn = byId('add-project-btn');
+      const modal = byId('project-modal');
+      const nameInput = byId('project-name');
+      const descInput = byId('project-desc');
+      const saveBtn = byId('save-project');
+
+      function readProjects(){
+        try { const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); return Array.isArray(arr) ? arr : []; } catch { return []; }
+      }
+      function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+      function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
+      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
+
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+
+      function renderMenu(){
+        const list = ensureDefaults();
+        projMenu.innerHTML = '';
+        list.forEach((p, idx)=>{
+          const li = document.createElement('li');
+          li.className = 'proj-item';
+          li.setAttribute('role','option');
+          li.setAttribute('data-id', p.id);
+          li.tabIndex = -1;
+          li.innerHTML = `<span class="proj-dot" aria-hidden="true"></span><span class="proj-name">${p.name}</span>`;
+          li.addEventListener('click', ()=> selectProject(p.id));
+          projMenu.appendChild(li);
+        });
+        const cur = currentProject();
+        projCurrent.textContent = cur ? cur.name : 'Выберите проект';
+        
+        // Устанавливаем атрибут для стилизации кнопки
+        if (cur) {
+          projToggle.setAttribute('data-has-project', 'true');
+        } else {
+          projToggle.removeAttribute('data-has-project');
+        }
+        
+        [...projMenu.children].forEach(li=>{
+          li.setAttribute('aria-selected', li.getAttribute('data-id') === (cur?.id||''));
+        });
+      }
+
+      function openMenu(){ projMenu.hidden = false; projToggle.setAttribute('aria-expanded','true'); }
+      function closeMenu(){ projMenu.hidden = true; projToggle.setAttribute('aria-expanded','false'); }
+
+      function selectProject(id){
+        setSelectedId(id);
+        renderMenu();
+        closeMenu();
+        window.currentProject = currentProject();
+        toast(`Выбран проект: ${window.currentProject?.name||''}`);
+      }
+
+      function uidFromName(name){
+        return name.toLowerCase().trim().replace(/\s+/g,'-').replace(/[^a-zа-я0-9\-]/gi,'').slice(0,40) || ('proj-' + Math.random().toString(36).slice(2,8));
+      }
+
+      function openModal(){ modal.hidden = false; nameInput.value=''; descInput.value=''; nameInput.focus(); }
+      function closeModal(){ modal.hidden = true; }
+
+      function saveProject(){
+        const name = (nameInput.value||'').trim();
+        const desc = (descInput.value||'').trim();
+        if(!name){ nameInput.focus(); nameInput.setAttribute('aria-invalid','true'); toast('Введите название проекта', false); return; }
+        nameInput.removeAttribute('aria-invalid');
+        const list = readProjects();
+        const id = uidFromName(name);
+        if(list.some(p=>p.id===id)){
+          toast('Проект с таким названием уже есть', false);
+          return;
+        }
+        const proj = { id, name, description: desc };
+        list.push(proj);
+        writeProjects(list);
+        setSelectedId(id);
+        renderMenu();
+        window.currentProject = proj;
+        toast('Проект добавлен');
+        closeModal();
+      }
+
+      // Init
+      renderMenu();
+      window.currentProject = currentProject();
+
+      // Dropdown interactions
+      projToggle.addEventListener('click', ()=>{ (projMenu.hidden ? openMenu : closeMenu)(); });
+      document.addEventListener('click', (e)=>{
+        if(!document.getElementById('proj-dropdown').contains(e.target)) closeMenu();
+      });
+      projToggle.addEventListener('keydown', (e)=>{ if(e.key==='ArrowDown'){ e.preventDefault(); openMenu(); projMenu.querySelector('.proj-item')?.focus(); } });
+
+      // Modal interactions
+      addBtn.addEventListener('click', openModal);
+      modal.addEventListener('click', (e)=>{ if(e.target?.dataset?.close==='modal') closeModal(); });
+      document.getElementById('cancel-project').addEventListener('click', closeModal);
+      saveBtn.addEventListener('click', saveProject);
+      modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') saveProject(); });
+
+      // Expose helper fetch wrapper for backend wiring
+      window.apiFetch = function(url, options){
+        const opts = options ? {...options} : {};
+        const headers = new Headers(opts.headers || {});
+        const proj = window.currentProject || currentProject();
+        if(proj){ headers.set('X-Project-Id', proj.id); headers.set('X-Project-Name', encodeURIComponent(proj.name)); }
+        opts.headers = headers;
+        return fetch(url, opts);
+      }
+    })();
+
+    // ===== Инициализация Pumpjack анимации =====
+    (function(){
+      const canvas = document.getElementById('hero-pumpjack-canvas');
+      
+      if (canvas && window.PumpjackAnimation) {
+        // Создаем экземпляр анимации с фиксированными параметрами
+        const pumpjack = new window.PumpjackAnimation(canvas, {
+          width: 900,
+          height: 600,
+          speed: 0.4,
+          stroke: 10,
+          showPivots: false,
+          autoStart: true
+        });
+        
+        // Сохраняем в глобальной области для доступа из других функций
+        window.heroPumpjack = pumpjack;
+        
+        // Клик по canvas для паузы/воспроизведения
+        canvas.addEventListener('click', () => {
+          if (pumpjack.running) {
+            pumpjack.pause();
+          } else {
+            pumpjack.start();
+          }
+        });
+        
+        console.log('Pumpjack анимация инициализирована в hero секции');
+      } else {
+        console.warn('Не удалось инициализировать Pumpjack анимацию');
+      }
+    })();
+
+         // Плавный скролл
+     function scrollToTarget(sel){const el=document.querySelector(sel); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});}
+
+    // Сжатие шапки
+    document.addEventListener('scroll',()=>{const w=document.querySelector('.main-nav-wrapper'); if(w) w.classList.toggle('compact',window.scrollY>16);},{passive:true});
+
+    // Меню и «Ступени»
+    document.querySelectorAll('.nav-link').forEach(a=>{
+      a.addEventListener('click',(e)=>{e.preventDefault(); scrollToTarget(a.getAttribute('data-target')||a.getAttribute('href'));});
+    });
+    document.querySelectorAll('.steps .step').forEach(s=>{
+      s.addEventListener('click',()=> scrollToTarget(s.getAttribute('data-target')));
+    });
+
+    // Подсветка активного пункта меню и шага
+    const anchors=['#top','#assurance-card','#remarks-card','#protocol-card'].map(s=>document.querySelector(s)).filter(Boolean);
+    const nav=[...document.querySelectorAll('.nav-link')];
+    const steps=[...document.querySelectorAll('.steps .step')];
+    const isInView=(el)=>{const r=el.getBoundingClientRect(); return r.top<=140 && r.bottom>=140;};
+    const updateActive=()=>{
+      for(const s of anchors){
+        if(isInView(s)){
+          const id='#'+(s.id||'top');
+          nav.forEach(a=>a.toggleAttribute('aria-current',(a.getAttribute('data-target')===id)||(a.getAttribute('href')===id)));
+          steps.forEach(st=>st.classList.toggle('active', st.getAttribute('data-target')===id));
+          break;
+        }
+      }
+    };
+    updateActive(); document.addEventListener('scroll',()=>requestAnimationFrame(updateActive),{passive:true});
+
+    // Тост
+    function toast(msg, ok=true){
+      const el=document.getElementById('toast'); const text=document.getElementById('toast-msg');
+      text.textContent=msg; el.classList.toggle('bad', !ok); el.hidden=false; el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'), 2400);
+    }
+
+    // ===== 1) Ашуренс =====
+    (()=>{const dz=document.getElementById('dropzone'); const input=document.getElementById('file-input');
+      const pickBtn=document.getElementById('pick-btn'); const info=document.getElementById('upload-info');
+      const res=document.getElementById('assurance-result'); const badge=document.getElementById('verdict-badge');
+      const reasonsUl=document.getElementById('verdict-reasons'); const startBtn=document.getElementById('start-assurance');
+      const downloadBtn=document.getElementById('download-assurance'); const checkResultBtn=document.getElementById('check-result');
+      let lastAssurance=null;
+
+      const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
+      const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
+      const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await apiFetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
+      
+      // Функция для показа результата проверки
+      const showResult=(data)=>{
+        lastAssurance=data;
+        downloadBtn.disabled=false;
+        checkResultBtn.disabled=false;
+        badge.textContent=data.title||'—';
+        badge.classList.remove('ok','fail');
+        badge.classList.add(data.verdict==='ok'?'ok':'fail');
+        reasonsUl.innerHTML='';
+        (data.reasons||[]).forEach(t=>{
+          const li=document.createElement('li');
+          li.textContent=t;
+          reasonsUl.appendChild(li);
+        });
+        res.hidden=false;
+      };
+
+      pickBtn.addEventListener('click',()=>input.click());
+      input.addEventListener('change',()=>{const files=input.files; if(!files?.length) return; showFiles(files);});
+      ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
+      ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
+      ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
+      dz.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
+      dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+
+      // Начать проверку - используем новый обработчик
+      startBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.startAssurance(event, {
+          // Дополнительные параметры для backend API
+          priority: 'normal',
+          notifyOnComplete: true
+        });
+      });
+
+      // Скачать Excel-отчёт проверки с чек-листом - используем новый обработчик
+      downloadBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.downloadAssurance(event, {
+          // Дополнительные параметры для backend API
+          format: 'excel',
+          includeChecklist: true,
+          includeMetadata: true
+        });
+      });
+
+      // Узнать результат проверки - используем новый обработчик
+      checkResultBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.checkResult(event, {
+          // Дополнительные параметры для backend API
+          includeDetails: true,
+          format: 'detailed'
+        });
+      });
+    })();
+
+    // ===== 2) Обработка замечаний =====
+    (()=>{const zone=document.getElementById('remarks-zone'); const input=document.getElementById('remarks-input');
+      const pick=document.getElementById('remarks-pick'); const info=document.getElementById('remarks-info');
+      const startBtn=document.getElementById('start-remarks'); const downloadBtn=document.getElementById('download-remarks');
+      let lastRemarks=null;
+
+      const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
+      const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
+      
+      pick.addEventListener('click',()=>input.click());
+      input.addEventListener('change',()=>{const files=input.files; if(!files?.length) return; showFiles(files);});
+      ['dragenter','dragover','dragleave','drop'].forEach(ev=>zone.addEventListener(ev,stop,false));
+      ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.add('hover'),false));
+      ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,()=>zone.classList.remove('hover'),false));
+      zone.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
+      zone.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+
+      // Начать обработку - используем новый обработчик
+      startBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.startRemarks(event, {
+          // Дополнительные параметры для backend API
+          normalizeExcel: true,
+          generateRegistry: true,
+          outputFormat: 'xlsx'
+        });
+      });
+
+      // Скачать обработанный реестр - используем новый обработчик
+      downloadBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.downloadRemarks(event, {
+          // Дополнительные параметры для backend API
+          format: 'xlsx',
+          includeMetadata: true,
+          includeProcessingInfo: true
+        });
+      });
+    })();
+
+    // ===== 3) Формирование протокола =====
+    (()=>{
+      const btn=document.getElementById('make-protocol');
+      const loadingIndicator = document.getElementById('protocol-loading');
+      
+      btn.addEventListener('click', (event) => {
+        window.moduleHandlers.makeProtocol(event, {
+          // Дополнительные параметры для backend API
+          format: 'docx',
+          includeAttachments: true,
+          template: 'default',
+          language: 'ru'
+        });
+      });
+    })();
+  });
 </script>
 </body>
 </html>
