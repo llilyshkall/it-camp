@@ -50,8 +50,14 @@ docker-build: ## Собрать Docker образ
 docker-compose-up: ## Запустить сервисы через docker-compose
 	@echo "Starting services with docker-compose..."
 	docker-compose up -d
-	@echo "Waiting for PostgreSQL and MinIO to be ready..."
-	sleep 20
+	@echo "Waiting for PostgreSQL to be ready..."
+	@until docker-compose exec -T postgres pg_isready -U evaluation_user -d evaluation_db; do \
+		echo "Waiting for PostgreSQL..."; \
+		sleep 2; \
+	done
+	@echo "PostgreSQL is ready!"
+	@echo "Waiting for MinIO to be ready..."
+	sleep 10
 	@echo "Applying database migrations..."
 	@if command -v migrate >/dev/null 2>&1; then \
 		export PATH=$$PATH:$$(go env GOPATH)/bin; \
