@@ -7,6 +7,7 @@ import (
 	db "evaluation/internal/postgres/sqlc"
 	"evaluation/internal/repository"
 	"evaluation/internal/storage"
+	"evaluation/internal/tasks"
 	"io"
 	"log"
 	"net/http"
@@ -68,17 +69,19 @@ func returnErrorJSON(w http.ResponseWriter, err error) {
 
 // Handler объединяет все HTTP хендлеры
 type Handler struct {
-	pgClient *postgres.Client
-	repo     *repository.Repository
-	storage  storage.FileStorage
+	pgClient    *postgres.Client
+	repo        *repository.Repository
+	storage     storage.FileStorage
+	taskManager tasks.TaskManager
 }
 
 // New создает новый экземпляр хендлера
-func New(pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage) *Handler {
+func New(pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage, taskManager tasks.TaskManager) *Handler {
 	return &Handler{
-		pgClient: pgClient,
-		repo:     repo,
-		storage:  fileStorage,
+		pgClient:    pgClient,
+		repo:        repo,
+		storage:     fileStorage,
+		taskManager: taskManager,
 	}
 }
 

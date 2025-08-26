@@ -12,3 +12,9 @@ ORDER BY created_at DESC;
 INSERT INTO projects (name, status)
 VALUES ($1, $2)
 RETURNING id, name, created_at, status;
+
+-- name: UpdateProjectStatus :one
+UPDATE projects 
+SET status = $2
+WHERE id = $1
+RETURNING id, name, created_at, status;

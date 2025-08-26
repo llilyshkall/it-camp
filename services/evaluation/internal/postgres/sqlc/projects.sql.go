@@ -83,3 +83,27 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 	}
 	return items, nil
 }
+
+const updateProjectStatus = `-- name: UpdateProjectStatus :one
+UPDATE projects 
+SET status = $2
+WHERE id = $1
+RETURNING id, name, created_at, status
+`
+
+type UpdateProjectStatusParams struct {
+	ID     int32         `json:"id"`
+	Status ProjectStatus `json:"status"`
+}
+
+func (q *Queries) UpdateProjectStatus(ctx context.Context, arg UpdateProjectStatusParams) (Project, error) {
+	row := q.db.QueryRowContext(ctx, updateProjectStatus, arg.ID, arg.Status)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.Status,
+	)
+	return i, err
+}

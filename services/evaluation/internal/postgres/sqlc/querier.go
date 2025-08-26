@@ -12,7 +12,10 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error)
 	GetProject(ctx context.Context, id int32) (Project, error)
+	GetProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error)
+	GetProjectFilesByType(ctx context.Context, arg GetProjectFilesByTypeParams) ([]ProjectFile, error)
 	ListProjects(ctx context.Context) ([]Project, error)
+	UpdateProjectStatus(ctx context.Context, arg UpdateProjectStatusParams) (Project, error)
 }
 
 var _ Querier = (*Queries)(nil)

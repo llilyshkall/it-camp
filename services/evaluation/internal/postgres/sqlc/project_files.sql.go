@@ -49,3 +49,88 @@ func (q *Queries) CreateProjectFile(ctx context.Context, arg CreateProjectFilePa
 	)
 	return i, err
 }
+
+const getProjectFiles = `-- name: GetProjectFiles :many
+SELECT id, project_id, filename, original_name, file_path, file_size, extension, file_type, uploaded_at
+FROM project_files
+WHERE project_id = $1
+ORDER BY uploaded_at DESC
+`
+
+func (q *Queries) GetProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectFiles, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProjectFile{}
+	for rows.Next() {
+		var i ProjectFile
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Filename,
+			&i.OriginalName,
+			&i.FilePath,
+			&i.FileSize,
+			&i.Extension,
+			&i.FileType,
+			&i.UploadedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProjectFilesByType = `-- name: GetProjectFilesByType :many
+SELECT id, project_id, filename, original_name, file_path, file_size, extension, file_type, uploaded_at
+FROM project_files
+WHERE project_id = $1 AND file_type = $2
+ORDER BY uploaded_at DESC
+`
+
+type GetProjectFilesByTypeParams struct {
+	ProjectID int32    `json:"project_id"`
+	FileType  FileType `json:"file_type"`
+}
+
+func (q *Queries) GetProjectFilesByType(ctx context.Context, arg GetProjectFilesByTypeParams) ([]ProjectFile, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectFilesByType, arg.ProjectID, arg.FileType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProjectFile{}
+	for rows.Next() {
+		var i ProjectFile
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Filename,
+			&i.OriginalName,
+			&i.FilePath,
+			&i.FileSize,
+			&i.Extension,
+			&i.FileType,
+			&i.UploadedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

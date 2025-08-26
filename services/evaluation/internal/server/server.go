@@ -10,6 +10,7 @@ import (
 	"evaluation/internal/postgres"
 	"evaluation/internal/repository"
 	"evaluation/internal/storage"
+	"evaluation/internal/tasks"
 
 	_ "evaluation/internal/handler/docs"
 
@@ -17,16 +18,17 @@ import (
 )
 
 type Server struct {
-	httpServer *http.Server
-	config     *config.Config
-	pgClient   *postgres.Client
-	repo       *repository.Repository
-	storage    storage.FileStorage
+	httpServer  *http.Server
+	config      *config.Config
+	pgClient    *postgres.Client
+	repo        *repository.Repository
+	storage     storage.FileStorage
+	taskManager tasks.TaskManager
 }
 
-func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage) *Server {
+func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage, taskManager tasks.TaskManager) *Server {
 	// Создаем единый хендлер
-	handler := handler.New(pgClient, repo, fileStorage)
+	handler := handler.New(pgClient, repo, fileStorage, taskManager)
 
 	// Настраиваем роутинг
 	mux := http.NewServeMux()
