@@ -115,16 +115,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
 // @Router /file [get]
 func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
-	// Разрешить CORS для всех источников (для разработки)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// Обработка preflight-запроса
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	dir, err := os.Getwd()
 	if err != nil {
 		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file location"), m.ErrServerError500))
@@ -163,16 +153,6 @@ func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "internal server error"
 // @Router /projects/{project_id}/remarks [post]
 func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
-	// CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// Handle preflight request
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 
 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
@@ -279,13 +259,6 @@ func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
 
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	switch r.Method {
 	case http.MethodGet:
 		h.ListProjects(w, r)
@@ -298,13 +271,6 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 
 // HandleProject обрабатывает запросы к /api/projects/{id}
 func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	switch r.Method {
 	case http.MethodGet:
 		h.GetProject(w, r)
@@ -315,13 +281,6 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 
 // HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
 func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	switch r.Method {
 	case http.MethodPost:
 		h.UploadProjectFile(w, r)
@@ -498,6 +457,25 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "Internal server error"
 // @Router /projects [post]
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
+
+	origin := r.Header.Get("Origin")
+
+	// Разрешаем конкретные origin'ы (настройте под свои нужды)
+	allowedOrigins := map[string]bool{
+		"http://127.0.0.1:5001": true,
+		"http://localhost:5001": true,
+		"http://127.0.0.1:5000": true,
+		"http://localhost:5000": true,
+	}
+
+	if allowedOrigins[origin] {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Max-Age", "3600")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

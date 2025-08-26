@@ -12,7 +12,6 @@
   <title>{{ page_title }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile-specific.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='oil-rig-animation.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pumpjack.css') }}">
 </head>
 <body>
@@ -385,8 +384,6 @@
 
  <!-- Подключение мобильных улучшений -->
  <script src="{{ url_for('static', filename='mobile-enhancements.js') }}"></script>
- <!-- Подключение анимации нефтяной вышки -->
- <script src="{{ url_for('static', filename='oil-rig-animation.js') }}"></script>
  <!-- Подключение анимации Pumpjack -->
  <script src="{{ url_for('static', filename='pumpjack.js') }}"></script>
  <!-- Подключение обработчиков модулей -->
@@ -473,7 +470,7 @@
           navDropdown.hidden = true;
         }, 300);
         
-        navToggle.focus();
+        //navToggle.focus();
       }
 
       // Переключение меню по клику на кнопку
@@ -813,12 +810,9 @@
       dz.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
       dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
 
-      // Начать проверку - используем новый обработчик
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startAssurance(event, {
-          // Дополнительные параметры для backend API
-          priority: 'normal',
-          notifyOnComplete: true
+          projectID: window.currentProject || currentProject()
         });
       });
 

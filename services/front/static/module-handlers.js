@@ -61,7 +61,7 @@ async function createProject(name, desc) {
 /**
  * Обработчик кнопки "Начать проверку"
  * @param {Event} event - Событие клика
- * @param {Object} options - Дополнительные параметры
+ * @param {String} options - Дополнительные параметры
  */
 function handleStartAssurance(event, options = {}) {
   console.log('🔄 Начинаем проверку по чек-листу...');
@@ -93,12 +93,10 @@ function handleStartAssurance(event, options = {}) {
   const formData = new FormData();
   formData.append('file', file); 
   
-  
   //let url = "http://127.0.0.1:8081/api/projects/"+projectId+"/files?type=excel";
-  let url = "http://127.0.0.1:8081/api/attach?type=excel";
+  //let url = "http://127.0.0.1:8081/api/attach?type=excel";
 
-
-    fetch(url, {
+    fetch(endpoints.loadFile + options['projectID'] + "/files?type=documentation", {
             method: 'POST',
             body: formData,
   }).then(response => {
@@ -110,8 +108,8 @@ function handleStartAssurance(event, options = {}) {
       document.getElementById('download-assurance').disabled = false;
     })
     .catch(error => {
-      console.error('❌ Ошибка при запуске проверки:', error);
-      showToast('Ошибка при запуске проверки', false);
+      console.error('❌ Ошибка при отправке файла:', error);
+      showToast('Ошибка при отправке файла:', false);
     })
     .finally(() => {
       startBtn.disabled = false;

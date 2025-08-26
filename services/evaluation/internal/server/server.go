@@ -36,9 +36,24 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Разрешаем все origin для разработки
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			origin := r.Header.Get("Origin")
+
+			// Разрешаем конкретные origin'ы (настройте под свои нужды)
+			allowedOrigins := map[string]bool{
+				"http://127.0.0.1:5001": true,
+				"http://localhost:5001": true,
+				"http://127.0.0.1:5000": true,
+				"http://localhost:5000": true,
+			}
+
+			if allowedOrigins[origin] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "3600")
 
 			// Обрабатываем preflight OPTIONS запросы
 			if r.Method == "OPTIONS" {

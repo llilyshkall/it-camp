@@ -59,10 +59,9 @@ func Load() (*Config, error) {
 			ShutdownTimeout: getEnvAsDuration("SHUTDOWN_TIMEOUT", 30*time.Second),
 		},
 		Postgres: PostgresConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnvAsInt("DB_PORT", 5432),
-			User:     getEnv("DB_USER", "postgres"),
-			//Password: getEnv("DB_PASSWORD", "password"),
+			Host:            getEnv("DB_HOST", "localhost"),
+			Port:            getEnvAsInt("DB_PORT", 5432),
+			User:            getEnv("DB_USER", "postgres"),
 			Password:        getEnv("DB_PASSWORD", "12345"),
 			DBName:          getEnv("DB_NAME", "evaluation"),
 			SSLMode:         getEnv("DB_SSLMODE", "disable"),
