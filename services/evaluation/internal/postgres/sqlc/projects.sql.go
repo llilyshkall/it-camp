@@ -10,40 +10,30 @@ import (
 )
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (name, in_progress)
+INSERT INTO projects (name, status)
 VALUES ($1, $2)
-RETURNING id, name, created_at, in_progress
+RETURNING id, name, created_at, status
 `
 
 type CreateProjectParams struct {
-	Name       string `json:"name"`
-	InProgress bool   `json:"in_progress"`
+	Name   string        `json:"name"`
+	Status ProjectStatus `json:"status"`
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
-	row := q.db.QueryRowContext(ctx, createProject, arg.Name, arg.InProgress)
+	row := q.db.QueryRowContext(ctx, createProject, arg.Name, arg.Status)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.CreatedAt,
-		&i.InProgress,
+		&i.Status,
 	)
 	return i, err
 }
 
-const deleteProject = `-- name: DeleteProject :exec
-DELETE FROM projects
-WHERE id = $1
-`
-
-func (q *Queries) DeleteProject(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteProject, id)
-	return err
-}
-
 const getProject = `-- name: GetProject :one
-SELECT id, name, created_at, in_progress
+SELECT id, name, created_at, status
 FROM projects
 WHERE id = $1
 `
@@ -55,13 +45,13 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.ID,
 		&i.Name,
 		&i.CreatedAt,
-		&i.InProgress,
+		&i.Status,
 	)
 	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, name, created_at, in_progress
+SELECT id, name, created_at, status
 FROM projects
 ORDER BY created_at DESC
 `
@@ -79,7 +69,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.ID,
 			&i.Name,
 			&i.CreatedAt,
-			&i.InProgress,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -94,27 +84,26 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 	return items, nil
 }
 
-const updateProject = `-- name: UpdateProject :one
-UPDATE projects
-SET name = $2, in_progress = $3
+const updateProjectStatus = `-- name: UpdateProjectStatus :one
+UPDATE projects 
+SET status = $2
 WHERE id = $1
-RETURNING id, name, created_at, in_progress
+RETURNING id, name, created_at, status
 `
 
-type UpdateProjectParams struct {
-	ID         int32  `json:"id"`
-	Name       string `json:"name"`
-	InProgress bool   `json:"in_progress"`
+type UpdateProjectStatusParams struct {
+	ID     int32         `json:"id"`
+	Status ProjectStatus `json:"status"`
 }
 
-func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
-	row := q.db.QueryRowContext(ctx, updateProject, arg.ID, arg.Name, arg.InProgress)
+func (q *Queries) UpdateProjectStatus(ctx context.Context, arg UpdateProjectStatusParams) (Project, error) {
+	row := q.db.QueryRowContext(ctx, updateProjectStatus, arg.ID, arg.Status)
 	var i Project
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.CreatedAt,
-		&i.InProgress,
+		&i.Status,
 	)
 	return i, err
 }

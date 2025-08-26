@@ -5,33 +5,125 @@
 package db
 
 import (
-	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"time"
 )
 
+type FileType string
+
+const (
+	FileTypeDocumentation    FileType = "documentation"
+	FileTypeChecklist        FileType = "checklist"
+	FileTypeRemarks          FileType = "remarks"
+	FileTypeRemarksClustered FileType = "remarks_clustered"
+	FileTypeFinalReport      FileType = "final_report"
+)
+
+func (e *FileType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FileType(s)
+	case string:
+		*e = FileType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FileType: %T", src)
+	}
+	return nil
+}
+
+type NullFileType struct {
+	FileType FileType `json:"file_type"`
+	Valid    bool     `json:"valid"` // Valid is true if FileType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFileType) Scan(value interface{}) error {
+	if value == nil {
+		ns.FileType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FileType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFileType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FileType), nil
+}
+
+type ProjectStatus string
+
+const (
+	ProjectStatusReady                 ProjectStatus = "ready"
+	ProjectStatusProcessingRemarks     ProjectStatus = "processing_remarks"
+	ProjectStatusProcessingChecklist   ProjectStatus = "processing_checklist"
+	ProjectStatusGeneratingFinalReport ProjectStatus = "generating_final_report"
+)
+
+func (e *ProjectStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProjectStatus(s)
+	case string:
+		*e = ProjectStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProjectStatus: %T", src)
+	}
+	return nil
+}
+
+type NullProjectStatus struct {
+	ProjectStatus ProjectStatus `json:"project_status"`
+	Valid         bool          `json:"valid"` // Valid is true if ProjectStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProjectStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProjectStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProjectStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProjectStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProjectStatus), nil
+}
+
 type Project struct {
-	ID         int32        `json:"id"`
-	Name       string       `json:"name"`
-	CreatedAt  sql.NullTime `json:"created_at"`
-	InProgress bool         `json:"in_progress"`
+	ID        int32         `json:"id"`
+	Name      string        `json:"name"`
+	CreatedAt time.Time     `json:"created_at"`
+	Status    ProjectStatus `json:"status"`
 }
 
 type ProjectFile struct {
-	ID           int32          `json:"id"`
-	ProjectID    int32          `json:"project_id"`
-	Filename     string         `json:"filename"`
-	OriginalName string         `json:"original_name"`
-	FilePath     string         `json:"file_path"`
-	FileSize     int64          `json:"file_size"`
-	MimeType     sql.NullString `json:"mime_type"`
-	UploadedAt   sql.NullTime   `json:"uploaded_at"`
+	ID           int32     `json:"id"`
+	ProjectID    int32     `json:"project_id"`
+	Filename     string    `json:"filename"`
+	OriginalName string    `json:"original_name"`
+	FilePath     string    `json:"file_path"`
+	FileSize     int64     `json:"file_size"`
+	Extension    string    `json:"extension"`
+	FileType     FileType  `json:"file_type"`
+	UploadedAt   time.Time `json:"uploaded_at"`
 }
 
 type Remark struct {
-	ID         int32        `json:"id"`
-	ProjectID  int32        `json:"project_id"`
-	Direction  string       `json:"direction"`
-	Section    string       `json:"section"`
-	Subsection string       `json:"subsection"`
-	Content    string       `json:"content"`
-	CreatedAt  sql.NullTime `json:"created_at"`
+	ID         int32     `json:"id"`
+	ProjectID  int32     `json:"project_id"`
+	Direction  string    `json:"direction"`
+	Section    string    `json:"section"`
+	Subsection string    `json:"subsection"`
+	Content    string    `json:"content"`
+	CreatedAt  time.Time `json:"created_at"`
 }
