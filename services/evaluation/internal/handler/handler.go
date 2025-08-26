@@ -267,9 +267,6 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 
 	// Получаем тип файла из query параметров
 	fileTypeStr := r.URL.Query().Get("type")
-	if fileTypeStr == "" {
-		fileTypeStr = "documentation" // По умолчанию документация
-	}
 
 	// Валидируем тип файла
 	var fileType db.FileType
