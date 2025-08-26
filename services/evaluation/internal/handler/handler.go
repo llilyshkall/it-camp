@@ -271,7 +271,7 @@ func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
-		"message": fmt.Sprintf("Remarks for project %s processed successfully", projectID),
+		"message": fmt.Sprintf("Remarks for project %d processed successfully", projectID),
 	})
 }
 
