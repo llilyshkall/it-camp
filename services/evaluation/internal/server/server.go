@@ -51,20 +51,20 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	})
 
 	// Health check endpoint
-	r.HandleFunc("/health", handler.Health).Methods("GET")
+	r.HandleFunc("/health", handler.Health).Methods("GET", "OPTIONS")
 
 	// API endpoints
-	r.HandleFunc("/api/projects", handler.HandleProjects).Methods("GET", "POST")
+	r.HandleFunc("/api/projects", handler.HandleProjects).Methods("GET", "POST", "OPTIONS")
 
 	// Специфичные пути для проектов с поддержкой параметров
-	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST")
+	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST", "OPTIONS")
 
 	// GET ручки для получения результатов обработки
-	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleGetChecklist).Methods("GET")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks_clustered", handler.HandleGetRemarksClustered).Methods("GET")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGetFinalReport).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleGetChecklist).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks_clustered", handler.HandleGetRemarksClustered).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGetFinalReport).Methods("GET", "OPTIONS")
 
 	// Swagger docs
 	r.PathPrefix("/api/docs/").Handler(httpSwagger.WrapHandler)
