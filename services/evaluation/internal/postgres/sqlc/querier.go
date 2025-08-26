@@ -11,18 +11,11 @@ import (
 type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error)
-	CreateRemark(ctx context.Context, arg CreateRemarkParams) (Remark, error)
-	DeleteProject(ctx context.Context, id int32) error
-	DeleteProjectFile(ctx context.Context, id int32) error
-	DeleteRemark(ctx context.Context, id int32) error
 	GetProject(ctx context.Context, id int32) (Project, error)
-	GetProjectFile(ctx context.Context, id int32) (ProjectFile, error)
-	GetRemark(ctx context.Context, id int32) (Remark, error)
-	ListProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error)
+	GetProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error)
+	GetProjectFilesByType(ctx context.Context, arg GetProjectFilesByTypeParams) ([]ProjectFile, error)
 	ListProjects(ctx context.Context) ([]Project, error)
-	ListRemarksByProject(ctx context.Context, projectID int32) ([]Remark, error)
-	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
-	UpdateRemark(ctx context.Context, arg UpdateRemarkParams) (Remark, error)
+	UpdateProjectStatus(ctx context.Context, arg UpdateProjectStatusParams) (Project, error)
 }
 
 var _ Querier = (*Queries)(nil)

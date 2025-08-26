@@ -7,22 +7,22 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createProjectFile = `-- name: CreateProjectFile :one
-INSERT INTO project_files (project_id, filename, original_name, file_path, file_size, mime_type)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, project_id, filename, original_name, file_path, file_size, mime_type, uploaded_at
+INSERT INTO project_files (project_id, filename, original_name, file_path, file_size, extension, file_type)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, project_id, filename, original_name, file_path, file_size, extension, file_type, uploaded_at
 `
 
 type CreateProjectFileParams struct {
-	ProjectID    int32          `json:"project_id"`
-	Filename     string         `json:"filename"`
-	OriginalName string         `json:"original_name"`
-	FilePath     string         `json:"file_path"`
-	FileSize     int64          `json:"file_size"`
-	MimeType     sql.NullString `json:"mime_type"`
+	ProjectID    int32    `json:"project_id"`
+	Filename     string   `json:"filename"`
+	OriginalName string   `json:"original_name"`
+	FilePath     string   `json:"file_path"`
+	FileSize     int64    `json:"file_size"`
+	Extension    string   `json:"extension"`
+	FileType     FileType `json:"file_type"`
 }
 
 func (q *Queries) CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error) {
@@ -32,7 +32,8 @@ func (q *Queries) CreateProjectFile(ctx context.Context, arg CreateProjectFilePa
 		arg.OriginalName,
 		arg.FilePath,
 		arg.FileSize,
-		arg.MimeType,
+		arg.Extension,
+		arg.FileType,
 	)
 	var i ProjectFile
 	err := row.Scan(
@@ -42,53 +43,22 @@ func (q *Queries) CreateProjectFile(ctx context.Context, arg CreateProjectFilePa
 		&i.OriginalName,
 		&i.FilePath,
 		&i.FileSize,
-		&i.MimeType,
+		&i.Extension,
+		&i.FileType,
 		&i.UploadedAt,
 	)
 	return i, err
 }
 
-const deleteProjectFile = `-- name: DeleteProjectFile :exec
-DELETE FROM project_files
-WHERE id = $1
-`
-
-func (q *Queries) DeleteProjectFile(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteProjectFile, id)
-	return err
-}
-
-const getProjectFile = `-- name: GetProjectFile :one
-SELECT id, project_id, filename, original_name, file_path, file_size, mime_type, uploaded_at
-FROM project_files
-WHERE id = $1
-`
-
-func (q *Queries) GetProjectFile(ctx context.Context, id int32) (ProjectFile, error) {
-	row := q.db.QueryRowContext(ctx, getProjectFile, id)
-	var i ProjectFile
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
-		&i.Filename,
-		&i.OriginalName,
-		&i.FilePath,
-		&i.FileSize,
-		&i.MimeType,
-		&i.UploadedAt,
-	)
-	return i, err
-}
-
-const listProjectFiles = `-- name: ListProjectFiles :many
-SELECT id, project_id, filename, original_name, file_path, file_size, mime_type, uploaded_at
+const getProjectFiles = `-- name: GetProjectFiles :many
+SELECT id, project_id, filename, original_name, file_path, file_size, extension, file_type, uploaded_at
 FROM project_files
 WHERE project_id = $1
 ORDER BY uploaded_at DESC
 `
 
-func (q *Queries) ListProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error) {
-	rows, err := q.db.QueryContext(ctx, listProjectFiles, projectID)
+func (q *Queries) GetProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectFiles, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +73,53 @@ func (q *Queries) ListProjectFiles(ctx context.Context, projectID int32) ([]Proj
 			&i.OriginalName,
 			&i.FilePath,
 			&i.FileSize,
-			&i.MimeType,
+			&i.Extension,
+			&i.FileType,
+			&i.UploadedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProjectFilesByType = `-- name: GetProjectFilesByType :many
+SELECT id, project_id, filename, original_name, file_path, file_size, extension, file_type, uploaded_at
+FROM project_files
+WHERE project_id = $1 AND file_type = $2
+ORDER BY uploaded_at DESC
+`
+
+type GetProjectFilesByTypeParams struct {
+	ProjectID int32    `json:"project_id"`
+	FileType  FileType `json:"file_type"`
+}
+
+func (q *Queries) GetProjectFilesByType(ctx context.Context, arg GetProjectFilesByTypeParams) ([]ProjectFile, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectFilesByType, arg.ProjectID, arg.FileType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProjectFile{}
+	for rows.Next() {
+		var i ProjectFile
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Filename,
+			&i.OriginalName,
+			&i.FilePath,
+			&i.FileSize,
+			&i.Extension,
+			&i.FileType,
 			&i.UploadedAt,
 		); err != nil {
 			return nil, err
