@@ -8,8 +8,8 @@ import (
 	db "evaluation/internal/postgres/sqlc"
 	"evaluation/internal/repository"
 	"evaluation/internal/storage"
-	"fmt"
 	"evaluation/internal/tasks"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -368,10 +368,18 @@ func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
 		"message": fmt.Sprintf("Remarks for project %s processed successfully", projectID),
 	})
 }
+
 // ========== PROJECT HANDLERS ==========
 
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.ListProjects(w, r)
@@ -384,6 +392,13 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 
 // HandleProject обрабатывает запросы к /api/projects/{id}
 func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.GetProject(w, r)
@@ -394,6 +409,13 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 
 // HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
 func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodPost:
 		h.UploadProjectFile(w, r)

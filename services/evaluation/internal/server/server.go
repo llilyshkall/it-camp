@@ -39,14 +39,14 @@ func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Reposit
 	// API endpoints
 	mux.HandleFunc("/api/attach", handler.UploadFile)
 	mux.HandleFunc("/api/projects", handler.HandleProjects)
-	mux.HandleFunc("/api/projects/", handler.HandleProject)
+	mux.HandleFunc("/api/projects/{id}", handler.HandleProject)
 	// mux.HandleFunc("/api/project-files", handler.HandleProjectFiles)
 	// mux.HandleFunc("/api/project-files/", handler.HandleProjectFile)
 
 	// mux.HandleFunc("/api/attach", handler.UploadFile)
 	// mux.HandleFunc("/api/file", handler.SendFile)
 	// mux.HandleFunc("/api/projects/{project_id}/remarks", handler.SendProjectRemarks)
-	mux.HandleFunc("/api/projects/", handler.HandleProjectFiles)
+	mux.HandleFunc("/api/projects/{id}/files", handler.HandleProjectFiles)
 	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
 
 	// Создаем HTTP сервер

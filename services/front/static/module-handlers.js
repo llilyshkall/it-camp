@@ -2,8 +2,61 @@
  * Обработчики для всех кнопок в модулях
  * Готовы для подключения к backend API
  */
-
+import { endpoints } from './config.js';
 // ===== МОДУЛЬ 1: Проверка по чек-листу =====
+
+
+/**
+ * Обработчик кнопки "Сохранить в попапе добавления проекта"
+ * @param {String} name - Имя проекта
+ * @param {String} desc - Описание проекта
+ */
+async function createProject(name, desc) {
+  console.log('🔄 Создание проекта...');
+  
+  const requestData = {
+    name: name,
+    description: desc
+  };
+
+  const saveBtn = document.getElementById('save-project');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.classList.add('loading');
+  }
+
+  try {
+    const response = await fetch(endpoints.createProject, { 
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Ошибка при создании проекта');
+    }
+
+    const data = await response.json();
+    console.log('✅ Проект создан:', data);
+    showToast('Проект успешно создан', true);
+    return data;
+
+  } catch (error) {
+    console.error('❌ Ошибка создания проекта:', error);
+    showToast(error.message || 'Не удалось создать проект', false);
+    throw error;
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.classList.remove('loading');
+    }
+  }
+}
+  
+
 
 /**
  * Обработчик кнопки "Начать проверку"
@@ -472,7 +525,10 @@ window.moduleHandlers = {
   
   // Вспомогательные функции
   showToast: showToast,
-  showAssuranceResult: showAssuranceResult
+  showAssuranceResult: showAssuranceResult,
+
+  //создать проект
+  createProject: createProject
 };
 
 console.log('✅ Модуль обработчиков загружен и готов к использованию');

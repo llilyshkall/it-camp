@@ -390,9 +390,10 @@
  <!-- Подключение анимации Pumpjack -->
  <script src="{{ url_for('static', filename='pumpjack.js') }}"></script>
  <!-- Подключение обработчиков модулей -->
- <script src="{{ url_for('static', filename='module-handlers.js') }}"></script>
+ <script type="module" src="{{ url_for('static', filename='module-handlers.js') }}"></script>
 
-<script>
+<script type="module">
+  import { endpoints } from '../static/config.js';
   document.addEventListener('DOMContentLoaded', function() {
     // ===== Переключатель темы (auto → light → dark) =====
     (function(){
@@ -485,12 +486,12 @@
         }
       });
 
-      // Улучшенное закрытие при клике вне меню
-      document.addEventListener('click', (e) => {
-        if (!navToggle.contains(e.target) && !navDropdown.contains(e.target)) {
-          closeNavMenu();
-        }
-      });
+      // // Улучшенное закрытие при клике вне меню
+      // document.addEventListener('click', (e) => {
+      //   if (!navToggle.contains(e.target) && !navDropdown.contains(e.target)) {
+      //     closeNavMenu();
+      //   }
+      // });
 
       // Закрытие по Escape
       document.addEventListener('keydown', (e) => {
@@ -543,8 +544,8 @@
       const STORAGE_KEY = 'projects';
       const SELECTED_KEY = 'currentProjectId';
       const defaults = [
-        { id: 'yagodnoe', name: 'Ягодное', description: '' },
-        { id: 'brusnichnoe', name: 'Брусничное', description: '' },
+        // { id: 'yagodnoe', name: 'Ягодное', description: '' },
+        // { id: 'brusnichnoe', name: 'Брусничное', description: '' },
       ];
 
       const byId = (id)=>document.getElementById(id);
@@ -634,7 +635,47 @@
         closeModal();
       }
 
-      // Init
+      async function fetchProjects() {
+        try {
+          //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
+          const response = await fetch(endpoints.getProjects, {method:'GET'});
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          // предполагается, что data — это массив проектов
+          return data;
+        } catch (error) {
+          console.error('Ошибка при получении проектов:', error);
+          return []; // или возвращайте дефолтные проекты
+        }
+      }
+
+      async function getProjects() {
+        const projectsFromBackend = await fetchProjects();
+
+        // Можно сохранить их в localStorage или использовать напрямую
+        // Например, сохранить в localStorage:
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
+        const aCard = byId('assurance-card');
+        const rCard = byId('remarks-card');
+        const pCard = byId('protocol-card');
+        
+        if (projectsFromBackend.length == 0 ) {
+           aCard.hidden = true;
+           rCard.hidden = true;
+           pCard.hidden = true;
+        } else {
+           aCard.hidden = false;
+           rCard.hidden = false;
+           pCard.hidden = false;
+        }
+      }
+          // Init
+      
+      getProjects();
       renderMenu();
       window.currentProject = currentProject();
 
@@ -649,8 +690,9 @@
       addBtn.addEventListener('click', openModal);
       modal.addEventListener('click', (e)=>{ if(e.target?.dataset?.close==='modal') closeModal(); });
       document.getElementById('cancel-project').addEventListener('click', closeModal);
-      saveBtn.addEventListener('click', saveProject);
-      modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') saveProject(); });
+      //saveBtn.addEventListener('click', saveProject);
+      saveBtn.addEventListener('click', (e)=>{ window.moduleHandlers.createProject(nameInput.value, descInput.value); closeModal();});
+      modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') window.moduleHandlers.createProject(nameInput.value, descInput.value); });
 
       // Expose helper fetch wrapper for backend wiring
       window.apiFetch = function(url, options){
