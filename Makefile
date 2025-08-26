@@ -68,7 +68,9 @@ docker-compose-up: ## Запустить сервисы через docker-compos
 		export PATH=$$PATH:$$(go env GOPATH)/bin; \
 		make migrate-up; \
 	fi
-	@echo "Services started! PostgreSQL, MinIO and evaluation service are running."
+	@echo "Services started! PostgreSQL, MinIO, evaluation service, front and nginx are running."
+	@echo "Frontend available at http://localhost:5000"
+	@echo "API available at http://localhost:80/api"
 	@echo "Service available at http://localhost:8081"
 	@echo "MinIO Console available at http://localhost:9001 (minioadmin/minioadmin)"
 	@echo "Use 'make logs' to see logs"
@@ -187,4 +189,21 @@ clean-all: ## Полная очистка
 minio-status: ## Проверить статус MinIO
 	@echo "Checking MinIO status..."
 	@curl -f http://localhost:9000/minio/health/live || echo "MinIO not accessible"
+
+# Команды для front сервиса
+front-build: ## Собрать Docker образ для front
+	@echo "Building front Docker image..."
+	docker build -t evaluation-front:latest services/front
+
+front-run: ## Запустить front локально
+	@echo "Starting front service locally..."
+	cd services/front && python run.py
+
+front-install-deps: ## Установить зависимости для front
+	@echo "Installing front dependencies..."
+	cd services/front && pip install -r requirements.txt
+
+front-clean: ## Очистить front артефакты
+	@echo "Cleaning front artifacts..."
+	cd services/front && make clean
 
