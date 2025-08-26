@@ -231,7 +231,7 @@ func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
 	// // Получаем имя файла из пути
 	// _, fileName := filepath.Split(filePath)
 
-	json.NewEncoder(w).Encode(&m.Response{Body: filePath})
+	//json.NewEncoder(w).Encode(&m.Response{Body: filePath})
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	w.Header().Set("Content-Transfer-Encoding", "binary")

@@ -29,27 +29,26 @@ function handleStartAssurance(event, options = {}) {
   startBtn.disabled = true;
   startBtn.classList.add('loading');
   loadingIndicator.hidden = false;
+
+  if (!files?.[0]){
+      console.error('❌ Нет файлов в приложении:', error);
+      showToast('Нет файлов в приложении', false);
+      return;
+  }
+      
+  let file = files?.[0];
+  const formData = new FormData();
+  formData.append('file', file); 
   
-  // TODO: Здесь будет вызов backend API
-  // Пример структуры запроса:
-  const requestData = {
-    action: 'start_assurance',
-    projectId: window.currentProject?.id,
-    projectName: window.currentProject?.name,
-    files: Array.from(files).map(f => ({
-      name: f.name,
-      size: f.size,
-      type: f.type
-    })),
-    timestamp: new Date().toISOString(),
-    ...options
-  };
   
-  console.log('📤 Данные для отправки на backend:', requestData);
-  
-  // Имитация отправки на backend (заменить на реальный API вызов)
-  simulateBackendCall('/api/assurance/start', requestData)
-    .then(response => {
+  //let url = "http://127.0.0.1:8081/api/projects/"+projectId+"/files?type=excel";
+  let url = "http://127.0.0.1:8081/api/attach?type=excel";
+
+
+    fetch(url, {
+            method: 'POST',
+            body: formData,
+  }).then(response => {
       console.log('✅ Ответ от backend:', response);
       showToast('Проверка запущена успешно');
       
@@ -114,50 +113,70 @@ function handleCheckResult(event, options = {}) {
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
-function handleDownloadAssurance(event, options = {}) {
+async function handleDownloadAssurance(event, options = {}) {
   console.log('📥 Скачиваем отчёт...');
   
   const downloadBtn = document.getElementById('download-assurance');
-  downloadBtn.disabled = true;
-  downloadBtn.classList.add('loading');
-  
-  // TODO: Здесь будет вызов backend API для скачивания отчёта
-  const requestData = {
-    action: 'download_assurance_report',
-    projectId: window.currentProject?.id,
-    format: options.format || 'excel', // excel, pdf, docx
-    timestamp: new Date().toISOString(),
-    ...options
-  };
-  
-  console.log('📤 Запрос на скачивание отчёта:', requestData);
-  
-  // Имитация скачивания отчёта
-  simulateBackendCall('/api/assurance/download', requestData)
-    .then(response => {
-      console.log('✅ Отчёт готов к скачиванию:', response);
-      
-      // Создаем ссылку для скачивания
-      if (response.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = response.downloadUrl;
-        link.download = response.filename || 'assurance_report.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        showToast('Отчёт скачан успешно');
+  if (downloadBtn) {
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add('loading');
+  }
+
+  const url = "http://127.0.0.1:8081/api/file";
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/octet-stream'
       }
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при скачивании отчёта:', error);
-      showToast('Ошибка при скачивании отчёта', false);
-    })
-    .finally(() => {
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Получаем имя файла из заголовка Content-Disposition
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'report.xlsx'; // значение по умолчанию
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) filename = filenameMatch[1];
+    }
+
+    // Получаем blob  
+    const blob = await response.blob();
+    
+    // Создаем ссылку для скачивания
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    
+    // Запускаем скачивание
+    link.click();
+    
+    // Очищаем
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 100);
+
+    console.log('✅ Файл успешно скачан');
+    showToast('Файл успешно скачан', true);
+
+  } catch (error) {
+    console.error('❌ Ошибка при скачивании файла:', error);
+    showToast('Не удалось скачать файл', false);
+  } finally {
+    if (downloadBtn) {
       downloadBtn.disabled = false;
       downloadBtn.classList.remove('loading');
-    });
+    }
+  }
 }
-
 // ===== МОДУЛЬ 2: Обработка замечаний =====
 
 /**
