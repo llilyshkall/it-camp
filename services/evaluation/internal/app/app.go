@@ -6,6 +6,7 @@ import (
 	"evaluation/internal/postgres"
 	"evaluation/internal/repository"
 	"evaluation/internal/server"
+	"evaluation/internal/services"
 	"evaluation/internal/storage"
 	"evaluation/internal/tasks"
 	"fmt"
@@ -53,8 +54,13 @@ func New() (*App, error) {
 	// Создаем TaskManager
 	taskManager := tasks.NewTaskManager(1) // Один воркер для последовательного выполнения
 
+	// Создаем сервисы
+	projectService := services.NewProjectService(repo)
+	fileService := services.NewFileService(repo, fileStorage, taskManager, pgClient)
+	healthService := services.NewHealthService(pgClient)
+
 	// Создаем HTTP сервер
-	srv := server.New(cfg, pgClient, repo, fileStorage, taskManager)
+	srv := server.New(cfg, projectService, fileService, healthService, taskManager)
 
 	return &App{
 		Config:      cfg,

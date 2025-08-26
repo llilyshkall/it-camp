@@ -3,25 +3,17 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"evaluation/internal/postgres"
-	db "evaluation/internal/postgres/sqlc"
-	"evaluation/internal/repository"
-	"evaluation/internal/storage"
+	"evaluation/internal/services"
 	"evaluation/internal/tasks"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
-	"time"
 
 	m "evaluation/internal/models"
 
-	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 // @title API
@@ -72,29 +64,23 @@ func returnErrorJSON(w http.ResponseWriter, err error) {
 
 // Handler объединяет все HTTP хендлеры
 type Handler struct {
-	pgClient    *postgres.Client
-	repo        *repository.Repository
-	storage     storage.FileStorage
-	taskManager tasks.TaskManager
+	projectService services.ProjectService
+	fileService    services.FileService
+	healthService  services.HealthService
+	taskManager    tasks.TaskManager
 }
 
 // New создает новый экземпляр хендлера
-func New(pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage, taskManager tasks.TaskManager) *Handler {
+func New(projectService services.ProjectService, fileService services.FileService, healthService services.HealthService, taskManager tasks.TaskManager) *Handler {
 	return &Handler{
-		pgClient:    pgClient,
-		repo:        repo,
-		storage:     fileStorage,
-		taskManager: taskManager,
+		projectService: projectService,
+		fileService:    fileService,
+		healthService:  healthService,
+		taskManager:    taskManager,
 	}
 }
 
 // ========== HEALTH CHECK ==========
-
-type HealthResponse struct {
-	Status    string `json:"status"`
-	Timestamp string `json:"timestamp"`
-	Database  string `json:"database"`
-}
 
 // Health проверяет состояние сервиса
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -103,99 +89,16 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем состояние базы данных
-	dbStatus := "healthy"
-	if err := h.pgClient.HealthCheck(r.Context()); err != nil {
-		dbStatus = "unhealthy"
-	}
-
-	response := HealthResponse{
-		Status:    "ok",
-		Timestamp: time.Now().Format(time.RFC3339),
-		Database:  dbStatus,
+	// Получаем состояние сервиса через сервис
+	response, err := h.healthService.CheckHealth(r.Context())
+	if err != nil {
+		log.Printf("Health check failed: %v", err)
+		returnErrorJSON(w, err)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
-}
-
-// ========== FILE UPLOAD HANDLER ==========
-
-// UploadAttach godoc
-// @Summary Upload attach
-// @Description Upload attach
-// @ID uploadAttach
-// @Accept  multipart/form-data
-// @Produce  json
-// @Param file formData file true "attach"
-// @Param type query string true "type: excel or doc"
-// @Success 200 {object} Response "ok"
-// @Failure 400 {object} Error "bad request"
-// @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
-// @Router /attach [post]
-func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	// Разрешить CORS для всех источников (для разработки)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// Обработка preflight-запроса
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
-
-	file, fileHeader, err := r.FormFile("file")
-	if err != nil {
-		log.Println(m.StacktraceError(err))
-		returnErrorJSON(w, m.ErrBadRequest400)
-		return
-	}
-	defer file.Close()
-
-	fileName := fileHeader.Filename
-	log.Printf("Received file: %s", fileName)
-
-	ext := strings.ToLower(filepath.Ext(fileName))
-	log.Printf("File extension: '%s'", ext)
-
-	if ext != ".xlsx" && ext != ".docx" {
-		log.Printf("Invalid file extension: '%s'. Expected .xlsx or .docx", ext)
-		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file extension"), m.ErrServerError500))
-		return
-	}
-
-	// Определяем MIME тип файла
-	contentType := "application/octet-stream"
-	if ext == ".xlsx" {
-		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	} else if ext == ".docx" {
-		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	}
-
-	// Загружаем файл в MinIO
-	objectName, err := h.storage.UploadFile(r.Context(), file, fileName, contentType)
-	if err != nil {
-		log.Println(m.StacktraceError(err))
-		returnErrorJSON(w, err)
-		return
-	}
-
-	// Сохраняем информацию о файле в базе данных
-	fileName, err = h.repo.SaveAttach(&m.Attach{
-		Type:    r.URL.Query().Get("type"),
-		File:    file,
-		FileExt: ext,
-	})
-	if err != nil {
-		log.Println(m.StacktraceError(err))
-		returnErrorJSON(w, err)
-		return
-	}
-
-	json.NewEncoder(w).Encode(&m.UploadAttachResponse{File: objectName})
 }
 
 // SendFile godoc
@@ -424,6 +327,16 @@ func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleGenerateFinalReport обрабатывает запросы к /api/projects/{id}/final_report
+func (h *Handler) HandleGenerateFinalReport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.GenerateFinalReport(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // UploadProjectFile godoc
 // @Summary Upload file to project
 // @Description Upload a file to a specific project with specified type
@@ -433,7 +346,7 @@ func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
 // @Param id path int true "Project ID"
 // @Param file formData file true "File to upload"
 // @Param type query string true "Type of file: documentation, remarks, checklist, final_report, remarks_clustered"
-// @Success 201 {object} db.ProjectFile "File uploaded successfully"
+// @Success 202 {object} db.ProjectFile "File uploaded successfully"
 // @Failure 400 {object} Error "Bad request - invalid input data"
 // @Failure 404 {object} Error "Project not found"
 // @Failure 500 {object} Error "Internal server error"
@@ -444,51 +357,24 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлекаем ID проекта из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 4 {
-		log.Println("Invalid project files path")
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Проверяем, что путь содержит /files
-	if pathParts[3] != "files" {
-		log.Printf("Invalid path segment: expected 'files', got '%s'", pathParts[3])
-		returnErrorJSON(w, m.ErrBadRequest400)
-		return
-	}
-
-	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid project ID format: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Проверяем, что проект существует
-	_, err = h.repo.GetProject(r.Context(), int32(projectID))
-	if err != nil {
-		log.Printf("Project %d not found: %v", projectID, err)
-		returnErrorJSON(w, m.ErrNotFound404)
-		return
-	}
-
 	// Получаем тип файла из query параметров
 	fileTypeStr := r.URL.Query().Get("type")
-
-	// Валидируем тип файла
-	var fileType db.FileType
-	switch fileTypeStr {
-	case "documentation":
-		fileType = db.FileTypeDocumentation
-	case "remarks":
-		fileType = db.FileTypeRemarks
-	default:
-		log.Printf("Invalid file type: %s", fileTypeStr)
-		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file type"), m.ErrBadRequest400))
-		return
-	}
 
 	// Ограничиваем размер файла
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
@@ -506,52 +392,18 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 	fileSize := fileHeader.Size
 	log.Printf("Received file: %s, size: %d bytes", fileName, fileSize)
 
-	// Получаем расширение файла
-	ext := strings.ToLower(filepath.Ext(fileName))
-	if ext == "" {
-		log.Println("File has no extension")
-		returnErrorJSON(w, m.StacktraceError(errors.New("file must have an extension"), m.ErrBadRequest400))
-		return
-	}
-
-	// Определяем MIME тип файла
-	contentType := "application/octet-stream"
-	switch ext {
-	case ".pdf":
-		contentType = "application/pdf"
-	case ".docx":
-		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	case ".xlsx":
-		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	case ".txt":
-		contentType = "text/plain"
-	}
-
-	// Генерируем уникальное имя файла
-	uniqueFileName := uuid.New().String() + ext
-
-	// Загружаем файл в MinIO
-	objectName, err := h.storage.UploadFile(r.Context(), file, uniqueFileName, contentType)
+	// Используем сервис для загрузки файла в проект
+	projectFile, err := h.fileService.UploadProjectFile(r.Context(), int32(projectID), file, fileName, fileTypeStr, fileSize)
 	if err != nil {
-		log.Printf("Failed to upload file to MinIO: %v", err)
-		returnErrorJSON(w, m.ErrServerError500)
-		return
-	}
-
-	// Создаем запись о файле в базе данных
-	projectFile, err := h.repo.CreateProjectFile(r.Context(), int32(projectID), uniqueFileName, fileName, objectName, fileSize, ext, fileType)
-	if err != nil {
-		log.Printf("Failed to create project file record: %v", err)
-		returnErrorJSON(w, m.ErrServerError500)
+		log.Printf("Failed to upload project file: %v", err)
+		returnErrorJSON(w, err)
 		return
 	}
 
 	// Возвращаем информацию о загруженном файле
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(projectFile)
-
-	// TODO: отправка запроса в llm
 }
 
 // ListProjects godoc
@@ -569,8 +421,8 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем список проектов
-	projects, err := h.repo.ListProjects(r.Context())
+	// Получаем список проектов через сервис
+	projects, err := h.projectService.ListProjects(r.Context())
 	if err != nil {
 		log.Printf("Failed to list projects: %v", err)
 		returnErrorJSON(w, m.ErrServerError500)
@@ -601,23 +453,24 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлекаем ID из URL
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 3 {
-		log.Println("Invalid project ID path")
+	// Извлекаем ID из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	id, err := strconv.ParseInt(pathParts[2], 10, 32)
+	id, err := strconv.ParseInt(projectIDStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid project ID format: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Получаем проект
-	project, err := h.repo.GetProject(r.Context(), int32(id))
+	// Получаем проект через сервис
+	project, err := h.projectService.GetProject(r.Context(), int32(id))
 	if err != nil {
 		log.Printf("Failed to get project %d: %v", id, err)
 		returnErrorJSON(w, m.ErrNotFound404)
@@ -636,7 +489,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // @ID createProject
 // @Accept  json
 // @Produce  json
-// @Param project body CreateProjectRequest true "Project data"
+// @Param project body models.CreateProjectRequest true "Project data"
 // @Success 201 {object} db.Project "Project created successfully"
 // @Failure 400 {object} Error "Bad request - invalid input data"
 // @Failure 500 {object} Error "Internal server error"
@@ -647,31 +500,18 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req CreateProjectRequest
+	var req m.CreateProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Failed to decode request body: %v", err)
 		returnErrorJSON(w, m.ErrBadRequest400)
 		return
 	}
 
-	// Валидация входных данных
-	if req.Name == "" {
-		log.Println("Project name is required")
-		returnErrorJSON(w, m.StacktraceError(errors.New("project name is required"), m.ErrBadRequest400))
-		return
-	}
-
-	if len(req.Name) > 255 {
-		log.Println("Project name too long")
-		returnErrorJSON(w, m.StacktraceError(errors.New("project name too long (max 255 characters)"), m.ErrBadRequest400))
-		return
-	}
-
-	// Создаем проект (статус "ready" по умолчанию)
-	project, err := h.repo.CreateProject(r.Context(), req.Name)
+	// Создаем проект через сервис
+	project, err := h.projectService.CreateProject(r.Context(), req.Name)
 	if err != nil {
 		log.Printf("Failed to create project: %v", err)
-		returnErrorJSON(w, m.ErrServerError500)
+		returnErrorJSON(w, err)
 		return
 	}
 
@@ -681,7 +521,224 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(project)
 }
 
-// CreateProjectRequest структура запроса для создания проекта
-type CreateProjectRequest struct {
-	Name string `json:"name" validate:"required,max=255"`
+// GenerateFinalReport godoc
+// @Summary Generate final report for project
+// @Description Generate final report for a specific project
+// @ID generateFinalReport
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 202 {object} Response "Final report generation started"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Project is already being processed"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/final_report [post]
+func (h *Handler) GenerateFinalReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для генерации финального отчета
+	err = h.fileService.GenerateFinalReport(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to generate final report for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(&Response{
+		Body: map[string]interface{}{
+			"message":    "Final report generation started",
+			"project_id": projectID,
+		},
+	})
+}
+
+// HandleGetChecklist обрабатывает запросы к /api/projects/{id}/checklist
+func (h *Handler) HandleGetChecklist(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetChecklist(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleGetRemarksClustered обрабатывает запросы к /api/projects/{id}/remarks_clustered
+func (h *Handler) HandleGetRemarksClustered(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetRemarksClustered(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleGetFinalReport обрабатывает запросы к /api/projects/{id}/final_report
+func (h *Handler) HandleGetFinalReport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetFinalReport(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// GetChecklist godoc
+// @Summary Get project checklist
+// @Description Get checklist result for a specific project
+// @ID getChecklist
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Checklist result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Checklist is still being generated"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/checklist [get]
+func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения чеклиста
+	result, err := h.fileService.GetChecklist(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get checklist for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
+	})
+}
+
+// GetRemarksClustered godoc
+// @Summary Get clustered remarks for project
+// @Description Get clustered remarks result for a specific project
+// @ID getRemarksClustered
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Clustered remarks result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Remarks are still being processed"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/remarks_clustered [get]
+func (h *Handler) GetRemarksClustered(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения кластеризированных замечаний
+	result, err := h.fileService.GetRemarksClustered(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get clustered remarks for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
+	})
+}
+
+// GetFinalReport godoc
+// @Summary Get final report for project
+// @Description Get final report result for a specific project
+// @ID getFinalReport
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "Final report result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Final report is still being generated"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/final_report [get]
+func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для получения финального отчета
+	result, err := h.fileService.GetFinalReport(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to get final report for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем результат
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&Response{
+		Body: result,
+	})
 }

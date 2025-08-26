@@ -7,63 +7,66 @@ import (
 
 	"evaluation/internal/config"
 	"evaluation/internal/handler"
-	"evaluation/internal/postgres"
-	"evaluation/internal/repository"
-	"evaluation/internal/storage"
+	"evaluation/internal/services"
 	"evaluation/internal/tasks"
 
 	_ "evaluation/internal/handler/docs"
 
+	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Server struct {
-	httpServer  *http.Server
-	config      *config.Config
-	pgClient    *postgres.Client
-	repo        *repository.Repository
-	storage     storage.FileStorage
-	taskManager tasks.TaskManager
+	httpServer     *http.Server
+	config         *config.Config
+	projectService services.ProjectService
+	fileService    services.FileService
+	healthService  services.HealthService
+	taskManager    tasks.TaskManager
 }
 
-func New(cfg *config.Config, pgClient *postgres.Client, repo *repository.Repository, fileStorage storage.FileStorage, taskManager tasks.TaskManager) *Server {
+func New(cfg *config.Config, projectService services.ProjectService, fileService services.FileService, healthService services.HealthService, taskManager tasks.TaskManager) *Server {
 	// Создаем единый хендлер
-	handler := handler.New(pgClient, repo, fileStorage, taskManager)
+	handler := handler.New(projectService, fileService, healthService, taskManager)
 
-	// Настраиваем роутинг
-	mux := http.NewServeMux()
+	// Создаем роутер с gorilla/mux
+	r := mux.NewRouter()
 
 	// Health check endpoint
-	mux.HandleFunc("/health", handler.Health)
+	r.HandleFunc("/health", handler.Health).Methods("GET")
 
 	// API endpoints
-	mux.HandleFunc("/api/attach", handler.UploadFile)
-	mux.HandleFunc("/api/projects", handler.HandleProjects)
-	mux.HandleFunc("/api/projects/{id}", handler.HandleProject)
-	// mux.HandleFunc("/api/project-files", handler.HandleProjectFiles)
-	// mux.HandleFunc("/api/project-files/", handler.HandleProjectFile)
+	r.HandleFunc("/api/projects", handler.HandleProjects).Methods("GET", "POST")
 
-	// mux.HandleFunc("/api/attach", handler.UploadFile)
-	// mux.HandleFunc("/api/file", handler.SendFile)
-	// mux.HandleFunc("/api/projects/{project_id}/remarks", handler.SendProjectRemarks)
-	mux.HandleFunc("/api/projects/{id}/files", handler.HandleProjectFiles)
-	mux.HandleFunc("/api/docs/", httpSwagger.WrapHandler)
+	// Специфичные пути для проектов с поддержкой параметров
+	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST")
+
+	// GET ручки для получения результатов обработки
+	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleGetChecklist).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks_clustered", handler.HandleGetRemarksClustered).Methods("GET")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGetFinalReport).Methods("GET")
+
+	// Swagger docs
+	r.PathPrefix("/api/docs/").Handler(httpSwagger.WrapHandler)
 
 	// Создаем HTTP сервер
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
-		Handler:      mux,
+		Handler:      r,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	return &Server{
-		httpServer: httpServer,
-		config:     cfg,
-		pgClient:   pgClient,
-		repo:       repo,
-		storage:    fileStorage,
+		httpServer:     httpServer,
+		config:         cfg,
+		projectService: projectService,
+		fileService:    fileService,
+		healthService:  healthService,
+		taskManager:    taskManager,
 	}
 }
 

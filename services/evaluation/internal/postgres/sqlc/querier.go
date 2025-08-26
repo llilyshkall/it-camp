@@ -9,6 +9,9 @@ import (
 )
 
 type Querier interface {
+	// Атомарно проверяет статус проекта и обновляет его, если он "ready"
+	// Возвращает ошибку, если статус не "ready"
+	CheckAndUpdateProjectStatus(ctx context.Context, arg CheckAndUpdateProjectStatusParams) (Project, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error)
 	GetProject(ctx context.Context, id int32) (Project, error)
