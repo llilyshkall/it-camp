@@ -23,6 +23,7 @@ type Repository interface {
 	GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error)
 	CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error)
 	CreateProjectFile(ctx context.Context, projectID int32, filename, originalName, filePath string, fileSize int64, extension string, fileType db.FileType) (*db.ProjectFile, error)
+	UpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error)
 }
 
 // RemarkItem структура для элемента замечания из JSON ответа
@@ -112,6 +113,10 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	//
 	files, err := pt.repo.GetProjectFilesByType(ctx, project.ID, db.FileTypeRemarks)
 	if err != nil || len(files) == 0 {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return err
 	}
 
@@ -120,6 +125,10 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Получаем файл из S3
 	fileReader, err := pt.storage.DownloadFile(ctx, fileRemarks.Filename)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to download file %s from S3: %w", fileRemarks.Filename, err)
 	}
 	defer fileReader.Close()
@@ -127,6 +136,10 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Читаем содержимое файла
 	fileContent, err := io.ReadAll(fileReader)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to read file content: %w", err)
 	}
 
@@ -135,6 +148,10 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Парсим Excel файл и преобразуем в JSON
 	jsonData, err := utils.ParseExcelFromBytes(fileContent)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to parse Excel file: %w", err)
 	}
 
@@ -143,6 +160,10 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Send request to external service
 	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to send remarks to external service: %v", err)
 	}
 	defer resp.Body.Close()
@@ -150,23 +171,39 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Check external service response
 	if resp.StatusCode != http.StatusAccepted {
 		body, _ := io.ReadAll(resp.Body)
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Читаем ответ от внешнего сервиса
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// Парсим JSON ответ
 	var remarksResponse RemarksResponse
 	if err := json.Unmarshal(respBody, &remarksResponse); err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
 	// Сохраняем замечания в БД
 	if err := pt.saveRemarksToDB(ctx, project.ID, remarksResponse); err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to save remarks to DB: %w", err)
 	}
 
@@ -175,24 +212,53 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// Генерируем Excel файл из JSON ответа
 	excelBuffer, err := pt.generateExcelFromRemarks(remarksResponse)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to generate Excel file: %w", err)
 	}
 
 	// Сохраняем Excel файл в S3
 	objectName, err := pt.storage.UploadFile(ctx, excelBuffer, "remarks_clustered.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to upload Excel file to S3: %w", err)
 	}
 
 	// Сохраняем запись о файле в БД
 	_, err = pt.repo.CreateProjectFile(ctx, project.ID, "remarks_clustered.xlsx", "Замечания по тематикам.xlsx", objectName, int64(excelBuffer.Len()), ".xlsx", db.FileTypeRemarksClustered)
 	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
 		return fmt.Errorf("failed to create project file record: %w", err)
 	}
 
 	log.Printf("Successfully generated and uploaded Excel file %s to S3", objectName)
 
 	log.Printf("Successfully processed remarks for project %d", pt.projectID)
+
+	// Устанавливаем статус ready после успешной обработки
+	if err := pt.setProjectStatusReady(ctx, project.ID); err != nil {
+		log.Printf("Failed to set project status to ready: %v", err)
+		return fmt.Errorf("failed to set project status to ready: %w", err)
+	}
+
+	return nil
+}
+
+// setProjectStatusReady устанавливает статус проекта на ready
+func (pt *ProjectProcessorTask) setProjectStatusReady(ctx context.Context, projectID int32) error {
+	_, err := pt.repo.UpdateProjectStatus(ctx, projectID, db.ProjectStatusReady)
+	if err != nil {
+		return fmt.Errorf("failed to update project status to ready: %w", err)
+	}
+	log.Printf("Project %d status set to ready", projectID)
 	return nil
 }
 
