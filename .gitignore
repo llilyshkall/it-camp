@@ -76,3 +76,5 @@ services/ML/structuring_comments/synthesis_report_clustered.json
 services/ML/.venv1
 services/ML/structuring_comments/Project_Alfa
 
+services/createFileService/.venv2
+
