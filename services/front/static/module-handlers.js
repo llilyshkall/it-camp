@@ -174,10 +174,16 @@ async function handleStartAssurance(event, options = {}) {
       body: JSON.stringify(requestData)
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Ошибка при создании проекта');
-    }
+    if (response.status === 404) {
+          throw new Error('404 Выполняется обработка. Пожалуйста, попробуйте позже.');
+        }
+      if (response.status === 409) {
+          throw new Error('409 Выполняется обработка. Пожалуйста, попробуйте позже.');
+        }
+
+      if (!response.ok) {
+          throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+        }
 
     const data = await response.json();
     console.log('✅ Обработка успешно начата:', data);
@@ -185,8 +191,15 @@ async function handleStartAssurance(event, options = {}) {
     return data;
 
   } catch (error) {
-    console.error('❌ Ошибка начала обработки:', error);
-    showToast(error.message || 'Не удалось начать обработку', false);
+    console.error('❌ Ошибка при выполнении фунции:', error);
+    const errorMessages = {
+      '404': 'Выполняется обработка. Пожалуйста, попробуйте позже.',
+      '409': 'Выполняется обработка. Пожалуйста, попробуйте позже.',
+      'default': 'Не удалось скачать файл'
+    };
+
+    const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
+    showToast(error.message, false);
     throw error;
   } finally {
     if (saveBtn) {
@@ -206,8 +219,8 @@ async function handleDownloadAssurance(event, options = {}) {
   
   const downloadBtn = document.getElementById('download-assurance');
   if (downloadBtn) {
-    //downloadBtn.disabled = true;
-    //downloadBtn.classList.add('loading');
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add('loading');
   }
 
   const url = endpoints.projects + options.projectID + "/checklist";
@@ -289,7 +302,7 @@ async function handleDownloadAssurance(event, options = {}) {
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
-function handleStartRemarks(event, options = {}) {
+async function handleStartRemarks(event, options = {}) {
   console.log('⚙️ Начинаем обработку замечаний...');
   
   const remarksInput = document.getElementById('remarks-input');
@@ -306,45 +319,67 @@ function handleStartRemarks(event, options = {}) {
   startBtn.disabled = true;
   startBtn.classList.add('loading');
   loadingIndicator.hidden = false;
-  
-  // TODO: Здесь будет вызов backend API для обработки замечаний
-  const requestData = {
-    action: 'process_remarks',
-    projectId: window.currentProject?.id,
-    files: Array.from(files).map(f => ({
-      name: f.name,
-      size: f.size,
-      type: f.type
-    })),
-    processingOptions: {
-      normalizeExcel: true,
-      generateRegistry: true,
-      outputFormat: 'xlsx'
-    },
-    timestamp: new Date().toISOString(),
-    ...options
-  };
-  
-  console.log('📤 Данные для обработки замечаний:', requestData);
-  
-  // Имитация обработки
-  simulateBackendCall('/api/remarks/process', requestData)
-    .then(response => {
-      console.log('✅ Замечания обработаны:', response);
+
+  try {
+    // Последовательно отправляем все файлы
+      const file = files[0];
       
-      // Активируем кнопку скачивания
-      document.getElementById('download-remarks').disabled = false;
-      showToast(`Обработано ${files.length} файлов`);
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при обработке замечаний:', error);
-      showToast('Ошибка при обработке замечаний', false);
-    })
-    .finally(() => {
-      startBtn.disabled = false;
-      startBtn.classList.remove('loading');
-      loadingIndicator.hidden = true;
-    });
+      if (!file) {
+        console.warn(`Файл не существует`);
+        throw new Error(`Ошибка файла ${file.name}: не найден`);
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      
+      const response = await fetch(
+        `${endpoints.loadFile}${options.projectID}${endpoints.remarks}`, 
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+      
+      if (response.status === 404) {
+          throw new Error('404 Выполняется обработка. Пожалуйста, попробуйте позже.');
+        }
+      if (response.status === 409) {
+          throw new Error('409 Выполняется обработка. Пожалуйста, попробуйте позже.');
+        }
+
+      if (!response.ok) {
+          throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+        }
+      
+      
+      const result = await response.json();
+      console.log(`✅ Файл ${file.name} успешно обработан:`, result);
+    
+      
+      showToast(`Обработка успешно начата`, true);
+      console.log('✅ Обработка успешно начата');  
+  } catch (error) {
+    console.error('❌ Ошибка при выполнении фунции:', error);
+    const errorMessages = {
+      '404': 'Выполняется обработка. Пожалуйста, попробуйте позже.',
+      '409': 'Выполняется обработка. Пожалуйста, попробуйте позже.',
+      'default': 'Не удалось скачать файл'
+    };
+
+    const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
+    
+    showToast(userMessage, false);
+    throw error;
+    
+  } finally {
+    startBtn.disabled = false;
+    startBtn.classList.remove('loading');
+    loadingIndicator.hidden = true;
+    if (progressBar) {
+      progressBar.hidden = true;
+    }
+  }
 }
 
 /**
