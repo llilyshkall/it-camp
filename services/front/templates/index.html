@@ -130,7 +130,7 @@
         </div>
       </div>
 
-      <div class="wordmark"><a class="wordmark-link" href="#top">ПРОЕКТ ДЛЯ ГАЗПРОМА</a></div>
+      <div class="wordmark"><a class="wordmark-link" href="#top">DockПоток</a></div>
 
       <div class="project-ctl" aria-label="Выбор проекта">
         <div class="proj-dropdown" id="proj-dropdown">
@@ -161,8 +161,8 @@
     <div class="container">
       <div class="hero-content">
         <div class="hero-text">
-          <h1>Чистая стартовая страница</h1>
-          <p class="lead">Заглушка интерфейса с эстетикой «сине-белого» корпоративного стиля. Без логотипов и товарных знаков. Готово к наполнению.</p>
+          <h1>Оптимизация процесса ашуранса</h1>
+          <p class="lead">Продукт оптимизирующий процесс работы документации по ашурансу в Газпромнефти с применениям больших языковых моделей.</p>
         </div>
         <div class="hero-visual">
           <!-- Анимация Pumpjack -->
@@ -248,11 +248,11 @@
               <span class="btn-icon" aria-hidden="true">🚀</span>
               Начать проверку
             </button>
-            <button class="btn btn-outline" id="check-result" disabled>
+            <button class="btn btn-outline" id="check-result" disabled >
               <span class="btn-icon" aria-hidden="true">🔍</span>
               Проверить результат
             </button>
-            <button class="btn btn-ghost" id="download-assurance" disabled>
+            <button class="btn btn-ghost" id="download-assurance">
               <span class="btn-icon" aria-hidden="true">📥</span>
               Скачать отчёт
             </button>
@@ -319,7 +319,7 @@
               <span class="btn-icon" aria-hidden="true">📄</span>
               Сформировать протокол
             </button>
-            <button class="btn btn-outline btn-large" id="download-protocol" disabled>
+            <button class="btn btn-outline btn-large" id="download-protocol">
               <span class="btn-icon" aria-hidden="true">⬇️</span>
               Скачать протокол
             </button>
@@ -803,6 +803,8 @@
       const reasonsUl=document.getElementById('verdict-reasons'); const startBtn=document.getElementById('start-assurance');
       const downloadBtn=document.getElementById('download-assurance'); const checkResultBtn=document.getElementById('check-result');
       let lastAssurance=null;
+
+      checkResultBtn.hidden = true;
       
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
@@ -839,7 +841,7 @@
           const files = input.files;
           if (!files?.length) return;
           //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
-          window.moduleHandlers.startAssurance(e, { projectID: window.currentProject?.id});
+          window.moduleHandlers.sendAssuranceDocuments(e, { projectID: window.currentProject?.id});
           showFiles(files);
       });
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => { dz.addEventListener(ev, stop, false);});
@@ -851,7 +853,7 @@
           if (!files?.length) return;
           input.files = files;
           //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
-          window.moduleHandlers.startAssurance(e, { projectID: window.currentProject?.id});
+          window.moduleHandlers.sendAssuranceDocuments(e, { projectID: window.currentProject?.id});
           
           showFiles(files);
       });
@@ -931,6 +933,14 @@
           projectID: window.currentProject?.id,
         });
       });
+
+      const downloadBtn = document.getElementById('download-protocol');
+      downloadBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.downloadProtocol(event, {
+          projectID: window.currentProject?.id,
+        });
+      });
+
     })();
   });
 </script>
