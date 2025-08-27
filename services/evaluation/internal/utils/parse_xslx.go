@@ -71,7 +71,7 @@ func ParseExcel(filePath string) (string, error) {
 		headers[4], // text
 		headers[5], // urgency
 	}
-	log.Println(requiredCols)
+	//log.Println(requiredCols)
 	for i, colName := range headers {
 		// switch colName {
 		// case "Проект":
@@ -134,7 +134,7 @@ func ParseExcel(filePath string) (string, error) {
 
 		modelList = append(modelList, model)
 	}
-	log.Println(modelList)
+	//log.Println(modelList)
 	// Обработка поля expertise_section с проверкой NaN и переводом по словарю
 	for i, m := range modelList {
 		val := m["expertise_section"]
