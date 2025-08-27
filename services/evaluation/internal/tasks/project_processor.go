@@ -17,6 +17,7 @@ import (
 	"evaluation/internal/utils"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/jung-kurt/gofpdf"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -472,28 +473,28 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 
 	log.Printf("Successfully saved %d remark categories to DB", len(remarksResponse))
 
-	// Генерируем Excel файл из JSON ответа
-	excelBuffer, err := pt.generateExcelFromRemarks(remarksResponse)
+	// Генерируем PDF отчет из JSON ответа
+	pdfBuffer, err := pt.generatePDFFromRemarks(remarksResponse)
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
 			log.Printf("Failed to set project status to ready after error: %v", updateErr)
 		}
-		return fmt.Errorf("failed to generate Excel file: %w", err)
+		return fmt.Errorf("failed to generate PDF report: %w", err)
 	}
 
-	// Сохраняем Excel файл в S3
-	objectName, err := pt.storage.UploadFile(ctx, excelBuffer, "remarks_clustered.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	// Сохраняем PDF файл в S3
+	objectName, err := pt.storage.UploadFile(ctx, pdfBuffer, "remarks_report.pdf", "application/pdf")
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
 			log.Printf("Failed to set project status to ready after error: %v", updateErr)
 		}
-		return fmt.Errorf("failed to upload Excel file to S3: %w", err)
+		return fmt.Errorf("failed to upload PDF file to S3: %w", err)
 	}
 
 	// Сохраняем запись о файле в БД
-	_, err = pt.repo.CreateProjectFile(ctx, project.ID, "remarks_clustered.xlsx", "Замечания по тематикам.xlsx", objectName, int64(excelBuffer.Len()), ".xlsx", db.FileTypeRemarksClustered)
+	_, err = pt.repo.CreateProjectFile(ctx, project.ID, "remarks_report.pdf", "Отчет по замечаниям.pdf", objectName, int64(pdfBuffer.Len()), ".pdf", db.FileTypeRemarksClustered)
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
@@ -502,7 +503,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 		return fmt.Errorf("failed to create project file record: %w", err)
 	}
 
-	log.Printf("Successfully generated and uploaded Excel file %s to S3", objectName)
+	log.Printf("Successfully generated and uploaded PDF report %s to S3", objectName)
 
 	log.Printf("Successfully processed remarks for project %d", pt.projectID)
 
@@ -829,6 +830,164 @@ func (pt *ProjectProcessorTask) generateExcelFromRemarks(remarksResponse Remarks
 	buffer := new(bytes.Buffer)
 	if err := f.Write(buffer); err != nil {
 		return nil, fmt.Errorf("failed to write Excel file to buffer: %w", err)
+	}
+
+	return buffer, nil
+}
+
+// generatePDFFromRemarks генерирует PDF отчет в стиле ГОСТ из замечаний
+func (pt *ProjectProcessorTask) generatePDFFromRemarks(remarksResponse RemarksResponse) (*bytes.Buffer, error) {
+	// Создаем новый PDF документ
+	pdf := gofpdf.New("P", "mm", "A4", "")
+
+	// Устанавливаем шрифт с поддержкой кириллицы
+	pdf.AddUTF8Font("DejaVu", "", "DejaVuSans.ttf")
+	pdf.AddUTF8Font("DejaVu", "B", "DejaVuSans-Bold.ttf")
+
+	// Устанавливаем отступы (ГОСТ-подобные)
+	pdf.SetMargins(30, 20, 10) // left, top, right
+
+	// Добавляем первую страницу
+	pdf.AddPage()
+
+	// Титульная страница
+	pdf.SetFont("DejaVu", "B", 18)
+	pdf.Cell(0, 20, "ПАО «Газпром»")
+	pdf.Ln(15)
+
+	pdf.SetFont("DejaVu", "B", 16)
+	pdf.Cell(0, 20, "Отчёт по результатам анализа замечаний")
+	pdf.Ln(15)
+
+	pdf.SetFont("DejaVu", "", 14)
+	pdf.Cell(0, 20, fmt.Sprintf("Проект: %d", pt.projectID))
+	pdf.Ln(15)
+
+	pdf.SetFont("DejaVu", "", 12)
+	pdf.Cell(0, 20, fmt.Sprintf("Дата: %s", time.Now().Format("02.01.2006")))
+	pdf.Ln(30)
+
+	// Оглавление
+	pdf.AddPage()
+	pdf.SetFont("DejaVu", "B", 16)
+	pdf.Cell(0, 20, "СОДЕРЖАНИЕ")
+	pdf.Ln(20)
+
+	// Введение
+	pdf.SetFont("DejaVu", "B", 14)
+	pdf.Cell(0, 15, "ВВЕДЕНИЕ")
+	pdf.Ln(15)
+
+	pdf.SetFont("DejaVu", "", 12)
+	introText := "Настоящий отчёт подготовлен на основании предоставленных данных. " +
+		"Категории данных сформированы как главы, группы — как подразделы. " +
+		"Для каждого подраздела приведены синтезированное описание и исходные замечания."
+
+	// Разбиваем текст на строки для корректного отображения
+	lines := pdf.SplitText(introText, 150)
+	for _, line := range lines {
+		pdf.Cell(0, 8, line)
+		pdf.Ln(8)
+	}
+	pdf.Ln(10)
+
+	// Основные разделы
+	for section, items := range remarksResponse {
+		// Заголовок раздела
+		pdf.SetFont("DejaVu", "B", 14)
+		pdf.Cell(0, 15, section)
+		pdf.Ln(15)
+
+		for _, item := range items {
+			// Подзаголовок
+			pdf.SetFont("DejaVu", "B", 12)
+			pdf.Cell(0, 12, item.GroupName)
+			pdf.Ln(12)
+
+			// Синтезированное замечание
+			if item.SynthesizedRemark != "" {
+				pdf.SetFont("DejaVu", "B", 11)
+				pdf.Cell(0, 10, "Краткая сводка:")
+				pdf.Ln(10)
+
+				pdf.SetFont("DejaVu", "", 11)
+				synthLines := pdf.SplitText(item.SynthesizedRemark, 150)
+				for _, line := range synthLines {
+					pdf.Cell(0, 8, line)
+					pdf.Ln(8)
+				}
+				pdf.Ln(5)
+			}
+
+			// Таблица с оригинальными замечаниями
+			if len(item.OriginalDuplicates) > 0 {
+				pdf.SetFont("DejaVu", "B", 11)
+				pdf.Cell(0, 10, "Оригинальные замечания:")
+				pdf.Ln(10)
+
+				// Создаем таблицу
+				colWidths := []float64{15, 135} // № | Замечание
+				rowHeight := 8.0
+
+				// Заголовок таблицы
+				pdf.SetFont("DejaVu", "B", 10)
+				pdf.SetFillColor(240, 240, 240)
+				pdf.CellFormat(colWidths[0], rowHeight, "№", "1", 0, "C", true, 0, "")
+				pdf.CellFormat(colWidths[1], rowHeight, "Замечание", "1", 0, "L", true, 0, "")
+				pdf.Ln(-1)
+
+				// Строки таблицы
+				pdf.SetFont("DejaVu", "", 10)
+				for i, remark := range item.OriginalDuplicates {
+					// Номер
+					pdf.CellFormat(colWidths[0], rowHeight, fmt.Sprintf("%d", i+1), "1", 0, "C", false, 0, "")
+
+					// Замечание (разбиваем на строки если длинное)
+					remarkLines := pdf.SplitText(remark, colWidths[1]-2)
+					if len(remarkLines) == 1 {
+						pdf.CellFormat(colWidths[1], rowHeight, remark, "1", 0, "L", false, 0, "")
+						pdf.Ln(-1)
+					} else {
+						// Первая строка
+						pdf.CellFormat(colWidths[1], rowHeight, remarkLines[0], "1", 0, "L", false, 0, "")
+						pdf.Ln(-1)
+
+						// Остальные строки
+						for j := 1; j < len(remarkLines); j++ {
+							pdf.CellFormat(colWidths[0], rowHeight, "", "1", 0, "C", false, 0, "")
+							pdf.CellFormat(colWidths[1], rowHeight, remarkLines[j], "1", 0, "L", false, 0, "")
+							pdf.Ln(-1)
+						}
+					}
+				}
+				pdf.Ln(10)
+			}
+		}
+		pdf.Ln(10)
+	}
+
+	// Заключение
+	pdf.AddPage()
+	pdf.SetFont("DejaVu", "B", 14)
+	pdf.Cell(0, 15, "ЗАКЛЮЧЕНИЕ")
+	pdf.Ln(15)
+
+	pdf.SetFont("DejaVu", "", 12)
+	conclusionText := "Предложенные мероприятия направлены на снижение неопределённостей и повышение качества " +
+		"прогнозов. Рекомендовано согласовать план доизучения и актуализировать модели по итогам " +
+		"получения новых данных."
+
+	conclusionLines := pdf.SplitText(conclusionText, 150)
+	for _, line := range conclusionLines {
+		pdf.Cell(0, 8, line)
+		pdf.Ln(8)
+	}
+
+	// Сохраняем в буфер
+	buffer := new(bytes.Buffer)
+	err := pdf.Output(buffer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
 
 	return buffer, nil
