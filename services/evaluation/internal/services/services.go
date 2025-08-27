@@ -16,6 +16,7 @@ type Repository interface {
 	CheckAndUpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error)
 	UpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error)
 	GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error)
+	CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error)
 	SaveAttach(file *models.Attach) (string, error)
 }
 

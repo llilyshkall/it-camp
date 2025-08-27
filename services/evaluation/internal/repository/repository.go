@@ -110,6 +110,11 @@ func (r *Repository) CreateProjectFile(ctx context.Context, projectID int32, fil
 	return &file, nil
 }
 
+// CreateRemark создает новое замечание
+func (r *Repository) CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error) {
+	return r.querier.CreateRemark(ctx, arg)
+}
+
 // SaveAttach сохраняет информацию о загруженном файле
 func (r *Repository) SaveAttach(file *models.Attach) (string, error) {
 	// Генерируем уникальное имя файла

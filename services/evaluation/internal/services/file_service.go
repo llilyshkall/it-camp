@@ -100,7 +100,7 @@ func (s *fileService) UploadRemarks(ctx context.Context, projectID int32, file i
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 
@@ -173,7 +173,7 @@ func (s *fileService) GenerateChecklist(ctx context.Context, projectID int32) er
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 
@@ -210,7 +210,7 @@ func (s *fileService) GenerateFinalReport(ctx context.Context, projectID int32) 
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 

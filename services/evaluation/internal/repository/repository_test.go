@@ -53,6 +53,16 @@ func (m *MockQuerier) CreateProjectFile(ctx context.Context, arg db.CreateProjec
 	return args.Get(0).(db.ProjectFile), args.Error(1)
 }
 
+func (m *MockQuerier) CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(db.Remark), args.Error(1)
+}
+
+func (m *MockQuerier) GetRemarksByProject(ctx context.Context, projectID int32) ([]db.Remark, error) {
+	args := m.Called(ctx, projectID)
+	return args.Get(0).([]db.Remark), args.Error(1)
+}
+
 func (m *MockQuerier) GetProjectFiles(ctx context.Context, projectID int32) ([]db.ProjectFile, error) {
 	args := m.Called(ctx, projectID)
 	return args.Get(0).([]db.ProjectFile), args.Error(1)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"evaluation/internal/models"
 	db "evaluation/internal/postgres/sqlc"
@@ -91,6 +92,19 @@ func (m *MockRepository) UpdateProjectStatus(ctx context.Context, projectID int3
 	}
 	project.Status = newStatus
 	return project, nil
+}
+
+func (m *MockRepository) CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error) {
+	// Простая реализация для тестов
+	return db.Remark{
+		ID:         1,
+		ProjectID:  arg.ProjectID,
+		Direction:  arg.Direction,
+		Section:    arg.Section,
+		Subsection: arg.Subsection,
+		Content:    arg.Content,
+		CreatedAt:  time.Now(),
+	}, nil
 }
 
 // Тесты для ProjectService
