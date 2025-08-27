@@ -36,7 +36,9 @@ type ProjectService interface {
 
 // FileService интерфейс для бизнес-логики файлов
 type FileService interface {
-	UploadProjectFile(ctx context.Context, projectID int32, file io.Reader, filename, fileType string, fileSize int64) (*db.ProjectFile, error)
+	UploadRemarks(ctx context.Context, projectID int32, file io.Reader, filename, fileType string, fileSize int64) (*db.ProjectFile, error)
+	UploadDocumentation(ctx context.Context, projectID int32, file io.Reader, filename string, fileSize int64) (*db.ProjectFile, error)
+	GenerateChecklist(ctx context.Context, projectID int32) error
 	GenerateFinalReport(ctx context.Context, projectID int32) error
 	GetChecklist(ctx context.Context, projectID int32) (interface{}, error)
 	GetRemarksClustered(ctx context.Context, projectID int32) (interface{}, error)

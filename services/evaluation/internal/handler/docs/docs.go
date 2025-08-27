@@ -9,21 +9,45 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/file": {
+            "get": {
+                "description": "Send file",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "summary": "Send file",
+                "operationId": "sendFile",
+                "responses": {
+                    "200": {
+                        "description": "File attachment",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal Server Error - Request is valid but operation failed at server side",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/projects": {
             "get": {
                 "description": "Get list of all projects",
@@ -196,19 +220,71 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "Generate checklist for a specific project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Generate checklist for project",
+                "operationId": "generateChecklist",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Checklist generation started",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid project ID",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Project is not in ready status",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
             }
         },
-        "/projects/{id}/files": {
+        "/projects/{id}/documentation": {
             "post": {
-                "description": "Upload a file to a specific project with specified type",
+                "description": "Upload a documentation file to a specific project",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Upload file to project",
-                "operationId": "uploadProjectFile",
+                "summary": "Upload documentation file to project",
+                "operationId": "uploadDocumentation",
                 "parameters": [
                     {
                         "type": "integer",
@@ -219,22 +295,15 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "File to upload",
+                        "description": "Documentation file to upload",
                         "name": "file",
                         "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Type of file: documentation, remarks, checklist, final_report, remarks_clustered",
-                        "name": "type",
-                        "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "202": {
-                        "description": "File uploaded successfully",
+                        "description": "Documentation file uploaded successfully",
                         "schema": {
                             "$ref": "#/definitions/db.ProjectFile"
                         }
@@ -247,6 +316,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Project is not in ready status",
                         "schema": {
                             "$ref": "#/definitions/handler.Error"
                         }
@@ -366,6 +441,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/projects/{id}/remarks": {
+            "post": {
+                "description": "Upload a remarks file to a specific project",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Upload remarks file to project",
+                "operationId": "uploadRemarks",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Remarks file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Remarks file uploaded successfully",
+                        "schema": {
+                            "$ref": "#/definitions/db.ProjectFile"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/projects/{id}/remarks_clustered": {
             "get": {
                 "description": "Get clustered remarks result for a specific project",
@@ -420,39 +550,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/file": {
-            "get": {
-                "description": "Send file",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/octet-stream"
-                ],
-                "summary": "Send file",
-                "operationId": "sendFile",
-                "responses": {
-                    "200": {
-                        "description": "File attachment",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "internal Server Error - Request is valid but operation failed at server side",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
-                        }
-                    }
-                }
-            }
-        },
         "/projects/{project_id}/remarks": {
             "post": {
                 "description": "Get remarks for specific project and forward to external service",
@@ -462,7 +559,7 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Send Project Remarks",
+                "summary": "СТАРАЯ РУЧКА",
                 "operationId": "sendProjectRemarks",
                 "parameters": [
                     {
@@ -613,12 +710,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "127.0.0.1:8081",
-	BasePath:         "/api",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "API",
-	Description:      "... back server.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

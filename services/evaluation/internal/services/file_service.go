@@ -35,7 +35,7 @@ func NewFileService(repo Repository, storage FileStorage, taskManager tasks.Task
 }
 
 // UploadProjectFile загружает файл в проект
-func (s *fileService) UploadProjectFile(ctx context.Context, projectID int32, file io.Reader, filename, fileType string, fileSize int64) (*db.ProjectFile, error) {
+func (s *fileService) UploadRemarks(ctx context.Context, projectID int32, file io.Reader, filename, fileType string, fileSize int64) (*db.ProjectFile, error) {
 	// Атомарно проверяем статус проекта и изменяем его на "processing_remarks"
 	// Если статус не "ready", возвращаем ошибку
 	project, err := s.repo.CheckAndUpdateProjectStatus(ctx, projectID, db.ProjectStatusProcessingRemarks)
@@ -62,8 +62,6 @@ func (s *fileService) UploadProjectFile(ctx context.Context, projectID int32, fi
 	// Валидируем тип файла
 	var dbFileType db.FileType
 	switch fileType {
-	case "documentation":
-		dbFileType = db.FileTypeDocumentation
 	case "remarks":
 		dbFileType = db.FileTypeRemarks
 	default:
@@ -114,6 +112,82 @@ func (s *fileService) UploadProjectFile(ctx context.Context, projectID int32, fi
 	}
 
 	return projectFile, nil
+}
+
+// UploadDocumentation загружает файл документации в проект
+func (s *fileService) UploadDocumentation(ctx context.Context, projectID int32, file io.Reader, filename string, fileSize int64) (*db.ProjectFile, error) {
+	// Проверяем статус проекта - должен быть "ready"
+	project, err := s.repo.GetProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	if project.Status != db.ProjectStatusReady {
+		return nil, models.ErrProjectAlreadyProcessing
+	}
+
+	// Получаем расширение файла
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == "" {
+		return nil, errors.New("file must have an extension")
+	}
+
+	// Определяем MIME тип файла
+	contentType := s.getContentType(ext)
+
+	// Генерируем уникальное имя файла
+	uniqueFileName := uuid.New().String() + ext
+
+	// Загружаем файл в MinIO
+	objectName, err := s.storage.UploadFile(ctx, file, uniqueFileName, contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Создаем запись о файле в базе данных
+	projectFile, err := s.repo.CreateProjectFile(ctx, projectID, uniqueFileName, filename, objectName, fileSize, ext, db.FileTypeDocumentation)
+	if err != nil {
+		return nil, err
+	}
+
+	return projectFile, nil
+}
+
+// GenerateChecklist запускает генерацию чеклиста для проекта
+func (s *fileService) GenerateChecklist(ctx context.Context, projectID int32) error {
+	// Атомарно проверяем статус проекта и изменяем его на "processing_checklist"
+	// Если статус не "ready", возвращаем ошибку
+	project, err := s.repo.CheckAndUpdateProjectStatus(ctx, projectID, db.ProjectStatusProcessingChecklist)
+	if err != nil {
+		// Если проект не найден или статус не "ready", возвращаем соответствующую ошибку
+		if err.Error() == "no rows in result set" {
+			return models.ErrProjectAlreadyProcessing
+		}
+		return err
+	}
+
+	// Логируем успешное изменение статуса проекта
+	log.Printf("Project %d status changed to %s for checklist generation", project.ID, project.Status)
+
+	// Создаем и отправляем задачу ProjectProcessorTask в task manager
+	projectTask := tasks.NewProjectProcessorTask(
+		projectID,
+		1, // Приоритет 1 (высокий)
+		s.pgClient,
+		s.storage,
+	)
+
+	if err := s.taskManager.SubmitTask(projectTask); err != nil {
+		// Восстанавливаем статус проекта на 'ready' в случае ошибки
+		if _, restoreErr := s.repo.UpdateProjectStatus(ctx, projectID, db.ProjectStatusReady); restoreErr != nil {
+			log.Printf("Failed to restore project %d status to ready: %v", projectID, restoreErr)
+		} else {
+			log.Printf("Project %d status restored to ready after task submission failure", projectID)
+		}
+		return fmt.Errorf("failed to submit checklist generation task: %w", err)
+	}
+
+	return nil
 }
 
 // GenerateFinalReport запускает генерацию финального отчета для проекта

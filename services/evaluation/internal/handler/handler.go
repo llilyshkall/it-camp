@@ -141,7 +141,7 @@ func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // SendProjectRemarks godoc
-// @Summary Send Project Remarks
+// @Summary СТАРАЯ РУЧКА
 // @Description Get remarks for specific project and forward to external service
 // @ID sendProjectRemarks
 // @Accept  json
@@ -279,11 +279,31 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
-func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
+// HandleDocumentation обрабатывает запросы к /api/projects/{id}/documentation
+func (h *Handler) HandleDocumentation(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		h.UploadProjectFile(w, r)
+		h.UploadDocumentation(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleChecklist обрабатывает запросы к /api/projects/{id}/checklist
+func (h *Handler) HandleChecklist(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.GenerateChecklist(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleRemarks обрабатывает запросы к /api/projects/{id}/remarks
+func (h *Handler) HandleRemarks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.UploadRemarks(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -299,21 +319,21 @@ func (h *Handler) HandleGenerateFinalReport(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// UploadProjectFile godoc
-// @Summary Upload file to project
-// @Description Upload a file to a specific project with specified type
-// @ID uploadProjectFile
+// UploadDocumentation godoc
+// @Summary Upload documentation file to project
+// @Description Upload a documentation file to a specific project
+// @ID uploadDocumentation
 // @Accept  multipart/form-data
 // @Produce  json
 // @Param id path int true "Project ID"
-// @Param file formData file true "File to upload"
-// @Param type query string true "Type of file: documentation, remarks, checklist, final_report, remarks_clustered"
-// @Success 202 {object} db.ProjectFile "File uploaded successfully"
+// @Param file formData file true "Documentation file to upload"
+// @Success 202 {object} db.ProjectFile "Documentation file uploaded successfully"
 // @Failure 400 {object} Error "Bad request - invalid input data"
 // @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Project is not in ready status"
 // @Failure 500 {object} Error "Internal server error"
-// @Router /projects/{id}/files [post]
-func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
+// @Router /projects/{id}/documentation [post]
+func (h *Handler) UploadDocumentation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -335,8 +355,124 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем тип файла из query параметров
-	fileTypeStr := r.URL.Query().Get("type")
+	// Ограничиваем размер файла
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
+
+	// Получаем файл из формы
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("Failed to get file: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+	defer file.Close()
+
+	fileName := fileHeader.Filename
+	fileSize := fileHeader.Size
+	log.Printf("Received documentation file: %s, size: %d bytes", fileName, fileSize)
+
+	// Используем сервис для загрузки документации
+	projectFile, err := h.fileService.UploadDocumentation(r.Context(), int32(projectID), file, fileName, fileSize)
+	if err != nil {
+		log.Printf("Failed to upload documentation file: %v", err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем информацию о загруженном файле
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(projectFile)
+}
+
+// GenerateChecklist godoc
+// @Summary Generate checklist for project
+// @Description Generate checklist for a specific project
+// @ID generateChecklist
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Success 202 {object} Response "Checklist generation started"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Project is not in ready status"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/checklist [post]
+func (h *Handler) GenerateChecklist(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для генерации чеклиста
+	err = h.fileService.GenerateChecklist(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to generate checklist for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(&Response{
+		Body: map[string]interface{}{
+			"message":    "Checklist generation started",
+			"project_id": projectID,
+		},
+	})
+}
+
+// UploadRemarks godoc
+// @Summary Upload remarks file to project
+// @Description Upload a remarks file to a specific project
+// @ID uploadRemarks
+// @Accept  multipart/form-data
+// @Produce  json
+// @Param id path int true "Project ID"
+// @Param file formData file true "Remarks file to upload"
+// @Success 202 {object} db.ProjectFile "Remarks file uploaded successfully"
+// @Failure 400 {object} Error "Bad request - invalid input data"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/remarks [post]
+func (h *Handler) UploadRemarks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
 
 	// Ограничиваем размер файла
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
@@ -352,12 +488,12 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 
 	fileName := fileHeader.Filename
 	fileSize := fileHeader.Size
-	log.Printf("Received file: %s, size: %d bytes", fileName, fileSize)
+	log.Printf("Received remarks file: %s, size: %d bytes", fileName, fileSize)
 
-	// Используем сервис для загрузки файла в проект
-	projectFile, err := h.fileService.UploadProjectFile(r.Context(), int32(projectID), file, fileName, fileTypeStr, fileSize)
+	// Используем сервис для загрузки файла замечаний (только тип "remarks")
+	projectFile, err := h.fileService.UploadRemarks(r.Context(), int32(projectID), file, fileName, "remarks", fileSize)
 	if err != nil {
-		log.Printf("Failed to upload project file: %v", err)
+		log.Printf("Failed to upload remarks file: %v", err)
 		returnErrorJSON(w, err)
 		return
 	}

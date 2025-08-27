@@ -73,7 +73,9 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 
 	// Специфичные пути для проектов с поддержкой параметров
 	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/documentation", handler.HandleDocumentation).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleChecklist).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks", handler.HandleRemarks).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST", "OPTIONS")
 
 	// GET ручки для получения результатов обработки
