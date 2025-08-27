@@ -825,13 +825,42 @@
         res.hidden=false;
       };
 
-      pickBtn.addEventListener('click',()=>input.click());
-      input.addEventListener('change',()=>{const files=input.files; if(!files?.length || files.length === 0) return; handleStartAssurance(e, { file: files[files.length - 1] }); showFiles(files);});
-      ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
-      ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
-      ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
-      dz.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
-      dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+      // pickBtn.addEventListener('click',()=>input.click());
+      // input.addEventListener('change',()=>{const files=input.files; if(!files?.length || files.length === 0) return; showFiles(files);});
+      // ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
+      // ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
+      // ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
+      // dz.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
+      // //dz.addEventListener('drop',(e)=>{const files=input.files; if(!files?.length || files.length === 0) return; sendDocumentAssurance(event, { file: files[files.length - 1] }); showFiles(files);});
+      // dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+      pickBtn.addEventListener('click', () => input.click());
+
+      input.addEventListener('change', (e) => {
+          const files = input.files;
+          if (!files?.length) return;
+          //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
+          window.moduleHandlers.startAssurance(e, { projectID: window.currentProject?.id});
+          showFiles(files);
+      });
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => { dz.addEventListener(ev, stop, false);});
+      ['dragenter', 'dragover'].forEach(ev => {dz.addEventListener(ev, () => dz.classList.add('hover'), false);});
+      ['dragleave', 'drop'].forEach(ev => {dz.addEventListener(ev, () => dz.classList.remove('hover'), false);});
+
+      dz.addEventListener('drop', (e) => {
+          const files = e.dataTransfer.files;
+          if (!files?.length) return;
+          input.files = files;
+          //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
+          window.moduleHandlers.startAssurance(e, { projectID: window.currentProject?.id});
+          
+          showFiles(files);
+      });
+      dz.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              input.click();
+          }
+      });
 
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startAssurance(event, {

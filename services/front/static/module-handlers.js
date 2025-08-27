@@ -56,7 +56,11 @@ async function createProject(name, desc) {
   }
 }
   
-
+/**
+ * Обработчик инпута загрузки документов
+ * @param {Event} event - Событие клика
+ * @param {Object} options - Дополнительные параметры
+ */
 async function sendDocumentAssurance(event, options = {}) {
   console.log('Отправка файла');
   
@@ -68,13 +72,8 @@ async function sendDocumentAssurance(event, options = {}) {
     return;
   }
   
-  
-  
   const file = options.file
-  try {
-    // Последовательно отправляем все файлы
-    
-      
+  try {    
       if (!file) {
         console.warn(`Файл  не существует`);
         return;
@@ -174,7 +173,7 @@ async function handleStartAssurance(event, options = {}) {
       showToast(`Отправка файла ${i+1}/${files.length}...`, true);
       
       const response = await fetch(
-        `${endpoints.loadFile}${options.projectID}/files?type=documentation`, 
+        `${endpoints.loadFile}${options.projectID}${endpoints.loadFileDocumentation}`, 
         {
           method: 'POST',
           body: formData
