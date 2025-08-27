@@ -1,434 +1,592 @@
+import os
+import docx
+import fitz
 import torch
-from sentence_transformers import SentenceTransformer, util
-import json
+import pandas as pd
 import asyncio
-from collections import defaultdict
 import aiohttp
-from asyncio import Semaphore
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import itertools
+from tqdm.asyncio import tqdm as async_tqdm
+import json
+import subprocess
+import shutil
+from enum import StrEnum
+from pathlib import Path
+from typing import NamedTuple
 
-# ---  КОНФИГУРАЦИЯ ---
-LOCAL_API_URL = "http://89.108.116.240:11434/api/chat"
-LOCAL_MODEL_NAME = "qwen3-8b:latest"
-MAX_CONCURRENT_REQUESTS = 3
+import jinja2
 
-# Если в кластере больше замечаний, чем это число, будет запущена выборка лучших, чтобы не перегревать модель.
-MAX_REMARKS_FOR_SYNTHESIS = 10
+from pptx import Presentation
+from bs4 import BeautifulSoup
 
-EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
-DATA_FILE = "Dirty.json"
-THEMES_FILE = "themes.json"
-CLUSTER_DISTANCE_THRESHOLD = 0.18
-NLP_CLASSIFICATION_THRESHOLD = 0.75
+from langchain.schema.document import Document
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# ---  ИНИЦИАЛИЗАЦИЯ ---
-print("Загрузка локальной модели для векторизации...")
-device = "cuda" if torch.cuda.is_available() else "cpu"
-embedding_model = SentenceTransformer(EMBEDDING_MODEL, device=device)
-print(f"Модель для векторизации загружена на '{device}'.")
-
-# ---  ПРОМПТЫ ---
-CLASSIFY_MAJOR_PROMPT = lambda text, categories: [{"role": "system",
-                                                   "content": "Ты — эксперт-аналитик... Классифицируй замечание, выбрав ОДНУ ОСНОВНУЮ категорию. Ответь НА РУССКОМ ЯЗЫКЕ ТОЛЬКО названием категории или 'Прочее'."},
-                                                  {"role": "user",
-                                                   "content": f"СПИСОК КАТЕГОРИЙ:\n{categories}\n\nЗАМЕЧАНИЕ:\n\"{text}\"\n\nКАТЕГОРИЯ:"}]
-
-CLASSIFY_SUB_PROMPT = lambda text, sub_categories: [{"role": "system",
-                                                     "content": "Ты — эксперт-аналитик... Классифицируй замечание, выбрав ОДНУ ПОДКАТЕГОРИЮ НА РУССКОМ ЯЗЫКЕ. Если ни одна не подходит, ответь 'None'."},
-                                                    {"role": "user",
-                                                     "content": f"СПИСОК ПОДКАТЕГОРИЙ:\n{sub_categories}\n\nЗАМЕЧАНИЕ:\n\"{text}\"\n\nПОДКАТЕГОРИЯ:"}]
-
-CREATE_NEW_SUB_PROMPT = lambda text: [{"role": "system",
-                                       "content": "Ты — эксперт-аналитик... Сформулируй ОДНО краткое название новой подкатегории для этого замечания. Ответь ТОЛЬКО названием НА РУССКОМ ЯЗЫКЕ."},
-                                      {"role": "user",
-                                       "content": f"ЗАМЕЧАНИЕ:\n\"{text}\"\n\nНАЗВАНИЕ НОВОЙ ПОДКАТЕГОРИИ:"}]
-
-COMPLEX_SYNTHESIS_PROMPT = lambda texts: [{"role": "system",
-                                           "content": "Ты — главный эксперт-аналитик... Проанализируй список схожих замечаний. Верни ответ СТРОГО в формате JSON с двумя ключами: 'group_name' (краткое название) и 'synthesized_remark' (обобщающее замечание) НА РУССКОМ ЯЗЫКЕ."},
-                                          {"role": "user", "content": f"СПИСОК ЗАМЕЧАНИЙ:\n{texts}\n\nJSON ОТВЕТ:"}]
+# ---  ГЛОБАЛЬНАЯ КОНФИГУРАЦИЯ  ---
+GLOBAL_CONFIG = {
+    "LOCAL_API_URL": "http://89.108.116.240:11434/api/chat",
+    "LOCAL_MODEL_NAME": "qwen3:8b",
+    "EMBEDDING_MODEL": "intfloat/multilingual-e5-large",
+    "MAX_CONCURRENT_REQUESTS": 1,
+    "RETRIEVER_TOP_K": 5,
+    "REQUEST_DELAY_SECONDS": 0.5
+}
 
 
-# ---  ФУНКЦИИ ПАЙПЛАЙНА ---
-
-def load_knowledge_base(themes_file):
-    try:
-        with open(themes_file, 'r', encoding='utf-8') as f:
-            themes = json.load(f)
-        print(" База знаний тем успешно загружена.")
-        # ### ИЗМЕНЕНИЕ: Убедимся, что возвращаем списки, даже если ключей нет ###
-        return themes.get('major_categories', []), themes.get('sub_categories', [])
-    except Exception as e:
-        print(f" Ошибка загрузки базы знаний: {e}");
-        return [], []
+# --- PDF generator ----
+def filter_newlines(text: str) -> str:
+    """Фильтрует переносы строк для LaTeX"""
+    # Заменяем переносы строк на пробелы и удаляем лишние пробелы
+    return ' '.join(text.replace("|", "").split()).replace('%', '\\%').replace('&', '\\&').replace("_", "\\_")
 
 
-def save_knowledge_base(themes_file, major_categories, sub_categories):
-    try:
-        with open(themes_file, 'w', encoding='utf-8') as f:
-            json.dump({"major_categories": major_categories, "sub_categories": sub_categories}, f, ensure_ascii=False,
-                      indent=2)
-        print("База знаний успешно обновлена и сохранена.")
-    except Exception as e:
-        print(f" Ошибка сохранения базы знаний: {e}")
+def process_summary(text: str, section_label: str) -> str:
+    """Обрабатывает сводку, добавляя ссылки на строки таблицы"""
+    # Простая замена номеров на ссылки (можно адаптировать под ваш формат)
+    import re
+    # Ищем упоминания источников типа "ИСТОЧНИК 1", "источник 3" и т.д.
+    pattern = r'(ИСТОЧНИК|источник|Источник|Source|SOURCE|КОНТЕКСТ)\s+(\d+)'
+
+    def replace_with_ref(match):
+        source_num = match.group(2)
+        return f"{match.group(1)} \\hyperlink{{row:{section_label}-{source_num}}}{{{source_num}}}"
+
+    return re.sub(pattern, replace_with_ref, text)
+
+jinja_env = jinja2.Environment(
+    block_start_string='<BLOCK>',
+    block_end_string='</BLOCK>',
+    variable_start_string='<VAR>',
+    variable_end_string='</VAR>',
+    comment_start_string='<!--',
+    comment_end_string='-->'
+)
+
+jinja_env.filters['filter_newlines'] = filter_newlines
+jinja_env.filters['process_summary'] = process_summary
+
+class Source(NamedTuple):
+    source_label: str
+    source_chunk: str
+    source_filepath: str
 
 
-# Разделяет замечания на две группы: уже классифицированные и те, что в "None"
-def load_and_partition_remarks(file_path):
-    preclassified_remarks = defaultdict(list)
-    unclassified_remarks = []
-    unique_texts = set()
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        # Сначала загрузим названия категорий из ключа 'keys'
-        category_names = data.get("keys", {})
-
-        for cat_key, remarks in data.items():
-            if cat_key in ["keys", "None"]:
-                continue
-
-            # Получаем  имя категории, если оно есть
-            major_category_name = category_names.get(cat_key, cat_key)
-
-            for remark_text in remarks:
-                stripped_text = remark_text.strip()
-                if stripped_text and stripped_text not in unique_texts:
-                    unique_texts.add(stripped_text)
-                    preclassified_remarks[major_category_name].append(
-                        {"id": len(unique_texts) - 1, "text": stripped_text})
-
-        if "None" in data:
-            for remark_text in data["None"]:
-                stripped_text = remark_text.strip()
-                if stripped_text and stripped_text not in unique_texts:
-                    unique_texts.add(stripped_text)
-                    unclassified_remarks.append({"id": len(unique_texts) - 1, "text": stripped_text})
-
-        print(
-            f" Данные загружены. Найдено {len(preclassified_remarks.keys())} предварительно классифицированных категорий.")
-        print(f" Найдено {len(unclassified_remarks)} неклассифицированных замечаний.")
-        print(f" Всего уникальных замечаний: {len(unique_texts)}.")
-
-        return preclassified_remarks, unclassified_remarks
-
-    except Exception as e:
-        print(f" Ошибка загрузки и разделения данных: {e}")
-        return {}, []
+class Section(NamedTuple):
+    name: str
+    label: str
+    summary: str
+    sources: list[Source]
 
 
-def cluster_remarks(remarks_list, embeddings, distance_threshold=0.3):
-    if len(remarks_list) <= 1:
-        # Если замечание одно, возвращаем кластер из одного элемента
-        return [[remarks_list[0]]]
+class Status(StrEnum):
+    confirmed = "confirmed"
+    not_found = "not_found"
+    partial = "partial"
+    indirect = "indirect"
+    requires_confirmation = "requires_confirmation"
 
-    print(f"\n--- Этап: Семантическая кластеризация (порог: {distance_threshold}) ---")
-    clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=distance_threshold, metric='cosine',
-                                         linkage='complete').fit(embeddings)
-    clusters = defaultdict(list)
-    for i, cluster_id in enumerate(clustering.labels_):
-        clusters[cluster_id].append(remarks_list[i])
-
-    final_clusters = list(clusters.values())
-    print(f" Замечания сгруппированы в {len(final_clusters)} семантических кластеров.")
-    return final_clusters
-
-
-async def process_llm_requests(items, prompt_function, semaphore, **kwargs):
-    session_id = kwargs.pop("session_id", "REQ")
-    async with aiohttp.ClientSession() as session:
-        async def get_one(item):
-            async with semaphore:
-                prompt_args = {k: v for k, v in kwargs.items()}
-                prompt_input_for_log = ""
-
-                if 'texts_list' in item:
-                    texts_for_prompt = "\n".join([f"- {text}" for text in item['texts_list']])
-                    prompt_args['texts'] = texts_for_prompt
-                    prompt_input_for_log = f"texts list of size {len(item['texts_list'])}"
-                elif 'text' in item:
-                    prompt_args['text'] = item['text']
-                    prompt_input_for_log = item['text'][:70].strip()
-                else:
-                    return item, None
-
-                messages = prompt_function(**prompt_args)
-                payload = {"model": LOCAL_MODEL_NAME, "messages": messages, "stream": False}
-
-                try:
-                    async with session.post(LOCAL_API_URL, json=payload, timeout=300) as response:
-                        if response.status != 200:
-                            error_text = await response.text()
-                            print(
-                                f" [API SERVER ERROR-{session_id}] Статус {response.status} для '{prompt_input_for_log!r}'. Ответ: {error_text[:500]}")
-                            return item, None
-
-                        response_data = await response.json()
-                        content = response_data['message']['content'].strip()
-                        if content.startswith("```json"): content = content[7:-3].strip()
-                        print(f" [API-{session_id}] Вход: '{prompt_input_for_log!r}...' -> Выход: '{content[:100]}...'")
-                        await asyncio.sleep(0.5)
-                        return item, content
-
-                except aiohttp.ContentTypeError:
-                    error_text = await response.text()
-                    print(
-                        f" [API FORMAT ERROR-{session_id}] Сервер вернул не-JSON для '{prompt_input_for_log!r}'. Ответ: {error_text[:500]}")
-                    return item, None
-                except Exception as e:
-                    print(f" [API UNKNOWN ERROR-{session_id}] Для '{prompt_input_for_log!r}...' ошибка: {repr(e)}")
-                    return item, None
-
-        tasks = [get_one(item) for item in items]
-        return await asyncio.gather(*tasks)
+    def get_ru_name(self) -> str:
+        match self:
+            case Status.confirmed:
+                return "Подтверждено"
+            case Status.not_found:
+                return "Не найдено"
+            case Status.partial:
+                return "Частично найдено"
+            case Status.indirect:
+                return "Индиректно"
+            case Status.requires_confirmation:
+                return "Требует подтверждения"
+            case _:
+                raise NotImplementedError
 
 
+CHAPTER_TEMPLATE = jinja_env.from_string("""
+\\chapter{<VAR>chapter_name</VAR>}
+\\label{cha:<VAR>chapter_label</VAR>}
 
-# Объединяет логику кластеризации и синтеза
-async def get_synthesized_groups(remarks_list, all_embeddings, semaphore):
-    if not remarks_list:
-        return [], {}  # Возвращаем пустые результаты, если нет замечаний
+<BLOCK>for section in sections</BLOCK>
+\\section{<VAR>section.name</VAR>}
+\\label{sec:<VAR>section.label</VAR>}
 
-    # Извлекаем эмбеддинги только для текущей группы замечаний
-    original_indices = [r['id'] for r in remarks_list]
-    current_embeddings = all_embeddings[original_indices]
+\\subsection{Краткая сводка}
+\\textbf{Статус}: <VAR>chapter_name</VAR>. <VAR>section.summary | filter_newlines | process_summary(section.label)</VAR>
 
-    remark_clusters = cluster_remarks(remarks_list, current_embeddings, distance_threshold=CLUSTER_DISTANCE_THRESHOLD)
+\\subsection{Релевантные результаты}
+\\begin{longtable}{|p{0.05\\textwidth}|p{0.65\\textwidth}|p{0.2\\textwidth}|}
+\\hline
+\\textbf{№} & \\textbf{Релевантные результаты} & \\textbf{Источник} \\\\
+\\hline
+\\endhead
+<BLOCK>for source in section.sources</BLOCK>
+<BLOCK>set source_index = loop.index</BLOCK>
+\\raisebox{-\\baselineskip}[0pt][0pt]{\\hypertarget{row:<VAR>section.label</VAR>-<VAR>source_index</VAR>}{}} <VAR>source_index</VAR> & <VAR>source.source_chunk | filter_newlines</VAR> & \\cite{<VAR>source.source_label</VAR>} \\\\
+\\hline
+<BLOCK>endfor</BLOCK>
+\\end{longtable}
+<BLOCK>endfor</BLOCK>
+""")
 
-    print(f"\n--- Этап: Подготовка к синтезу (лимит на кластер: {MAX_REMARKS_FOR_SYNTHESIS}) ---")
-    items_for_synthesis = []
-    for i, cluster in enumerate(remark_clusters):
-        if len(cluster) <= 1:
+BIBLIOGRAPHY_TEMPLATE = jinja_env.from_string("""@misc{<VAR>source_label</VAR>,
+    author = {ПАО ``Газпром``},
+    title = {<VAR>filename | filter_newlines</VAR>},
+    howpublished = {Внутренний документ},
+    year = {2025},
+    note = {Страница: <VAR>page</VAR>, Слайд: <VAR>slide</VAR>}
+}
+""")
+
+LATEX_ROOT_PATH = Path(__file__).parent / "latex-gost-template"
+LATEX_OUTPUT_PATH = LATEX_ROOT_PATH / "thesis.pdf"
+LATEX_COMPILE_SCRIPT = LATEX_ROOT_PATH / "build.sh"
+LATEX_TEMPLATE_PATH = LATEX_ROOT_PATH / "tex"
+LATEX_SOURCE_PATH = LATEX_ROOT_PATH / "tex_tmp"
+
+
+def create_safe_label(text: str) -> str:
+    """Создает безопасный лабел для LaTeX из текста"""
+    return text.lower().replace(' ', '-').replace(',', '').replace('.', '').replace('(', '').replace(')', '')
+
+
+def create_source_label(filename: str, index: int) -> str:
+    """Создает уникальный идентификатор для источника"""
+    base_name = Path(filename).stem.lower().replace(' ', '-').replace('.', '-')
+    return f"{base_name}-{index}"
+
+
+def render_latex(file_path: Path, **kwargs) -> None:
+    template = jinja_env.from_string(file_path.read_text())
+    rendered = template.render(**kwargs)
+    file_path.write_text(rendered)
+
+
+def make_pdf(input_json: dict, output_pdf: Path) -> None:
+    # Создаем директории если они не существуют
+    LATEX_SOURCE_PATH.mkdir(exist_ok=True)
+
+    chapters = {status: [] for status in Status}
+    json_data = input_json
+
+    # Собираем все источники для библиографии
+    all_sources = []
+    source_counter = {}
+
+    for section_name, content in json_data.items():
+        status = Status(content["status"])
+
+        # Обрабатываем источники для этой секции
+        section_sources = []
+        for i, source_data in enumerate(content["sources"]):
+            filename = source_data["filename"]
+            source_counter[filename] = source_counter.get(filename, 0) + 1
+            source_label = create_source_label(filename, source_counter[filename])
+
+            section_sources.append(Source(
+                source_label=source_label,
+                source_chunk=source_data["snippet"],
+                source_filepath=filename
+            ))
+
+            # Добавляем в общий список источников
+            all_sources.append({
+                'source_label': source_label,
+                'filename': filename,
+                'page': source_data.get("page", "N/A") or "N/A",
+                'slide': source_data.get("slide", "N/A") or "N/A"
+            })
+
+        # Создаем секцию
+        section_label = create_safe_label(section_name)
+        section = Section(
+            name=section_name,
+            label=section_label,
+            summary=content["answer"],
+            sources=section_sources
+        )
+
+        chapters[status].append(section)
+
+    shutil.rmtree(LATEX_SOURCE_PATH)
+    shutil.copytree(LATEX_TEMPLATE_PATH, LATEX_SOURCE_PATH)
+
+    # Создаем библиографию
+    bib_content = []
+    for source in all_sources:
+        bib_entry = BIBLIOGRAPHY_TEMPLATE.render(**source)
+        bib_content.append(bib_entry)
+
+    bib_path = LATEX_SOURCE_PATH / "0-main.bib"
+    bib_path.write_text('\n'.join(bib_content), encoding='utf-8')
+
+    # Создаем главы
+    chapter_ids = []
+    for i, status in enumerate(Status, start=1):
+        if not chapters[status]:  # Пропускаем пустые главы
             continue
 
-        cluster_texts = [r['text'] for r in cluster]
-        remarks_to_send = cluster_texts
+        chapter_id = f"chapter-{i}"
+        chapter_filename = f"3{i}-{chapter_id}.tex"
+        chapter_path = LATEX_SOURCE_PATH / chapter_filename
 
-        if len(cluster) > MAX_REMARKS_FOR_SYNTHESIS:
-            print(
-                f" [CHAMPIONS] Кластер {i} слишком большой ({len(cluster)}). Выбираем {MAX_REMARKS_FOR_SYNTHESIS} чемпионов...")
-            cluster_original_indices = [r['id'] for r in cluster]
-            cluster_embeddings = all_embeddings[cluster_original_indices]
+        rendered_template = CHAPTER_TEMPLATE.render(
+            chapter_name=status.get_ru_name(),
+            chapter_label=f"chapter-{i}",
+            sections=chapters[status]
+        )
 
-            centroid = np.mean(cluster_embeddings, axis=0)
-            similarities = cosine_similarity(cluster_embeddings, centroid.reshape(1, -1)).flatten()
-            top_indices_in_cluster = np.argsort(similarities)[-MAX_REMARKS_FOR_SYNTHESIS:]
-            remarks_to_send = [cluster_texts[j] for j in top_indices_in_cluster]
+        chapter_path.write_text(rendered_template, encoding='utf-8')
+        chapter_ids.append(chapter_filename.replace('.tex', ''))
 
-        items_for_synthesis.append({'cluster_id': i, 'texts_list': remarks_to_send})
+    render_latex(LATEX_SOURCE_PATH / "0-main.tex", chapters=chapter_ids)
+    render_latex(LATEX_SOURCE_PATH / "11-title-page.tex", doc_name="Сводный отчёт по замечаниям и программе доизучения",
+                 doc_id=" GAZ-REP-2025-001", assigned_to="Отдел аналитики")
+    render_latex(LATEX_SOURCE_PATH / "2-intro.tex", intro_text="""Настоящий отчёт подготовлен на основании предоставленных
+данных в формате JSON. Категории данных сформированы как
+главы, группы — как подразделы. Для каждого подраздела
+приведены синтезированное описание и исходные замечания""")
+    render_latex(LATEX_SOURCE_PATH / "4-conclusion.tex", conclusion_text="""Предложенные мероприятия направлены на снижение
+неопределённостей и повышение качества прогнозов.
+Рекомендовано согласовать план доизучения и
+актуализировать модели по итогам получения новых данных.""")
 
-    cluster_names, synthesized_remarks = {}, {}
-    if items_for_synthesis:
-        print("\n---  Этап: Запуск синтеза для кластеров ---")
-        processing_results = await process_llm_requests(items_for_synthesis, COMPLEX_SYNTHESIS_PROMPT, semaphore,
-                                                        session_id='SYNTH-JSON')
-        for item, content in processing_results:
-            cluster_id = item['cluster_id']
-            try:
-                data = json.loads(content)
-                cluster_names[cluster_id] = data.get('group_name', 'Без названия')
-                synthesized_remarks[cluster_id] = data.get('synthesized_remark', item['texts_list'][0])
-            except (json.JSONDecodeError, TypeError):
-                print(f" [WARNING] Не удалось распарсить JSON для кластера {cluster_id}. Используем запасной вариант.")
-                cluster_names[cluster_id] = "Название не сгенерировано"
-                synthesized_remarks[cluster_id] = item['texts_list'][0]
+    # Компилируем LaTeX
+    try:
+        subprocess.run(['bash', str(LATEX_COMPILE_SCRIPT)], cwd=LATEX_SOURCE_PATH, check=True)
 
-    final_groups_list = []
-    for i, cluster in enumerate(remark_clusters):
-        original_texts = [r['text'] for r in cluster]
-        if len(cluster) == 1:
-            final_groups_list.append({
-                "text_to_classify": original_texts[0],
-                "group_name": "Уникальное замечание",
-                "original_remarks": original_texts
-            })
-        else:
-            synthesized_text = synthesized_remarks.get(i, original_texts[0])
-            group_name = cluster_names.get(i, "Без названия")
-            final_groups_list.append({
-                "text_to_classify": synthesized_text,
-                "group_name": group_name,
-                "original_remarks": original_texts
-            })
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка компиляции LaTeX: {e}")
 
-    # Сохраняем отчет о синтезе для отладки
-    synthesis_report = [{"group_name": item['group_name'], "synthesized_remark": item['text_to_classify'],
-                         "original_duplicates": item['original_remarks']} for item in final_groups_list if
-                        len(item['original_remarks']) > 1]
-
-    return final_groups_list, synthesis_report
-
-
-async def main():
-    print("\n---  ЗАПУСК ГИБРИДНОГО ПАЙПЛАЙНА ---")
-    semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
-
-    # === ЭТАП 0: Загрузка и предварительная обработка ===
-    major_categories_kb, sub_categories_kb = load_knowledge_base(THEMES_FILE)
-
-    # ### ИЗМЕНЕНИЕ: Используем новую функцию для разделения данных ###
-    preclassified_remarks, unclassified_remarks = load_and_partition_remarks(DATA_FILE)
-
-    all_remarks_list = list(itertools.chain.from_iterable(preclassified_remarks.values())) + unclassified_remarks
-    if not all_remarks_list:
-        print("Не найдено замечаний для обработки.")
-        return
-
-    print("\n--- Этап 0.5: Предварительное создание всех эмбеддингов ---")
-    # Сортируем по ID, чтобы сохранить порядок для индексации
-    all_remarks_list.sort(key=lambda x: x['id'])
-    all_remark_texts = [r['text'] for r in all_remarks_list]
-    all_remark_embeddings = embedding_model.encode(all_remark_texts, show_progress_bar=True)
-
-    final_report = defaultdict(list)
-    synthesis_reports = {}
-
-    # === ЭТАП 1: Обработка НЕКЛАССИФИЦИРОВАННЫХ замечаний (полный цикл) ===
-    print("\n\n---  ПАЙПЛАЙН А: Обработка неклассифицированных замечаний (из 'None') ---")
-    if unclassified_remarks:
-        # Кластеризация и синтез
-        unclassified_groups, unclassified_synthesis_report = await get_synthesized_groups(unclassified_remarks,
-                                                                                          all_remark_embeddings,
-                                                                                          semaphore)
-        synthesis_reports['unclassified'] = unclassified_synthesis_report
-
-        # Классификация
-        print(f"\n--- Этап: Гибридная классификация для {len(unclassified_groups)} групп ---")
-        group_texts_to_classify = [item['text_to_classify'] for item in unclassified_groups]
-        group_embeddings = embedding_model.encode(group_texts_to_classify, convert_to_tensor=True, device=device)
-
-        # Получаем эмбеддинги для категорий из базы знаний
-        major_cat_embeddings = embedding_model.encode(major_categories_kb, convert_to_tensor=True, device=device)
-        sub_cat_embeddings = embedding_model.encode(sub_categories_kb, convert_to_tensor=True, device=device)
-
-        major_cos_scores = util.cos_sim(group_embeddings, major_cat_embeddings)
-        major_top_scores, major_top_indices = torch.max(major_cos_scores, dim=1)
-
-        for i, item in enumerate(unclassified_groups):
-            text = item['text_to_classify']
-            major_cat_score, major_cat_nlp = major_top_scores[i].item(), major_categories_kb[
-                major_top_indices[i].item()]
-
-            # --- Определение основной категории ---
-            major_cat = "Прочее"
-            if major_cat_score >= NLP_CLASSIFICATION_THRESHOLD:
-                major_cat = major_cat_nlp
-                print(f" [NLP-CLASS] '{text[:50]}...' -> '{major_cat}' (score: {major_cat_score:.2f})")
-            else:
-                print(
-                    f" [NLP-UNSURE] Низкая уверенность для основной категории ({major_cat_score:.2f}). Спрашиваем LLM...")
-                major_cat_result, = await process_llm_requests([{'text': text}], CLASSIFY_MAJOR_PROMPT, semaphore,
-                                                               categories="\n".join(major_categories_kb),
-                                                               session_id='LLM-MAJOR')
-                major_cat = major_cat_result[1] if major_cat_result[1] else "Прочее"
-
-            # --- Определение подкатегории ---
-            sub_cat = 'Не удалось классифицировать'
-            if major_cat != "Прочее":
-                # Пересчитываем эмбеддинги для обновленной базы знаний подкатегорий
-                sub_cat_embeddings_updated = embedding_model.encode(sub_categories_kb, convert_to_tensor=True,
-                                                                    device=device)
-                sub_cos_scores = util.cos_sim(group_embeddings[i].unsqueeze(0), sub_cat_embeddings_updated)
-                sub_top_score, sub_top_index = torch.max(sub_cos_scores, dim=1)
-
-                if sub_top_score.item() >= NLP_CLASSIFICATION_THRESHOLD:
-                    sub_cat = sub_categories_kb[sub_top_index.item()]
-                    print(f" [NLP-SUB-CLASS] -> '{sub_cat}' (score: {sub_top_score.item():.2f})")
-                else:
-                    print(f" [NLP-UNSURE-SUB] Низкая уверенность для подкатегории. Спрашиваем LLM...")
-                    sub_cat_result, = await process_llm_requests([{'text': text}], CLASSIFY_SUB_PROMPT, semaphore,
-                                                                 sub_categories="\n".join(sub_categories_kb),
-                                                                 session_id='LLM-SUB')
-                    found_sub_cat = sub_cat_result[1] if sub_cat_result[1] and sub_cat_result[
-                        1].lower() != 'none' else None
-
-                    if found_sub_cat:
-                        sub_cat = found_sub_cat
-                    else:
-                        new_sub_cat_result, = await process_llm_requests([{'text': text}], CREATE_NEW_SUB_PROMPT,
-                                                                         semaphore, session_id='CREATE-SUB')
-                        new_sub_cat = new_sub_cat_result[1]
-                        if new_sub_cat:
-                            sub_cat = new_sub_cat
-                            if new_sub_cat not in sub_categories_kb:
-                                sub_categories_kb.append(new_sub_cat)  # Обновляем базу знаний "на лету"
-
-            category_key = f"{major_cat} / {sub_cat}"
-            final_report[category_key].append(item)
+    if LATEX_OUTPUT_PATH.exists():
+        shutil.copy2(LATEX_OUTPUT_PATH, output_pdf)
+        print(f"PDF успешно создан: {output_pdf}")
     else:
-        print("Неклассифицированных замечаний не найдено. Пропускаем Пайплайн А.")
+        print("Ошибка: PDF файл не был создан")
 
-    # === ЭТАП 2: Обработка ПРЕДВАРИТЕЛЬНО КЛАССИФИЦИРОВАННЫХ замечаний (упрощенный цикл) ===
-    print("\n\n---  ПАЙПЛАЙН Б: Обработка предварительно классифицированных замечаний ---")
-    for major_cat, remarks in preclassified_remarks.items():
-        print(f"\n--- Обрабатываем категорию: '{major_cat}' ({len(remarks)} шт.) ---")
+# --- RAG ---
 
-        # Кластеризация и синтез внутри основной категории
-        preclassified_groups, preclassified_synthesis_report = await get_synthesized_groups(remarks,
-                                                                                            all_remark_embeddings,
-                                                                                            semaphore)
-        synthesis_reports[major_cat] = preclassified_synthesis_report
+class ComprehensiveRAGSystem:
+    def __init__(self, config):
+        self.config = config
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Используется устройство: {self.device} для проекта '{self.config.get('PROJECT_NAME', 'Unknown')}'")
 
-        # Классификация ТОЛЬКО подкатегорий
-        print(f"\n--- Этап: Определение подкатегорий для {len(preclassified_groups)} групп в '{major_cat}' ---")
-        group_texts_to_classify = [item['text_to_classify'] for item in preclassified_groups]
-        group_embeddings = embedding_model.encode(group_texts_to_classify, convert_to_tensor=True, device=device)
+        print("Загрузка Embedding модели...")
+        self.embedding_model = HuggingFaceEmbeddings(
+            model_name=self.config["EMBEDDING_MODEL"],
+            model_kwargs={'device': self.device},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        print("✅ Embedding модель загружена.")
 
-        for i, item in enumerate(preclassified_groups):
-            text = item['text_to_classify']
-            sub_cat = 'Не удалось классифицировать'
+        self.retriever = self._build_or_load_retriever()
 
-            sub_cat_embeddings_updated = embedding_model.encode(sub_categories_kb, convert_to_tensor=True,
-                                                                device=device)
-            sub_cos_scores = util.cos_sim(group_embeddings[i].unsqueeze(0), sub_cat_embeddings_updated)
-            sub_top_score, sub_top_index = torch.max(sub_cos_scores, dim=1)
+    def _extract_text_from_pptx_safe(self, filepath, filename):
+        docs = []
+        try:
+            prs = Presentation(filepath)
+            for i, slide in enumerate(prs.slides):
+                slide_texts = [
+                    shape.text for shape in slide.shapes
+                    if hasattr(shape, "text") and shape.text
+                ]
+                if slide_texts:
+                    slide_content = "\n".join(slide_texts)
+                    docs.append(Document(
+                        page_content=slide_content,
+                        metadata={"filename": filename, "slide": i + 1}
+                    ))
+            return docs
+        except Exception as e:
+            print(f"    ⚠ PPTX (SVG или неподдерживаемый объект) – fallback через PyMuPDF: {e}")
+            try:
+                with fitz.open(filepath) as ppt_as_pdf:
+                    for page_num, page in enumerate(ppt_as_pdf):
+                        page_text = page.get_text("text")
+                        if page_text:
+                            docs.append(Document(
+                                page_content=page_text,
+                                metadata={"filename": filename, "page": page_num + 1}
+                            ))
+            except Exception as inner_e:
+                print(f"    Не удалось fallback-распарсить {filename} через PyMuPDF: {inner_e}")
+            return docs
 
-            if sub_top_score.item() >= NLP_CLASSIFICATION_THRESHOLD:
-                sub_cat = sub_categories_kb[sub_top_index.item()]
-                print(f" [NLP-SUB-CLASS] '{text[:50]}...' -> '{sub_cat}' (score: {sub_top_score.item():.2f})")
-            else:
-                print(f" [NLP-UNSURE-SUB] Низкая уверенность для подкатегории. Спрашиваем LLM...")
-                sub_cat_result, = await process_llm_requests([{'text': text}], CLASSIFY_SUB_PROMPT, semaphore,
-                                                             sub_categories="\n".join(sub_categories_kb),
-                                                             session_id='LLM-SUB')
-                found_sub_cat = sub_cat_result[1] if sub_cat_result[1] and sub_cat_result[1].lower() != 'none' else None
+    def _extract_text_from_docs(self, folder_path):
+        if not os.path.exists(folder_path):
+            print(f"    Папка с документами не найдена: {folder_path}")
+            return []
+        all_docs = []
+        print(f"--- Начало извлечения текста (продвинутый парсер) из '{folder_path}' ---")
 
-                if found_sub_cat:
-                    sub_cat = found_sub_cat
-                else:
-                    new_sub_cat_result, = await process_llm_requests([{'text': text}], CREATE_NEW_SUB_PROMPT, semaphore,
-                                                                     session_id='CREATE-SUB')
-                    new_sub_cat = new_sub_cat_result[1]
-                    if new_sub_cat:
-                        sub_cat = new_sub_cat
-                        if new_sub_cat not in sub_categories_kb:
-                            sub_categories_kb.append(new_sub_cat)
+        for filename in os.listdir(folder_path):
+            full_path = os.path.join(folder_path, filename)
+            try:
+                if filename.endswith(".docx"):
+                    doc = docx.Document(full_path)
+                    content_parts = []
+                    for para in doc.paragraphs:
+                        if para.text.strip(): content_parts.append(para.text)
+                    for table in doc.tables:
+                        for row in table.rows:
+                            row_text = " | ".join([cell.text.strip() for cell in row.cells])
+                            if row_text: content_parts.append(row_text)
+                    full_text = "\n".join(content_parts)
+                    if full_text: all_docs.append(Document(page_content=full_text, metadata={"filename": filename}))
 
-            category_key = f"{major_cat} / {sub_cat}"
-            final_report[category_key].append(item)
+                elif filename.endswith(".pdf"):
+                    with fitz.open(full_path) as pdf_doc:
+                        for page_num, page in enumerate(pdf_doc):
+                            page_text = page.get_text("text")
+                            if page_text: all_docs.append(
+                                Document(page_content=page_text, metadata={"filename": filename, "page": page_num + 1}))
 
-    # === ЭТАП 3: Сборка и сохранение результатов ===
-    print("\n\n---  Этап: Сборка и сохранение результатов ---")
+                elif filename.endswith(".pptx"):
+                    docs_from_pptx = self._extract_text_from_pptx_safe(full_path, filename)
+                    all_docs.extend(docs_from_pptx)
 
-    # Обновляем базу знаний новыми подкатегориями, если они появились
-    save_knowledge_base(THEMES_FILE, major_categories_kb, sub_categories_kb)
+                elif filename.endswith((".html", ".htm")):
+                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        html = f.read()
+                    soup = BeautifulSoup(html, "lxml")
+                    for tag in soup(["script", "style"]): tag.decompose()
+                    text = soup.get_text(" ", strip=True)
+                    if text: all_docs.append(Document(page_content=text, metadata={"filename": filename}))
 
-    # Сохраняем отчеты о синтезе
-    with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
-        json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
-    print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
+                elif filename.endswith(".txt"):
+                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        text = f.read()
+                    if text: all_docs.append(Document(page_content=text, metadata={"filename": filename}))
 
-    # Формируем и сохраняем финальный отчет
-    final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
-    with open("report_final_classified.json", "w", encoding="utf-8") as f:
-        json.dump(final_report_list, f, ensure_ascii=False, indent=2)
-    print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
-    print("\n---  Пайплайн завершен! ---")
+                print(f"     Успешно обработан файл: {filename}")
+            except Exception as e:
+                print(f"     Не удалось прочитать файл {filename}: {e}")
+        return all_docs
+
+    def _split_text_into_chunks(self, documents):
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=150)
+        return text_splitter.split_documents(documents)
+
+    def _build_or_load_retriever(self):
+        index_path, chunks_path = self.config["INDEX_FILE_PATH"], self.config["CHUNKS_FILE_PATH"]
+        index_dir = os.path.dirname(index_path)
+        index_name = os.path.basename(index_path).replace('.faiss', '')
+
+        if os.path.exists(index_path):
+            print(f"--- Найден существующий индекс для '{self.config['PROJECT_NAME']}'. Загружаем... ---")
+            faiss_store = FAISS.load_local(
+                folder_path=index_dir, embeddings=self.embedding_model, index_name=index_name,
+                allow_dangerous_deserialization=True
+            )
+            with open(chunks_path, 'r', encoding='utf-8') as f:
+                chunks_json = json.load(f)
+            split_docs = [Document(page_content=c["page_content"], metadata=c["metadata"]) for c in chunks_json]
+        else:
+            print(f"--- Индекс для '{self.config['PROJECT_NAME']}' не найден. Создаем новый... ---")
+            documents = self._extract_text_from_docs(self.config["DOCUMENTS_PATH"])
+            if not documents: raise FileNotFoundError(
+                f"Документы для проекта '{self.config['PROJECT_NAME']}' не найдены в {self.config['DOCUMENTS_PATH']}.")
+            split_docs = self._split_text_into_chunks(documents)
+            print(f"\n--- Векторизуем {len(split_docs)} чанков для проекта '{self.config['PROJECT_NAME']}'... ---")
+            faiss_store = FAISS.from_documents(split_docs, self.embedding_model)
+            faiss_store.save_local(folder_path=index_dir, index_name=index_name)
+            chunks_for_json = [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in split_docs]
+            with open(chunks_path, 'w', encoding='utf-8') as f:
+                json.dump(chunks_for_json, f, ensure_ascii=False, indent=2)
+
+        faiss_retriever = faiss_store.as_retriever(search_kwargs={"k": self.config["RETRIEVER_TOP_K"]})
+        bm25_retriever = BM25Retriever.from_documents(split_docs)
+        bm25_retriever.k = self.config["RETRIEVER_TOP_K"]
+
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, faiss_retriever], weights=[0.5, 0.5]
+        )
+        print(f"      Гибридный ретривер (BM25 + FAISS) готов для проекта '{self.config['PROJECT_NAME']}'.")
+        return ensemble_retriever
+
+    # --- ИЗМЕНЕНО: Добавлен параметр "format": "json" для принудительного вывода в JSON ---
+    async def _call_local_llm(self, messages):
+        payload = {
+            "model": self.config["LOCAL_MODEL_NAME"],
+            "messages": messages,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.2,  # Низкая температура для точности
+                "top_p": 0.9,  # Оптимальная  выборка
+                "repetition_penalty": 1.05  #  штраф за повторы
+            }
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.config["LOCAL_API_URL"], json=payload, timeout=300) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        print(f"  [LLM SERVER ERROR] Статус {response.status}. Ответ: {error_text[:200]}")
+                        # Возвращаем JSON с ошибкой, чтобы основной код мог это обработать
+                        return json.dumps({"status": "requires_confirmation", "answer": f"Ошибка API: {error_text}"})
+                    response_data = await response.json()
+                    # Ответ от Ollama в JSON mode находится в message.content в виде строки
+                    return response_data.get('message', {}).get('content', '')
+        except Exception as e:
+            print(f"  [LLM CONNECTION EXCEPTION] Ошибка при запросе к API: {type(e).__name__}: {e}")
+            return json.dumps({"status": "requires_confirmation", "answer": f"Ошибка подключения к API: {e}"})
+
+    async def _expand_query(self, criterion):
+        prompt = f"""Переформулируй следующий запрос тремя разными способами для поиска в базе знаний. Используй синонимы и меняй структуру. Верни только 3 новые версии, каждая на новой строке НА РУССКОМ ЯЗЫКЕ.
+
+ИСХОДНЫЙ ЗАПРОС: "{criterion}"
+
+ПЕРЕФОРМУЛИРОВАННЫЕ ЗАПРОСЫ:"""
+        response_text = await self._call_local_llm([{"role": "user", "content": prompt}])
+        if "Ошибка" in response_text: return [criterion]
+        expanded = [q.strip().lstrip("-* ").strip() for q in response_text.split('\n') if q.strip()]
+        print(f"      ... запрос '{criterion[:30]}...' расширен до: {expanded}")
+        return [criterion] + expanded
+
+
+
+    async def process_criterion(self, criterion):
+        print(f"\n--- Обработка критерия для '{self.config['PROJECT_NAME']}': '{criterion[:70]}...' ---")
+
+        all_queries = await self._expand_query(criterion)
+        tasks = [asyncio.to_thread(self.retriever.invoke, q) for q in all_queries]
+        results_from_queries = await asyncio.gather(*tasks)
+
+        unique_docs = {doc.page_content: doc for doc_list in results_from_queries for doc in doc_list}
+        retrieved_docs = list(unique_docs.values())
+        print(f"    🔍 Найдено {len(retrieved_docs)} уникальных чанков-кандидатов.")
+
+        if not retrieved_docs:
+            return {"answer": "Не найдено релевантных документов.", "status": "not_found", "sources": []}
+
+        final_docs = sorted(retrieved_docs, key=lambda x: x.metadata.get('score', 0), reverse=True)[
+                     :self.config["RETRIEVER_TOP_K"]]
+        context = ""
+        for i, doc in enumerate(final_docs):
+            source_info = f"[ИСТОЧНИК {i + 1}: {doc.metadata.get('filename', 'N/A')}, стр. {doc.metadata.get('page', 'N/A')}, слайд {doc.metadata.get('slide', 'N/A')}]"
+            context += f"{source_info}\n{doc.page_content}\n\n"
+
+        # --- Новый промпт, запрашивающий JSON ---
+        final_prompt = f"""Ты — ассистент-аналитик, который возвращает ответы строго в формате JSON. Проанализируй предоставленный КОНТЕКСТ и ответь на ВОПРОС НА РУССКОМ.
+
+КОНТЕКСТ:
+---
+{context.strip()}
+---
+
+ВОПРОС: "{criterion}"
+
+Твой ответ должен быть ТОЛЬКО JSON объектом со следующей структурой:
+{{
+  "status": "ОДИН ИЗ СТАТУСОВ: confirmed, not_found, partial, indirect, requires_confirmation",
+  "answer": "Твой развернутый ответ на основе контекста, со ссылками на источники в формате [ИСТОЧНИК N] НА РУССКОМ"
+}}
+"""
+        raw_json_string = await self._call_local_llm([{"role": "user", "content": final_prompt}])
+
+        try:
+            data = json.loads(raw_json_string)
+            clean_answer = data.get("answer", "Ключ 'answer' не найден в ответе модели.")
+            status = data.get("status", "requires_confirmation")
+            # Простая валидация статуса
+            valid_statuses = {"confirmed", "not_found", "partial", "indirect", "requires_confirmation"}
+            if status not in valid_statuses:
+                status = "requires_confirmation"
+        except (json.JSONDecodeError, TypeError):
+            # Если модель вернула невалидный JSON или вообще не JSON
+            clean_answer = "Ошибка: Модель вернула невалидный JSON. Ответ: " + str(raw_json_string)
+            status = "requires_confirmation"
+
+        sources = [
+            {"filename": d.metadata.get("filename"), "page": d.metadata.get("page"), "slide": d.metadata.get("slide"),
+             "snippet": d.page_content} for d in final_docs]
+
+        return {"answer": clean_answer, "status": status, "sources": sources}
+
+
+def parse_checklist_from_csv(filename):
+    try:
+        if not os.path.exists(filename):
+            print(f"     Файл чек-листа не найден: {filename}")
+            return []
+        df = pd.read_csv(filename)
+        if 'criterion' not in df.columns:
+            print(f"     В файле '{filename}' отсутствует колонка 'criterion'.")
+            return []
+        criteria = df['criterion'].dropna().astype(str).tolist()
+        print(f"    Найдено {len(criteria)} критериев в CSV файле '{filename}'.")
+        return criteria
+    except Exception as e:
+        print(f"    Ошибка при чтении CSV файла '{filename}': {e}")
+        return []
+
+
+async def main(project_names):
+    for project_name in project_names:
+        print(f"\n======== НАЧИНАЕМ ОБРАБОТКУ ПРОЕКТА: {project_name} ========")
+
+        project_folder = os.path.join(".", project_name)
+        documents_path = os.path.join(project_folder, "documents")
+        checklist_file = os.path.join(project_folder, f"checklist_{project_name.lower()}.csv")
+        index_file_path = os.path.join(project_folder, "vector_index.faiss")
+        chunks_file_path = os.path.join(project_folder, "chunks_meta.json")
+        report_path = os.path.join(project_folder,
+                                   f"verification_report_{project_name}_RAG_FINAL.pdf")
+
+        current_project_config = GLOBAL_CONFIG.copy()
+        current_project_config.update({
+            "PROJECT_NAME": project_name,
+            "PROJECT_FOLDER": project_folder,
+            "DOCUMENTS_PATH": documents_path,
+            "CHECKLIST_FILE": checklist_file,
+            "INDEX_FILE_PATH": index_file_path,
+            "CHUNKS_FILE_PATH": chunks_file_path,
+        })
+
+        if not os.path.exists(current_project_config["PROJECT_FOLDER"]):
+            os.makedirs(current_project_config["PROJECT_FOLDER"])
+            os.makedirs(current_project_config["DOCUMENTS_PATH"])
+            print(f"Создана структура папок для проекта: {project_name}")
+
+        try:
+            system = ComprehensiveRAGSystem(current_project_config)
+
+            print(
+                f"\n--- ЭТАП 2: Верификация по чек-листу '{current_project_config['CHECKLIST_FILE']}' для проекта '{project_name}' ---")
+            criteria_to_check = parse_checklist_from_csv(current_project_config['CHECKLIST_FILE'])
+            if not criteria_to_check:
+                print(f"    Пропускаем проект {project_name}: Нет критериев для проверки.")
+                continue
+
+            semaphore = asyncio.Semaphore(current_project_config["MAX_CONCURRENT_REQUESTS"])
+
+            async def process_with_semaphore(criterion):
+                async with semaphore:
+                    result = await system.process_criterion(criterion)
+                    await asyncio.sleep(current_project_config["REQUEST_DELAY_SECONDS"])
+                    return result
+
+            tasks = [process_with_semaphore(c) for c in criteria_to_check]
+            results = await async_tqdm.gather(*tasks, desc=f"Проверка критериев для {project_name}")
+            final_report = {c: r for c, r in zip(criteria_to_check, results)}
+
+            print(f"\n--- ИТОГОВЫЙ ОТЧЕТ ВЕРИФИКАЦИИ для проекта {project_name} ---")
+
+            make_pdf(final_report, Path(report_path))
+
+            print(f"\n Отчет сохранен в {report_path}")
+
+        except FileNotFoundError as e:
+            print(f"     Ошибка при обработке проекта {project_name}: {e}")
+        except Exception as e:
+            print(f"     Непредвиденная ошибка при обработке проекта {project_name}: {type(e).__name__}: {e}")
+
+        print(f"\n======== ЗАВЕРШЕНА ОБРАБОТКА ПРОЕКТА: {project_name} ========\n")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    projects_to_process = ["Project_Alfa"] # Оставил один для примера
+    asyncio.run(main(projects_to_process))
