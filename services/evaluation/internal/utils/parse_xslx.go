@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"strconv"
@@ -239,7 +238,7 @@ func ParseExcelFromBytes(fileContent []byte) ([]byte, error) {
 		headers[4], // text
 		headers[5], // urgency
 	}
-	log.Println(requiredCols)
+	//log.Println(requiredCols)
 	for i, colName := range headers {
 		switch colName {
 		case requiredCols[0]:
@@ -290,7 +289,7 @@ func ParseExcelFromBytes(fileContent []byte) ([]byte, error) {
 
 		modelList = append(modelList, model)
 	}
-	log.Println(modelList)
+	//log.Println(modelList)
 
 	// Обработка поля expertise_section с проверкой NaN и переводом по словарю
 	for i, m := range modelList {

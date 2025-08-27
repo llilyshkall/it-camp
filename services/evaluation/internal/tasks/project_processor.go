@@ -450,6 +450,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 		}
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
+	//log.Println(string(respBody))
 
 	// Парсим JSON ответ
 	var remarksResponse RemarksResponse

@@ -19,7 +19,8 @@ import os
 
 # ---  КОНФИГУРАЦИЯ ---
 LOCAL_API_URL = "http://89.108.116.240:11434/api/chat"
-LOCAL_MODEL_NAME = "qwen3-8b:latest"
+LOCAL_MODEL_NAME = "qwen2.5:14b"
+#LOCAL_MODEL_NAME = "qwen3-8b:latest"
 MAX_CONCURRENT_REQUESTS = 3
 
 # Если в кластере больше замечаний, чем это число, будет запущена выборка лучших, чтобы не перегревать модель.
@@ -444,15 +445,15 @@ async def logic(data):
     save_knowledge_base(THEMES_FILE, major_categories_kb, sub_categories_kb)
 
     # Сохраняем отчеты о синтезе
-    # with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
-    #     json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
-    # print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
+    with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
+        json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
+    print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
 
     # Формируем и сохраняем финальный отчет
     #final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
     # with open("report_final_classified.json", "w", encoding="utf-8") as f:
     #     json.dump(final_report_list, f, ensure_ascii=False, indent=2)
-    print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
+    #print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
     print("\n---  Пайплайн завершен! ---")
     return {
         "success": True,
@@ -468,7 +469,7 @@ async def remarksHandler(
     #return JSONResponse(content=None, status_code=202)
     #background_tasks.add_task(logic, data)
     processed_remarks = await logic(data)
-    return JSONResponse(content=processed_remarks, status_code=200)
+    return JSONResponse(content=processed_remarks, status_code=202)
 # if __name__ == "__main__":
 #     asyncio.run(main())
 
