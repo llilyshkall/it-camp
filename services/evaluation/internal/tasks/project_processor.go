@@ -465,7 +465,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 		}
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
-	log.Println(string(respBody))
+	//log.Println(string(respBody))
 
 	// Парсим JSON ответ от внешнего сервиса
 	var externalResponse ExternalServiceResponse
@@ -508,17 +508,42 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	log.Printf("Successfully saved %d remark categories to DB", len(remarksResponse))
 
 	// Генерируем PDF отчет из JSON ответа
-	pdfBuffer, err := pt.generatePDFFromRemarks(remarksResponse)
+	// pdfBuffer, err := pt.generatePDFFromRemarks(remarksResponse)
+	// if err != nil {
+
+	// 	// Устанавливаем статус ready при ошибке
+	// 	if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+	// 		log.Printf("Failed to set project status to ready after error: %v", updateErr)
+	// 	}
+	// 	return fmt.Errorf("failed to generate PDF report: %w", err)
+	// }
+
+	externalURL2 := "http://127.0.0.1:8086/remarks_report"
+
+	// Send request to external service json.NewEncoder(w).Encode(
+	//resp, err = http.Post(externalURL2, "application/json", bytes.NewBuffer(remarksResponse))
+	resp, err = http.Post(externalURL2, "application/json", bytes.NewBuffer(remarksResponse))
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
 			log.Printf("Failed to set project status to ready after error: %v", updateErr)
 		}
-		return fmt.Errorf("failed to generate PDF report: %w", err)
+		return fmt.Errorf("failed to send remarks to external service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check external service response
+	if resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
+		return fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Сохраняем PDF файл в S3
-	objectName, err := pt.storage.UploadFile(ctx, pdfBuffer, "remarks_report.pdf", "application/pdf")
+	objectName, err := pt.storage.UploadFile(ctx, body2, "remarks_report.pdf", "application/pdf")
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
@@ -920,6 +945,9 @@ func (pt *ProjectProcessorTask) generatePDFFromRemarks(remarksResponse RemarksRe
 	// Разбиваем текст на строки для корректного отображения
 	lines := pdf.SplitText(introText, 150)
 	for _, line := range lines {
+		if line == "" {
+			continue
+		}
 		pdf.Cell(0, 8, line)
 		pdf.Ln(8)
 	}
@@ -1013,6 +1041,9 @@ func (pt *ProjectProcessorTask) generatePDFFromRemarks(remarksResponse RemarksRe
 
 	conclusionLines := pdf.SplitText(conclusionText, 150)
 	for _, line := range conclusionLines {
+		if line == "" {
+			continue
+		}
 		pdf.Cell(0, 8, line)
 		pdf.Ln(8)
 	}
