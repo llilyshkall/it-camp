@@ -199,8 +199,7 @@ async function handleStartAssurance(event, options = {}) {
     };
 
     const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
-    showToast(error.message, false);
-    throw error;
+    showToast(errorMessage, false);
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
@@ -314,11 +313,11 @@ async function handleStartRemarks(event, options = {}) {
   }
   
   const startBtn = document.getElementById('start-remarks');
-  const loadingIndicator = document.getElementById('remarks-loading');
+  //const loadingIndicator = document.getElementById('remarks-loading');
   
   startBtn.disabled = true;
   startBtn.classList.add('loading');
-  loadingIndicator.hidden = false;
+  //loadingIndicator.hidden = false;
 
   try {
     // Последовательно отправляем все файлы
@@ -341,16 +340,18 @@ async function handleStartRemarks(event, options = {}) {
         }
       );
       
+
+        // Обрабатываем 404 ошибку отдельно  
       if (response.status === 404) {
-          throw new Error('404 Выполняется обработка. Пожалуйста, попробуйте позже.');
-        }
+        throw new Error('404 Выполняется обработка. Пожалуйста, попробуйте позже.');
+      }
       if (response.status === 409) {
-          throw new Error('409 Выполняется обработка. Пожалуйста, попробуйте позже.');
-        }
+        throw new Error('409 Выполняется обработка. Пожалуйста, попробуйте позже.');
+      }
 
       if (!response.ok) {
-          throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
-        }
+        throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+      }
       
       
       const result = await response.json();
@@ -368,17 +369,10 @@ async function handleStartRemarks(event, options = {}) {
     };
 
     const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
-    
-    showToast(userMessage, false);
-    throw error;
-    
+    showToast(errorMessage, false);
   } finally {
     startBtn.disabled = false;
     startBtn.classList.remove('loading');
-    loadingIndicator.hidden = true;
-    if (progressBar) {
-      progressBar.hidden = true;
-    }
   }
 }
 
