@@ -304,7 +304,7 @@
             <div class="card-icon" aria-hidden="true">📄</div>
             <h3>Формирование протокола</h3>
           </div>
-          <p class="sublead">Нажмите «Сформировать», и система подготовит файл протокола.</p>
+          <p class="sublead">Нажмите «Сформировать», и система подготовит файл протокола. После формирования кнопка «Скачать протокол» станет активной.</p>
           
           <!-- Индикатор загрузки с нефтяной вышкой -->
           <div class="loading-indicator" id="protocol-loading" hidden>
@@ -318,6 +318,10 @@
             <button class="btn btn-primary btn-large" id="make-protocol">
               <span class="btn-icon" aria-hidden="true">📄</span>
               Сформировать протокол
+            </button>
+            <button class="btn btn-outline btn-large" id="download-protocol" disabled>
+              <span class="btn-icon" aria-hidden="true">⬇️</span>
+              Скачать протокол
             </button>
           </div>
         </div>

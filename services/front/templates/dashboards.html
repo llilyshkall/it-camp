@@ -133,7 +133,7 @@
         </div>
       </div>
 
-      <div class="wordmark"><a class="wordmark-link" href="/">ПРОЕКТ ДЛЯ ГАЗПРОМА</a></div>
+      <div class="wordmark"><a class="wordmark-link" href="/">ДОК.ПОТОК</a></div>
     </div>
   </div>
 </header>
@@ -163,6 +163,23 @@
           <div class="filters-form">
             <div class="filters-row">
               <div class="filter-group">
+                <label class="filter-label" for="project-filter-toggle">Проект</label>
+                <div class="custom-select" id="project-filter-wrapper">
+                  <button class="custom-select-toggle" id="project-filter-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="custom-select-text">Все проекты</span>
+                    <span class="custom-select-arrow" aria-hidden="true">▼</span>
+                  </button>
+                  <ul class="custom-select-menu" id="project-filter-menu" hidden role="listbox">
+                    <li class="custom-select-option" data-value="" role="option" aria-selected="true">Все проекты</li>
+                    <li class="custom-select-option" data-value="yagodnoe" role="option">Ягодное</li>
+                    <li class="custom-select-option" data-value="brusnichnoe" role="option">Брусничное</li>
+                    <li class="custom-select-option" data-value="malinovoe" role="option">Малиновое</li>
+                    <li class="custom-select-option" data-value="klyukvennoe" role="option">Клюквенное</li>
+                    <li class="custom-select-option" data-value="chernichnoe" role="option">Черничное</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="filter-group">
                 <label class="filter-label" for="status-filter-toggle">Статус проекта</label>
                 <div class="custom-select" id="status-filter-wrapper">
                   <button class="custom-select-toggle" id="status-filter-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
@@ -171,8 +188,13 @@
                   </button>
                   <ul class="custom-select-menu" id="status-filter-menu" hidden role="listbox">
                     <li class="custom-select-option" data-value="" role="option" aria-selected="true">Все статусы</li>
-                    <li class="custom-select-option" data-value="active" role="option">В работе</li>
-                    <li class="custom-select-option" data-value="paused" role="option">На паузе</li>
+                    <li class="custom-select-option" data-value="planning" role="option">Планирование</li>
+                    <li class="custom-select-option" data-value="exploration" role="option">Разведка</li>
+                    <li class="custom-select-option" data-value="design" role="option">Проектирование</li>
+                    <li class="custom-select-option" data-value="construction" role="option">Строительство</li>
+                    <li class="custom-select-option" data-value="commissioning" role="option">Пусконаладка</li>
+                    <li class="custom-select-option" data-value="operation" role="option">Эксплуатация</li>
+                    <li class="custom-select-option" data-value="conservation" role="option">Консервация</li>
                     <li class="custom-select-option" data-value="completed" role="option">Завершён</li>
                   </ul>
                 </div>
@@ -186,15 +208,16 @@
                   </button>
                   <ul class="custom-select-menu" id="budget-filter-menu" hidden role="listbox">
                     <li class="custom-select-option" data-value="" role="option" aria-selected="true">Любой бюджет</li>
-                    <li class="custom-select-option" data-value="small" role="option">До 200K</li>
-                    <li class="custom-select-option" data-value="medium" role="option">200K - 500K</li>
-                    <li class="custom-select-option" data-value="large" role="option">Более 500K</li>
+                    <li class="custom-select-option" data-value="small" role="option">До 200M ₽</li>
+                    <li class="custom-select-option" data-value="medium" role="option">200M - 800M ₽</li>
+                    <li class="custom-select-option" data-value="large" role="option">800M - 5B ₽</li>
+                    <li class="custom-select-option" data-value="mega" role="option">Более 5B ₽</li>
                   </ul>
                 </div>
               </div>
               <div class="filter-group">
                 <label class="filter-label" for="search-filter">Поиск</label>
-                <input type="text" class="filter-input" id="search-filter" placeholder="Название проекта..." aria-label="Поиск по названию проекта">
+                <input type="text" class="filter-input" id="search-filter" placeholder="Название проекта..." aria-label="Поиск по названию проекта" autocomplete="off">
               </div>
             </div>
             <div class="filters-actions">
@@ -210,59 +233,6 @@
           </div>
         </div>
 
-        <!-- Общая статистика -->
-        <div class="card card-lg">
-          <div class="card-head">
-            <div class="card-icon" aria-hidden="true">📈</div>
-            <h3>Общая статистика</h3>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-number" aria-label="12 активных проектов">12</div>
-              <div class="stat-label">Активных проектов</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number" aria-label="8 завершённых проектов">8</div>
-              <div class="stat-label">Завершённых</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number" aria-label="95 процентов успешности">95%</div>
-              <div class="stat-label">Успешность</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number" aria-label="2.4 миллиона рублей общий бюджет">₽2.4M</div>
-              <div class="stat-label">Общий бюджет</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- График проектов -->
-        <div class="card card-lg">
-          <div class="card-head">
-            <div class="card-icon" aria-hidden="true">📊</div>
-            <h3>Статус проектов</h3>
-          </div>
-          <div class="chart-container">
-            <div class="chart-placeholder">
-              <div class="chart-text">График статусов проектов</div>
-              <div class="chart-legend">
-                <div class="legend-item">
-                  <span class="legend-color" style="background: #10b981;" aria-label="Цвет для проектов в работе"></span>
-                  <span>В работе</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-color" style="background: #f59e0b;" aria-label="Цвет для проектов на паузе"></span>
-                  <span>На паузе</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-color" style="background: #3b82f6;" aria-label="Цвет для завершённых проектов"></span>
-                  <span>Завершён</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Список проектов -->
         <div class="card card-lg">
           <div class="card-head">
@@ -274,44 +244,563 @@
               <div class="table-cell" role="columnheader">Название</div>
               <div class="table-cell" role="columnheader">Статус</div>
               <div class="table-cell" role="columnheader">Прогресс</div>
+              <div class="table-cell" role="columnheader">%</div>
               <div class="table-cell" role="columnheader">Бюджет</div>
               <div class="table-cell" role="columnheader">Дедлайн</div>
             </div>
-            <div class="table-row" data-status="active" data-budget="large" role="row">
+            <div class="table-row" data-project="yagodnoe" data-status="operation" data-budget="large" role="row">
               <div class="table-cell" role="cell">Ягодное</div>
-              <div class="table-cell" role="cell"><span class="status-badge status-active">В работе</span></div>
+              <div class="table-cell" role="cell"><span class="status-badge status-operation">Эксплуатация</span></div>
               <div class="table-cell" role="cell">
-                <div class="progress-bar" aria-label="Прогресс: 75 процентов">
-                  <div class="progress-fill" style="width: 75%"></div>
+                <div class="progress-bar" aria-label="Прогресс: 85 процентов">
+                  <div class="progress-fill" style="width: 85%"></div>
                 </div>
-                <span class="progress-text">75%</span>
               </div>
-              <div class="table-cell" role="cell">₽450K</div>
+              <div class="table-cell" role="cell">85%</div>
+              <div class="table-cell" role="cell">₽450M</div>
               <div class="table-cell" role="cell">15.12.2024</div>
             </div>
-            <div class="table-row" data-status="paused" data-budget="medium" role="row">
+            <div class="table-row" data-project="brusnichnoe" data-status="construction" data-budget="medium" role="row">
               <div class="table-cell" role="cell">Брусничное</div>
-              <div class="table-cell" role="cell"><span class="status-badge status-paused">На паузе</span></div>
+              <div class="table-cell" role="cell"><span class="status-badge status-construction">Строительство</span></div>
               <div class="table-cell" role="cell">
-                <div class="progress-bar" aria-label="Прогресс: 45 процентов">
-                  <div class="progress-fill" style="width: 45%"></div>
+                <div class="progress-bar" aria-label="Прогресс: 65 процентов">
+                  <div class="progress-fill" style="width: 65%"></div>
                 </div>
-                <span class="progress-text">45%</span>
               </div>
-              <div class="table-cell" role="cell">₽320K</div>
+              <div class="table-cell" role="cell">65%</div>
+              <div class="table-cell" role="cell">₽320M</div>
               <div class="table-cell" role="cell">20.01.2025</div>
             </div>
-            <div class="table-row" data-status="completed" data-budget="medium" role="row">
+            <div class="table-row" data-project="malinovoe" data-status="completed" data-budget="medium" role="row">
               <div class="table-cell" role="cell">Малиновое</div>
               <div class="table-cell" role="cell"><span class="status-badge status-completed">Завершён</span></div>
               <div class="table-cell" role="cell">
                 <div class="progress-bar" aria-label="Прогресс: 100 процентов">
                   <div class="progress-fill" style="width: 100%"></div>
                 </div>
-                <span class="progress-text">100%</span>
               </div>
-              <div class="table-cell" role="cell">₽280K</div>
+              <div class="table-cell" role="cell">100%</div>
+              <div class="table-cell" role="cell">₽280M</div>
               <div class="table-cell" role="cell">01.11.2024</div>
+            </div>
+            <div class="table-row" data-project="klyukvennoe" data-status="design" data-budget="small" role="row">
+              <div class="table-cell" role="cell">Клюквенное</div>
+              <div class="table-cell" role="cell"><span class="status-badge status-design">Проектирование</span></div>
+              <div class="table-cell" role="cell">
+                <div class="progress-bar" aria-label="Прогресс: 35 процентов">
+                  <div class="progress-fill" style="width: 35%"></div>
+                </div>
+              </div>
+              <div class="table-cell" role="cell">35%</div>
+              <div class="table-cell" role="cell">₽150M</div>
+              <div class="table-cell" role="cell">30.06.2025</div>
+            </div>
+            <div class="table-row" data-project="chernichnoe" data-status="exploration" data-budget="small" role="row">
+              <div class="table-cell" role="cell">Черничное</div>
+              <div class="table-cell" role="cell"><span class="status-badge status-exploration">Разведка</span></div>
+              <div class="table-cell" role="cell">
+                <div class="progress-bar" aria-label="Прогресс: 20 процентов">
+                  <div class="progress-fill" style="width: 20%"></div>
+                </div>
+              </div>
+              <div class="table-cell" role="cell">20%</div>
+              <div class="table-cell" role="cell">₽80M</div>
+              <div class="table-cell" role="cell">15.09.2025</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Общая статистика -->
+        <div class="card card-lg">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">📈</div>
+            <h3>Общая статистика</h3>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-number" aria-label="3 активных проекта">3</div>
+              <div class="stat-label">Активных проектов</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="1 завершённый проект">1</div>
+              <div class="stat-label">Завершённых</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="80 процентов успешности">80%</div>
+              <div class="stat-label">Успешность</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="1.28 миллиарда рублей общий бюджет">₽1.28B</div>
+              <div class="stat-label">Общий бюджет</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="5 общих проектов">5</div>
+              <div class="stat-label">Всего проектов</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="2.5 года средний срок">2.5 года</div>
+              <div class="stat-label">Средний срок</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="85% средний прогресс">85%</div>
+              <div class="stat-label">Средний прогресс</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number" aria-label="₽256M средний бюджет">₽256M</div>
+              <div class="stat-label">Средний бюджет</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Временная шкала проектов -->
+        <div class="card card-lg">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">📊</div>
+            <h3>Временная шкала проектов</h3>
+          </div>
+          <div class="timeline-container">
+            <div class="timeline">
+              <div class="timeline-item completed">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h4>Ягодное</h4>
+                  <p>Эксплуатация • 85% • ₽450M</p>
+                  <span class="timeline-date">2022-2024</span>
+                </div>
+              </div>
+              <div class="timeline-item active">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h4>Брусничное</h4>
+                  <p>Строительство • 70% • ₽320M</p>
+                  <span class="timeline-date">2023-2025</span>
+                </div>
+              </div>
+              <div class="timeline-item completed">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h4>Малиновое</h4>
+                  <p>Завершён • 100% • ₽280M</p>
+                  <span class="timeline-date">2021-2023</span>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h4>Клюквенное</h4>
+                  <p>Проектирование • 30% • ₽150M</p>
+                  <span class="timeline-date">2024-2026</span>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <h4>Черничное</h4>
+                  <p>Разведка • 15% • ₽80M</p>
+                  <span class="timeline-date">2024-2027</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Круговая диаграмма статусов -->
+        <div class="card card-lg">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">🥧</div>
+            <h3>Распределение по статусам</h3>
+          </div>
+          <div class="pie-chart-container">
+            <div class="pie-chart">
+              <svg width="200" height="200" viewBox="0 0 200 200">
+                <!-- Базовый круг будет добавляться динамически -->
+              </svg>
+            </div>
+            <div class="pie-legend">
+              <!-- Легенда будет обновляться динамически -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Финансовый график -->
+        <div class="card card-lg">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">💰</div>
+            <h3>Бюджет проектов</h3>
+          </div>
+          <div class="budget-chart-container">
+            <div class="budget-chart" id="budget-chart">
+              <!-- Диаграмма будет генерироваться динамически на основе данных из таблицы проектов -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Детальная информация о проектах -->
+        <div id="project-details" class="card card-lg">
+          <div class="card-head">
+            <div class="card-icon" aria-hidden="true">📋</div>
+            <h3>Детальная информация о проектах</h3>
+          </div>
+          <div class="project-details-content">
+            <!-- Ягодное -->
+            <div class="project-detail" data-project="yagodnoe">
+              <div class="project-overview">
+                <h4>Ягодное - Месторождение нефти</h4>
+                <p>Крупное месторождение в Западной Сибири с доказанными запасами 45 млн тонн нефти.</p>
+              </div>
+              <div class="project-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">Статус:</span>
+                  <span class="metric-value status-operation">Эксплуатация</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Прогресс:</span>
+                  <span class="metric-value">85%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Бюджет:</span>
+                  <span class="metric-value">₽450M</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Дедлайн:</span>
+                  <span class="metric-value">15.12.2024</span>
+                </div>
+              </div>
+              <div class="project-phases">
+                <h5>Этапы реализации:</h5>
+                <div class="phase-timeline">
+                  <div class="phase completed">
+                    <span class="phase-name">Планирование</span>
+                    <span class="phase-date">2020-2021</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Разведка</span>
+                    <span class="phase-date">2021-2022</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Проектирование</span>
+                    <span class="phase-date">2022-2023</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Строительство</span>
+                    <span class="phase-date">2023-2024</span>
+                  </div>
+                  <div class="phase active">
+                    <span class="phase-name">Эксплуатация</span>
+                    <span class="phase-date">2024-настоящее время</span>
+                  </div>
+                </div>
+              </div>
+              <div class="economic-indicators">
+                <h5>Экономические показатели:</h5>
+                <div class="indicators-grid">
+                  <div class="indicator">
+                    <span class="indicator-label">Инвестиции:</span>
+                    <span class="indicator-value">₽450M</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">Срок окупаемости:</span>
+                    <span class="indicator-value">3.2 года</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">IRR:</span>
+                    <span class="indicator-value">28%</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">NPV:</span>
+                    <span class="indicator-value">₽180M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Брусничное -->
+            <div class="project-detail" data-project="brusnichnoe">
+              <div class="project-overview">
+                <h4>Брусничное - Разработка месторождения</h4>
+                <p>Среднее месторождение с запасами 28 млн тонн нефти, находится в стадии активного строительства.</p>
+              </div>
+              <div class="project-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">Статус:</span>
+                  <span class="metric-value status-construction">Строительство</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Прогресс:</span>
+                  <span class="metric-value">65%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Бюджет:</span>
+                  <span class="metric-value">₽320M</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Дедлайн:</span>
+                  <span class="metric-value">20.01.2025</span>
+                </div>
+              </div>
+              <div class="project-phases">
+                <h5>Этапы реализации:</h5>
+                <div class="phase-timeline">
+                  <div class="phase completed">
+                    <span class="phase-name">Планирование</span>
+                    <span class="phase-date">2021-2022</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Разведка</span>
+                    <span class="phase-date">2022-2023</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Проектирование</span>
+                    <span class="phase-date">2023-2024</span>
+                  </div>
+                  <div class="phase active">
+                    <span class="phase-name">Строительство</span>
+                    <span class="phase-date">2024-2025</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Пусконаладка</span>
+                    <span class="phase-date">2025</span>
+                  </div>
+                </div>
+              </div>
+              <div class="economic-indicators">
+                <h5>Экономические показатели:</h5>
+                <div class="indicators-grid">
+                  <div class="indicator">
+                    <span class="indicator-label">Инвестиции:</span>
+                    <span class="indicator-value">₽320M</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">Срок окупаемости:</span>
+                    <span class="indicator-value">4.1 года</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">IRR:</span>
+                    <span class="indicator-value">22%</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">NPV:</span>
+                    <span class="indicator-value">₽95M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Малиновое -->
+            <div class="project-detail" data-project="malinovoe">
+              <div class="project-overview">
+                <h4>Малиновое - Завершённый проект</h4>
+                <p>Успешно завершённый проект разработки месторождения с запасами 15 млн тонн нефти.</p>
+              </div>
+              <div class="project-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">Статус:</span>
+                  <span class="metric-value status-completed">Завершён</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Прогресс:</span>
+                  <span class="metric-value">100%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Бюджет:</span>
+                  <span class="metric-value">₽280M</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Дедлайн:</span>
+                  <span class="metric-value">01.11.2024</span>
+                </div>
+              </div>
+              <div class="project-phases">
+                <h5>Этапы реализации:</h5>
+                <div class="phase-timeline">
+                  <div class="phase completed">
+                    <span class="phase-name">Планирование</span>
+                    <span class="phase-date">2020-2021</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Разведка</span>
+                    <span class="phase-date">2021-2022</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Проектирование</span>
+                    <span class="phase-date">2022-2023</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Строительство</span>
+                    <span class="phase-date">2023-2024</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Пусконаладка</span>
+                    <span class="phase-date">2024</span>
+                  </div>
+                </div>
+              </div>
+              <div class="economic-indicators">
+                <h5>Экономические показатели:</h5>
+                <div class="indicators-grid">
+                  <div class="indicator">
+                    <span class="indicator-label">Инвестиции:</span>
+                    <span class="indicator-value">₽280M</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">Срок окупаемости:</span>
+                    <span class="indicator-value">2.8 года</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">IRR:</span>
+                    <span class="indicator-value">35%</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">NPV:</span>
+                    <span class="indicator-value">₽120M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Клюквенное -->
+            <div class="project-detail" data-project="klyukvennoe">
+              <div class="project-overview">
+                <h4>Клюквенное - Проектирование</h4>
+                <p>Перспективное месторождение с запасами 22 млн тонн нефти, находится в стадии проектирования.</p>
+              </div>
+              <div class="project-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">Статус:</span>
+                  <span class="metric-value status-design">Проектирование</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Прогресс:</span>
+                  <span class="metric-value">35%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Бюджет:</span>
+                  <span class="metric-value">₽150M</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Дедлайн:</span>
+                  <span class="metric-value">30.06.2025</span>
+                </div>
+              </div>
+              <div class="project-phases">
+                <h5>Этапы реализации:</h5>
+                <div class="phase-timeline">
+                  <div class="phase completed">
+                    <span class="phase-name">Планирование</span>
+                    <span class="phase-date">2022-2023</span>
+                  </div>
+                  <div class="phase completed">
+                    <span class="phase-name">Разведка</span>
+                    <span class="phase-date">2023-2024</span>
+                  </div>
+                  <div class="phase active">
+                    <span class="phase-name">Проектирование</span>
+                    <span class="phase-date">2024-2025</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Строительство</span>
+                    <span class="phase-date">2025-2026</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Пусконаладка</span>
+                    <span class="phase-date">2026</span>
+                  </div>
+                </div>
+              </div>
+              <div class="economic-indicators">
+                <h5>Экономические показатели:</h5>
+                <div class="indicators-grid">
+                  <div class="indicator">
+                    <span class="indicator-label">Инвестиции:</span>
+                    <span class="indicator-value">₽150M</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">Срок окупаемости:</span>
+                    <span class="indicator-value">5.2 года</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">IRR:</span>
+                    <span class="indicator-value">18%</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">NPV:</span>
+                    <span class="indicator-value">₽45M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Черничное -->
+            <div class="project-detail" data-project="chernichnoe">
+              <div class="project-overview">
+                <h4>Черничное - Разведка</h4>
+                <p>Новое месторождение с предварительными запасами 18 млн тонн нефти, находится в стадии разведки.</p>
+              </div>
+              <div class="project-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">Статус:</span>
+                  <span class="metric-value status-exploration">Разведка</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Прогресс:</span>
+                  <span class="metric-value">20%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Бюджет:</span>
+                  <span class="metric-value">₽80M</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Дедлайн:</span>
+                  <span class="metric-value">15.09.2025</span>
+                </div>
+              </div>
+              <div class="project-phases">
+                <h5>Этапы реализации:</h5>
+                <div class="phase-timeline">
+                  <div class="phase completed">
+                    <span class="phase-name">Планирование</span>
+                    <span class="phase-date">2023-2024</span>
+                  </div>
+                  <div class="phase active">
+                    <span class="phase-name">Разведка</span>
+                    <span class="phase-date">2024-2025</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Проектирование</span>
+                    <span class="phase-date">2025-2026</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Строительство</span>
+                    <span class="phase-date">2026-2027</span>
+                  </div>
+                  <div class="phase">
+                    <span class="phase-name">Пусконаладка</span>
+                    <span class="phase-date">2027</span>
+                  </div>
+                </div>
+              </div>
+              <div class="economic-indicators">
+                <h5>Экономические показатели:</h5>
+                <div class="indicators-grid">
+                  <div class="indicator">
+                    <span class="indicator-label">Инвестиции:</span>
+                    <span class="indicator-value">₽80M</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">Срок окупаемости:</span>
+                    <span class="metric-value">6.5 года</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">IRR:</span>
+                    <span class="indicator-value">15%</span>
+                  </div>
+                  <div class="indicator">
+                    <span class="indicator-label">NPV:</span>
+                    <span class="indicator-value">₽25M</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -324,7 +813,7 @@
 <footer class="footer">
   <div class="container">
     <div>
-      <div class="wordmark-sm">Проект для Газпрома</div>
+      <div class="wordmark-sm">Док.Поток</div>
       <small>Демо-стиль без официальной символики.</small>
     </div>
     <nav class="footer-nav" aria-label="Вторичная навигация">
@@ -377,7 +866,7 @@
         navDropdown.hidden = false;
         navToggle.setAttribute('aria-expanded', 'true');
         
-        // Проверяем и корректируем позицию меню
+        // Умное позиционирование меню
         adjustMenuPosition();
         
         // Добавляем класс для анимации
@@ -385,6 +874,7 @@
           navDropdown.classList.add('open');
         });
         
+        // Фокус на первый элемент меню для доступности
         setTimeout(() => {
           const firstLink = navMenu.querySelector('.nav-menu-link');
           if (firstLink) firstLink.focus();
@@ -392,24 +882,90 @@
       }
 
       function adjustMenuPosition() {
-        const rect = navDropdown.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
+        const toggleRect = navToggle.getBoundingClientRect();
+        const dropdown = navDropdown;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
         
-        // Если меню выходит за левый край экрана
-        if (rect.left < 0) {
-          navDropdown.style.right = 'auto';
-          navDropdown.style.left = '0';
-          navDropdown.style.transformOrigin = 'top left';
+        // Сбрасываем предыдущие стили
+        dropdown.style.left = '';
+        dropdown.style.right = '';
+        dropdown.style.top = '';
+        dropdown.style.width = '';
+        dropdown.style.maxWidth = '';
+        dropdown.style.transformOrigin = '';
+        
+        if (screenWidth <= 768) {
+          // Мобильные устройства
+          const menuWidth = Math.min(320, screenWidth - 32);
+          const menuHeight = Math.min(400, screenHeight - 120);
+          
+          // Определяем позицию по горизонтали
+          let leftPos = 16;
+          let rightPos = 'auto';
+          let transformOrigin = 'top left';
+          
+          // Проверяем, помещается ли меню справа от кнопки
+          if (toggleRect.left + menuWidth + 16 <= screenWidth) {
+            // Меню помещается справа
+            leftPos = toggleRect.left;
+            transformOrigin = 'top left';
+          } else if (toggleRect.right - menuWidth - 16 >= 0) {
+            // Меню помещается слева от кнопки
+            leftPos = toggleRect.right - menuWidth;
+            transformOrigin = 'top right';
+          } else {
+            // Центрируем меню на экране
+            leftPos = (screenWidth - menuWidth) / 2;
+            transformOrigin = 'top center';
+          }
+          
+          // Ограничиваем позицию границами экрана
+          leftPos = Math.max(8, Math.min(leftPos, screenWidth - menuWidth - 8));
+          
+          // Устанавливаем позицию
+          dropdown.style.position = 'fixed';
+          dropdown.style.top = '90px';
+          dropdown.style.left = `${leftPos}px`;
+          dropdown.style.right = 'auto';
+          dropdown.style.width = `${menuWidth}px`;
+          dropdown.style.maxWidth = `${menuWidth}px`;
+          dropdown.style.maxHeight = `${menuHeight}px`;
+          dropdown.style.transformOrigin = transformOrigin;
+          dropdown.style.zIndex = '9999';
+          dropdown.style.boxSizing = 'border-box';
+          
+          // Проверяем, что меню помещается на экране
+          setTimeout(() => {
+            const menuRect = dropdown.getBoundingClientRect();
+            if (menuRect.right > screenWidth || menuRect.left < 0) {
+              // Если меню все еще не помещается, центрируем его
+              const centerPos = (screenWidth - menuWidth) / 2;
+              dropdown.style.left = `${Math.max(8, centerPos)}px`;
+              dropdown.style.transformOrigin = 'top center';
+              console.log('Fallback: centering menu at', centerPos);
+            }
+          }, 50);
+          
+          // Отладочная информация
+          console.log('Mobile menu positioning:', {
+            screenWidth,
+            toggleLeft: toggleRect.left,
+            toggleRight: toggleRect.right,
+            menuWidth,
+            leftPos,
+            transformOrigin
+          });
         } else {
-          navDropdown.style.right = '0';
-          navDropdown.style.left = 'auto';
-          navDropdown.style.transformOrigin = 'top right';
-        }
-        
-        // Если меню слишком широкое для экрана
-        if (rect.width > viewportWidth - 24) {
-          navDropdown.style.width = 'calc(100vw - 24px)';
-          navDropdown.style.maxWidth = 'calc(100vw - 24px)';
+          // Десктопные устройства
+          dropdown.style.position = 'absolute';
+          dropdown.style.top = 'calc(100% + 12px)';
+          dropdown.style.right = '0';
+          dropdown.style.left = 'auto';
+          dropdown.style.width = '320px';
+          dropdown.style.maxWidth = 'calc(100vw - 24px)';
+          dropdown.style.transformOrigin = 'top right';
+          dropdown.style.zIndex = '100';
         }
       }
 
@@ -434,12 +990,12 @@
         }
       });
 
-      // Улучшенное закрытие при клике вне меню
-      document.addEventListener('click', (e) => {
-        if (!navToggle.contains(e.target) && !navDropdown.contains(e.target)) {
-          closeNavMenu();
-        }
-      });
+      // // Улучшенное закрытие при клике вне меню
+      // document.addEventListener('click', (e) => {
+      //   if (!navToggle.contains(e.target) && !navDropdown.contains(e.target)) {
+      //     closeNavMenu();
+      //   }
+      // });
 
       // Закрытие по Escape
       document.addEventListener('keydown', (e) => {
@@ -462,9 +1018,7 @@
       // Закрытие при изменении размера окна
       window.addEventListener('resize', () => {
         if (!navDropdown.hidden) {
-          closeNavMenu();
-        } else {
-          // Если меню закрыто, все равно корректируем позицию для следующего открытия
+          // Пересчитываем позицию меню при изменении размера окна
           adjustMenuPosition();
         }
       });
@@ -488,21 +1042,73 @@
     }
 
     // ===== Фильтры =====
+    console.log('Инициализация фильтров...');
+    
+    // Проверяем, что все элементы найдены
+    const projectFilterWrapper = document.getElementById('project-filter-wrapper');
+    const projectFilterToggle = document.getElementById('project-filter-toggle');
+    const projectFilterMenu = document.getElementById('project-filter-menu');
+    const projectFilterText = projectFilterToggle?.querySelector('.custom-select-text');
+    
     const statusFilterWrapper = document.getElementById('status-filter-wrapper');
     const statusFilterToggle = document.getElementById('status-filter-toggle');
     const statusFilterMenu = document.getElementById('status-filter-menu');
-    const statusFilterText = statusFilterToggle.querySelector('.custom-select-text');
+    const statusFilterText = statusFilterToggle?.querySelector('.custom-select-text');
     
     const budgetFilterWrapper = document.getElementById('budget-filter-wrapper');
     const budgetFilterToggle = document.getElementById('budget-filter-toggle');
     const budgetFilterMenu = document.getElementById('budget-filter-menu');
-    const budgetFilterText = budgetFilterToggle.querySelector('.custom-select-text');
+    const budgetFilterText = budgetFilterToggle?.querySelector('.custom-select-text');
     
     const searchFilter = document.getElementById('search-filter');
     const applyFiltersBtn = document.getElementById('apply-filters');
     const resetFiltersBtn = document.getElementById('reset-filters');
     const projectRows = document.querySelectorAll('.table-row');
     
+    // Проверяем, что все необходимые элементы найдены
+    if (!projectFilterWrapper || !projectFilterToggle || !projectFilterMenu || !projectFilterText ||
+        !statusFilterWrapper || !statusFilterToggle || !statusFilterMenu || !statusFilterText ||
+        !budgetFilterWrapper || !budgetFilterToggle || !budgetFilterMenu || !budgetFilterText ||
+        !searchFilter || !applyFiltersBtn || !resetFiltersBtn) {
+      console.error('Не все элементы фильтров найдены!');
+    }
+    
+    if (projectRows.length === 0) {
+      console.error('Строки проектов не найдены!');
+    }
+    
+    console.log('Элементы фильтров найдены:', {
+      projectFilterWrapper: !!projectFilterWrapper,
+      projectFilterToggle: !!projectFilterToggle,
+      projectFilterMenu: !!projectFilterMenu,
+      statusFilterWrapper: !!statusFilterWrapper,
+      statusFilterToggle: !!statusFilterToggle,
+      statusFilterMenu: !!statusFilterMenu,
+      budgetFilterWrapper: !!budgetFilterWrapper,
+      budgetFilterToggle: !!budgetFilterToggle,
+      budgetFilterMenu: !!budgetFilterMenu,
+      searchFilter: !!searchFilter,
+      applyFiltersBtn: !!applyFiltersBtn,
+      resetFiltersBtn: !!resetFiltersBtn,
+      projectRows: projectRows.length
+    });
+    
+    // Проверяем каждую строку проекта
+    projectRows.forEach((row, index) => {
+      const projectName = row.querySelector('.table-cell:first-child')?.textContent || 'Неизвестно';
+      const status = row.getAttribute('data-status') || 'Неизвестно';
+      const budget = row.querySelector('.table-cell:nth-child(5)')?.textContent || 'Неизвестно';
+      console.log(`Строка ${index + 1}: Проект=${projectName}, Статус=${status}, Бюджет=${budget}`);
+      
+      // Проверяем структуру строки
+      const cells = row.querySelectorAll('.table-cell');
+      console.log(`  Строка ${index + 1} имеет ${cells.length} ячеек`);
+      cells.forEach((cell, cellIndex) => {
+        console.log(`    Ячейка ${cellIndex}: "${cell.textContent}"`);
+      });
+    });
+    
+    let projectFilterValue = '';
     let statusFilterValue = '';
     let budgetFilterValue = '';
 
@@ -525,7 +1131,9 @@
 
     function selectOption(wrapper, menu, textElement, value, text) {
       textElement.textContent = text;
-      if (wrapper === statusFilterWrapper) {
+      if (wrapper === projectFilterWrapper) {
+        projectFilterValue = value;
+      } else if (wrapper === statusFilterWrapper) {
         statusFilterValue = value;
       } else if (wrapper === budgetFilterWrapper) {
         budgetFilterValue = value;
@@ -547,7 +1155,13 @@
       menu.hidden = true;
     }
 
+
+
     // Обработчики событий для dropdown'ов
+    projectFilterToggle.addEventListener('click', () => {
+      toggleDropdown(projectFilterWrapper, projectFilterMenu);
+    });
+
     statusFilterToggle.addEventListener('click', () => {
       toggleDropdown(statusFilterWrapper, statusFilterMenu);
     });
@@ -557,6 +1171,15 @@
     });
 
     // Обработчики для опций
+    projectFilterMenu.addEventListener('click', (e) => {
+      const option = e.target.closest('.custom-select-option');
+      if (option) {
+        const value = option.getAttribute('data-value');
+        const text = option.textContent;
+        selectOption(projectFilterWrapper, projectFilterMenu, projectFilterText, value, text);
+      }
+    });
+
     statusFilterMenu.addEventListener('click', (e) => {
       const option = e.target.closest('.custom-select-option');
       if (option) {
@@ -586,16 +1209,23 @@
     });
 
     function applyFilters() {
+      const project = projectFilterValue;
       const status = statusFilterValue;
       const budget = budgetFilterValue;
       const search = searchFilter.value.toLowerCase().trim();
 
       projectRows.forEach(row => {
+        const rowProject = row.getAttribute('data-project');
         const rowStatus = row.getAttribute('data-status');
         const rowBudget = row.getAttribute('data-budget');
         const projectName = row.querySelector('.table-cell:first-child').textContent.toLowerCase();
 
         let showRow = true;
+
+        // Фильтр по проекту
+        if (project && rowProject !== project) {
+          showRow = false;
+        }
 
         // Фильтр по статусу
         if (status && rowStatus !== status) {
@@ -622,14 +1252,19 @@
         }
       });
 
+      // Обновляем детальную информацию о проектах
+      updateProjectDetails();
+
       // Обновляем статистику
       updateStats();
       toast('Фильтры применены');
     }
 
     function resetFilters() {
+      projectFilterValue = '';
       statusFilterValue = '';
       budgetFilterValue = '';
+      projectFilterText.textContent = 'Все проекты';
       statusFilterText.textContent = 'Все статусы';
       budgetFilterText.textContent = 'Любой бюджет';
       searchFilter.value = '';
@@ -647,30 +1282,535 @@
 
       // Обновляем статистику
       updateStats();
+      
+      // Обновляем детальную информацию и графики
+      updateProjectDetails();
+      
       toast('Фильтры сброшены');
     }
 
-    function updateStats() {
+    function updateProjectDetails() {
+      console.log('Обновление деталей проектов...');
+      
       const visibleRows = Array.from(projectRows).filter(row => 
         row.style.display !== 'none'
       );
+      
+      console.log('Видимых строк:', visibleRows.length);
+      console.log('Всего строк проектов:', projectRows.length);
+      
+      // Если нет активных фильтров, показываем все детали
+      if (!projectFilterValue && !statusFilterValue && !budgetFilterValue && !searchFilter.value.trim()) {
+        console.log('Нет активных фильтров, показываем все проекты');
+        document.querySelectorAll('.project-detail').forEach(detail => {
+          detail.style.display = 'block';
+        });
+        updateCharts(projectRows); // Показываем все проекты на графиках
+        return;
+      }
+      
+      console.log('Есть активные фильтры, обновляем для видимых проектов');
+      
+      // Скрываем все детали проектов
+      document.querySelectorAll('.project-detail').forEach(detail => {
+        detail.style.display = 'none';
+      });
+      
+      // Показываем детали только для видимых проектов
+      visibleRows.forEach(row => {
+        const projectId = row.getAttribute('data-project');
+        const detail = document.querySelector(`[data-project="${projectId}"]`);
+        if (detail) {
+          detail.style.display = 'block';
+        }
+      });
+      
+      // Обновляем графики для видимых проектов
+      updateCharts(visibleRows);
+    }
+
+    function updateCharts(rows) {
+      console.log('Обновление всех графиков...');
+      console.log('Получено строк для графиков:', rows.length);
+      
+      // Подсчитываем статусы для круговой диаграммы
+      const statusCounts = {};
+      rows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      console.log('Статистика статусов:', statusCounts);
+      
+      // Обновляем круговую диаграмму
+      updatePieChart(statusCounts);
+      
+      // Обновляем финансовый график
+      updateBudgetChart(rows);
+    }
+
+    function updatePieChart(statusCounts) {
+      const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+      if (total === 0) return;
+      
+      const pieChart = document.querySelector('.pie-chart svg');
+      if (!pieChart) return;
+      
+      // Очищаем существующие круги
+      pieChart.innerHTML = '';
+      
+      // Добавляем базовый круг
+      const baseCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      baseCircle.setAttribute('cx', '100');
+      baseCircle.setAttribute('cy', '100');
+      baseCircle.setAttribute('r', '80');
+      baseCircle.setAttribute('fill', 'none');
+      baseCircle.setAttribute('stroke', '#e5e7eb');
+      baseCircle.setAttribute('stroke-width', '40');
+      pieChart.appendChild(baseCircle);
+      
+      let currentAngle = 0;
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        const percentage = (count / total) * 100;
+        const angle = (percentage / 100) * 360;
+        
+        const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        segment.setAttribute('cx', '100');
+        segment.setAttribute('cy', '100');
+        segment.setAttribute('r', '80');
+        segment.setAttribute('fill', 'none');
+        segment.setAttribute('stroke', getStatusColor(status));
+        segment.setAttribute('stroke-width', '40');
+        segment.setAttribute('stroke-dasharray', `${(angle / 360) * 502.7} 502.7`);
+        segment.setAttribute('stroke-dashoffset', `${-currentAngle / 360 * 502.7}`);
+        segment.setAttribute('transform', 'rotate(-90 100 100)');
+        segment.title = `${getStatusName(status)}: ${count} проект`;
+        
+        pieChart.appendChild(segment);
+        currentAngle += angle;
+      });
+      
+      // Обновляем легенду
+      updatePieLegend(statusCounts, total);
+    }
+
+    function updateBudgetChart(rows) {
+      console.log('Обновление диаграммы бюджета...');
+      
+      const budgetChart = document.getElementById('budget-chart');
+      if (!budgetChart) {
+        console.error('Элемент диаграммы бюджета не найден!');
+        return;
+      }
+      
+      // Очищаем существующие столбцы
+      budgetChart.innerHTML = '';
+      
+      if (rows.length === 0) {
+        console.log('Нет строк для отображения');
+        return;
+      }
+      
+      // Создаем простую столбчатую диаграмму
+      rows.forEach((row, index) => {
+        const projectNameCell = row.querySelector('.table-cell:first-child');
+        const budgetCell = row.querySelector('.table-cell:nth-child(5)');
+        const status = row.getAttribute('data-status');
+        
+        if (!projectNameCell || !budgetCell || !status) {
+          return;
+        }
+        
+        const projectName = projectNameCell.textContent;
+        const budget = budgetCell.textContent;
+        const budgetValue = parseBudgetValue(budget);
+        
+        // Создаем контейнер для столбца
+        const columnContainer = document.createElement('div');
+        columnContainer.className = 'budget-column';
+        columnContainer.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          width: 80px;
+        `;
+        
+        // Создаем столбец
+        const column = document.createElement('div');
+        column.className = 'budget-bar';
+        column.style.cssText = `
+          width: 60px;
+          height: ${Math.max(20, (budgetValue / 450) * 200)}px;
+          background: linear-gradient(to top, ${getStatusColor(status)}, ${getStatusColor(status)}80);
+          border-radius: 8px 8px 0 0;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          transition: all 0.3s ease;
+          cursor: pointer;
+        `;
+        
+        // Добавляем hover эффект
+        column.addEventListener('mouseenter', () => {
+          column.style.transform = 'scaleY(1.05)';
+          column.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.3)';
+        });
+        
+        column.addEventListener('mouseleave', () => {
+          column.style.transform = 'scaleY(1)';
+          column.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        });
+        
+        // Добавляем название проекта
+        const label = document.createElement('div');
+        label.className = 'budget-label';
+        label.textContent = projectName;
+        label.style.cssText = `
+          font-size: 11px;
+          color: var(--muted);
+          text-align: center;
+          font-weight: 500;
+          white-space: nowrap;
+          max-width: 80px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        `;
+        
+        // Добавляем значение бюджета
+        const value = document.createElement('div');
+        value.className = 'budget-value';
+        value.textContent = budget;
+        value.style.cssText = `
+          font-size: 12px;
+          color: var(--text);
+          font-weight: 700;
+          text-align: center;
+        `;
+        
+        // Собираем столбец
+        columnContainer.appendChild(column);
+        columnContainer.appendChild(label);
+        columnContainer.appendChild(value);
+        
+        // Добавляем в диаграмму
+        budgetChart.appendChild(columnContainer);
+      });
+      
+      console.log('Диаграмма бюджета обновлена, добавлено столбцов:', budgetChart.children.length);
+    }
+
+    function getStatusColor(status) {
+      const colors = {
+        'operation': '#10b981',
+        'construction': '#f59e0b',
+        'completed': '#3b82f6',
+        'design': '#8b5cf6',
+        'exploration': '#06b6d4',
+        'planning': '#a855f7',
+        'commissioning': '#ef4444',
+        'conservation': '#6b7280'
+      };
+      const color = colors[status] || '#6b7280';
+      console.log(`Цвет для статуса '${status}': ${color}`);
+      return color;
+    }
+
+    function getStatusName(status) {
+      const names = {
+        'operation': 'Эксплуатация',
+        'construction': 'Строительство',
+        'completed': 'Завершён',
+        'design': 'Проектирование',
+        'exploration': 'Разведка',
+        'planning': 'Планирование',
+        'commissioning': 'Пусконаладка',
+        'conservation': 'Консервация'
+      };
+      return names[status] || status;
+    }
+
+    function parseBudgetValue(budget) {
+      console.log(`Парсинг бюджета: "${budget}"`);
+      const match = budget.match(/₽(\d+(?:\.\d+)?)([MB])/);
+      if (!match) {
+        console.log(`Не удалось распарсить бюджет: "${budget}"`);
+        return 0;
+      }
+      
+      const value = parseFloat(match[1]);
+      const unit = match[2];
+      
+      let result;
+      if (unit === 'B') result = value * 1000;
+      else if (unit === 'M') result = value;
+      else result = value;
+      
+      console.log(`Бюджет "${budget}" распарсен: значение=${value}, единица=${unit}, результат=${result}`);
+      return result;
+    }
+
+    function updatePieLegend(statusCounts, total) {
+      const legend = document.querySelector('.pie-legend');
+      if (!legend) return;
+      
+      legend.innerHTML = '';
+      
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        const percentage = Math.round((count / total) * 100);
+        
+        const item = document.createElement('div');
+        item.className = 'pie-legend-item';
+        item.innerHTML = `
+          <span class="pie-legend-color" style="background: ${getStatusColor(status)};"></span>
+          <span>${getStatusName(status)} (${percentage}%)</span>
+        `;
+        
+        legend.appendChild(item);
+      });
+    }
+
+    function updateStats() {
+      console.log('Обновление статистики...');
+      
+      const visibleRows = Array.from(projectRows).filter(row => 
+        row.style.display !== 'none'
+      );
+      
+      console.log('Видимых строк для статистики:', visibleRows.length);
 
       const activeProjects = visibleRows.filter(row => 
-        row.getAttribute('data-status') === 'active'
+        row.getAttribute('data-status') === 'operation' || // Эксплуатация
+        row.getAttribute('data-status') === 'construction' // Строительство
       ).length;
+      
+      console.log('Активных проектов:', activeProjects);
 
       const completedProjects = visibleRows.filter(row => 
         row.getAttribute('data-status') === 'completed'
       ).length;
+      
+      console.log('Завершенных проектов:', completedProjects);
 
       const totalProjects = visibleRows.length;
       const successRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
+      
+      console.log('Общая статистика:', {
+        totalProjects,
+        activeProjects,
+        completedProjects,
+        successRate
+      });
+
+      // Рассчитываем общий бюджет на основе реальных данных
+      const totalBudget = visibleRows.reduce((sum, row) => {
+        const budgetCell = row.querySelector('.table-cell:nth-child(5)');
+        if (!budgetCell) {
+          console.error('Не удалось найти ячейку бюджета в строке:', row);
+          return sum;
+        }
+        const budget = budgetCell.textContent;
+        const parsed = parseBudgetValue(budget);
+        if (isNaN(parsed)) {
+          console.error(`Не удалось распарсить бюджет: "${budget}"`);
+          return sum;
+        }
+        console.log(`Добавляем к общему бюджету: ${budget} (распарсено: ${parsed})`);
+        return sum + parsed;
+      }, 0);
+      
+      console.log('Общий бюджет рассчитан:', totalBudget);
+
+      // Рассчитываем средние показатели
+      const avgProgress = visibleRows.reduce((sum, row) => {
+        const progressCell = row.querySelector('.table-cell:nth-child(4)');
+        if (!progressCell) {
+          console.error('Не удалось найти ячейку прогресса в строке:', row);
+          return sum;
+        }
+        const progress = progressCell.textContent;
+        const progressValue = parseInt(progress.replace('%', ''));
+        if (isNaN(progressValue)) {
+          console.error(`Не удалось распарсить прогресс: "${progress}"`);
+          return sum;
+        }
+        console.log(`Добавляем к общему прогрессу: ${progress} (распарсено: ${progressValue})`);
+        return sum + progressValue;
+      }, 0);
+      
+      console.log('Общий прогресс рассчитан:', avgProgress);
+      
+      const avgProgressFinal = totalProjects > 0 ? avgProgress / totalProjects : 0;
+      const avgBudget = totalProjects > 0 ? totalBudget / totalProjects : 0;
+      const avgDuration = 2.5; // Примерная средняя продолжительность
+      
+      console.log('Расчет средних показателей:', {
+        totalProgress: avgProgress,
+        totalProjects: totalProjects,
+        avgProgress: avgProgressFinal,
+        totalBudget: totalBudget,
+        avgBudget: avgBudget
+      });
+      
+      // Проверяем, что все значения корректны
+      if (isNaN(avgProgressFinal) || isNaN(avgBudget)) {
+        console.error('Ошибка в расчете средних показателей:', {
+          avgProgressFinal,
+          avgBudget,
+          totalProgress: avgProgress,
+          totalProjects,
+          totalBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения положительные
+      if (avgProgressFinal < 0 || avgBudget < 0) {
+        console.error('Отрицательные значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что прогресс не превышает 100%
+      if (avgProgressFinal > 100) {
+        console.error('Прогресс превышает 100%:', avgProgressFinal);
+        return;
+      }
+      
+      // Проверяем, что бюджет не превышает разумных пределов
+      if (avgBudget > 1000000) {
+        console.error('Средний бюджет слишком большой:', avgBudget);
+        return;
+      }
+      
+      // Проверяем, что все значения конечные
+      if (!isFinite(avgProgressFinal) || !isFinite(avgBudget)) {
+        console.error('Бесконечные значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения не являются NaN
+      if (isNaN(avgProgressFinal) || isNaN(avgBudget)) {
+        console.error('NaN значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения не являются null или undefined
+      if (avgProgressFinal === null || avgProgressFinal === undefined || 
+          avgBudget === null || avgBudget === undefined) {
+        console.error('Null или undefined значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения являются числами
+      if (typeof avgProgressFinal !== 'number' || typeof avgBudget !== 'number') {
+        console.error('Нечисловые значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget,
+          typeProgress: typeof avgProgressFinal,
+          typeBudget: typeof avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения не являются строками
+      if (typeof avgProgressFinal === 'string' || typeof avgBudget === 'string') {
+        console.error('Строковые значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения не являются объектами
+      if (typeof avgProgressFinal === 'object' || typeof avgBudget === 'object') {
+        console.error('Объектные значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
+      
+      // Проверяем, что все значения не являются функциями
+      if (typeof avgProgressFinal === 'function' || typeof avgBudget === 'function') {
+        console.error('Функциональные значения в средних показателях:', {
+          avgProgressFinal,
+          avgBudget
+        });
+        return;
+      }
 
       // Обновляем статистику
       const statsNumbers = document.querySelectorAll('.stat-number');
-      if (statsNumbers[0]) statsNumbers[0].textContent = activeProjects;
-      if (statsNumbers[1]) statsNumbers[1].textContent = completedProjects;
-      if (statsNumbers[2]) statsNumbers[2].textContent = successRate + '%';
+      console.log('Найдено элементов статистики:', statsNumbers.length);
+      
+      if (statsNumbers.length === 0) {
+        console.error('Элементы статистики не найдены!');
+        return;
+      }
+      
+      if (statsNumbers[0]) {
+        statsNumbers[0].textContent = activeProjects;
+        console.log(`Обновлен активных проектов: ${activeProjects}`);
+      } else {
+        console.error('Элемент статистики [0] не найден');
+      }
+      if (statsNumbers[1]) {
+        statsNumbers[1].textContent = completedProjects;
+        console.log(`Обновлен завершенных проектов: ${completedProjects}`);
+      } else {
+        console.error('Элемент статистики [1] не найден');
+      }
+      if (statsNumbers[2]) {
+        statsNumbers[2].textContent = successRate + '%';
+        console.log(`Обновлен процент успешности: ${successRate}%`);
+      } else {
+        console.error('Элемент статистики [2] не найден');
+      }
+      if (statsNumbers[3]) {
+        const totalBudgetFormatted = `₽${(totalBudget / 1000000).toFixed(0)}M`;
+        statsNumbers[3].textContent = totalBudgetFormatted;
+        console.log(`Обновлен общий бюджет: ${totalBudgetFormatted} (${totalBudget})`);
+      } else {
+        console.error('Элемент статистики [3] не найден');
+      }
+      if (statsNumbers[4]) {
+        statsNumbers[4].textContent = totalProjects;
+        console.log(`Обновлено общее количество проектов: ${totalProjects}`);
+      } else {
+        console.error('Элемент статистики [4] не найден');
+      }
+      if (statsNumbers[5]) {
+        statsNumbers[5].textContent = `${avgDuration} года`;
+        console.log(`Обновлен средний срок: ${avgDuration} года`);
+      } else {
+        console.error('Элемент статистики [5] не найден');
+      }
+      if (statsNumbers[6]) {
+        const avgProgressFormatted = `${Math.round(avgProgressFinal)}%`;
+        statsNumbers[6].textContent = avgProgressFormatted;
+        console.log(`Обновлен средний прогресс: ${avgProgressFormatted} (${avgProgressFinal})`);
+      } else {
+        console.error('Элемент статистики [6] не найден');
+      }
+      if (statsNumbers[7]) {
+        const avgBudgetFormatted = `₽${(avgBudget / 1000000).toFixed(0)}M`;
+        statsNumbers[7].textContent = avgBudgetFormatted;
+        console.log(`Обновлен средний бюджет: ${avgBudgetFormatted} (${avgBudget})`);
+      } else {
+        console.error('Элемент статистики [7] не найден');
+      }
+      
+      console.log('Статистика обновлена успешно');
     }
 
     // Обработчики событий для фильтров
@@ -692,6 +1832,153 @@
         timeout = setTimeout(later, wait);
       };
     }
+    
+    // Функция создания fallback диаграммы
+    function createFallbackBudgetChart() {
+      console.log('Создание fallback диаграммы бюджета...');
+      
+      const budgetChart = document.getElementById('budget-chart');
+      if (!budgetChart) {
+        console.error('Элемент диаграммы бюджета не найден для fallback');
+        return;
+      }
+      
+      // Очищаем содержимое
+      budgetChart.innerHTML = '';
+      
+      // Создаем статические столбцы для демонстрации
+      const fallbackData = [
+        { name: 'Ягодное', budget: '₽450M', status: 'operation' },
+        { name: 'Брусничное', budget: '₽320M', status: 'construction' },
+        { name: 'Малиновое', budget: '₽280M', status: 'completed' },
+        { name: 'Клюквенное', budget: '₽150M', status: 'design' },
+        { name: 'Черничное', budget: '₽80M', status: 'exploration' }
+      ];
+      
+      fallbackData.forEach((item, index) => {
+        // Создаем контейнер для столбца
+        const columnContainer = document.createElement('div');
+        columnContainer.className = 'budget-column';
+        columnContainer.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          width: 80px;
+        `;
+        
+        // Создаем столбец
+        const column = document.createElement('div');
+        column.className = 'budget-bar';
+        const height = Math.max(20, (parseBudgetValue(item.budget) / 450) * 200);
+        column.style.cssText = `
+          width: 60px;
+          height: ${height}px;
+          background: linear-gradient(to top, ${getStatusColor(item.status)}, ${getStatusColor(item.status)}80);
+          border-radius: 8px 8px 0 0;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          transition: all 0.3s ease;
+          cursor: pointer;
+        `;
+        
+        // Добавляем название проекта
+        const label = document.createElement('div');
+        label.className = 'budget-label';
+        label.textContent = item.name;
+        label.style.cssText = `
+          font-size: 11px;
+          color: var(--muted);
+          text-align: center;
+          font-weight: 500;
+          white-space: nowrap;
+          max-width: 80px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        `;
+        
+        // Добавляем значение бюджета
+        const value = document.createElement('div');
+        value.className = 'budget-value';
+        value.textContent = item.budget;
+        value.style.cssText = `
+          font-size: 12px;
+          color: var(--text);
+          font-weight: 700;
+          text-align: center;
+        `;
+        
+        // Собираем столбец
+        columnContainer.appendChild(column);
+        columnContainer.appendChild(label);
+        columnContainer.appendChild(value);
+        
+        // Добавляем в диаграмму
+        budgetChart.appendChild(columnContainer);
+      });
+      
+      console.log('Fallback диаграмма создана');
+    }
+
+    // Инициализация при загрузке страницы
+    console.log('Инициализация страницы...');
+    console.log('Найдено строк проектов:', projectRows.length);
+    
+    // Проверяем, что все элементы найдены
+    const budgetChartElement = document.getElementById('budget-chart');
+    const pieChartElement = document.querySelector('.pie-chart svg');
+    const pieLegendElement = document.querySelector('.pie-legend');
+    
+    console.log('Элементы графиков:', {
+      budgetChart: budgetChartElement,
+      pieChart: pieChartElement,
+      pieLegend: pieLegendElement
+    });
+    
+    // Проверяем, что элемент диаграммы бюджета найден и имеет правильный ID
+    if (budgetChartElement) {
+      console.log('Элемент диаграммы бюджета найден:', {
+        id: budgetChartElement.id,
+        className: budgetChartElement.className,
+        tagName: budgetChartElement.tagName,
+        innerHTML: budgetChartElement.innerHTML
+      });
+    } else {
+      console.error('Элемент диаграммы бюджета НЕ найден!');
+      // Попробуем найти по классу
+      const budgetChartByClass = document.querySelector('.budget-chart');
+      console.log('Поиск по классу .budget-chart:', budgetChartByClass);
+    }
+    
+          if (budgetChartElement && projectRows.length > 0) {
+        console.log('Все элементы найдены, обновляем графики...');
+        updateProjectDetails();
+        updateCharts(projectRows);
+        console.log('Диаграммы обновлены');
+      } else {
+        console.error('Проблема с элементами:', {
+          budgetChart: !!budgetChartElement,
+          projectRows: projectRows.length
+        });
+        
+        // Попробуем найти элементы еще раз через небольшую задержку
+        setTimeout(() => {
+          console.log('Повторная попытка инициализации...');
+          const retryBudgetChart = document.getElementById('budget-chart');
+          const retryProjectRows = document.querySelectorAll('.table-row');
+          
+          if (retryBudgetChart && retryProjectRows.length > 0) {
+            console.log('Элементы найдены при повторной попытке');
+            updateProjectDetails();
+            updateCharts(Array.from(retryProjectRows));
+          } else {
+            console.error('Элементы все еще не найдены при повторной попытке');
+            
+            // Создаем fallback диаграмму
+            console.log('Создание fallback диаграммы...');
+            createFallbackBudgetChart();
+          }
+        }, 100);
+      }
   });
 </script>
 </body>
