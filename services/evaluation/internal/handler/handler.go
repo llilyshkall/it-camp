@@ -593,25 +593,6 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} Error "Internal server error"
 // @Router /projects [post]
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
-
-	origin := r.Header.Get("Origin")
-
-	// Разрешаем конкретные origin'ы (настройте под свои нужды)
-	allowedOrigins := map[string]bool{
-		"http://127.0.0.1:5001": true,
-		"http://localhost:5001": true,
-		"http://127.0.0.1:5000": true,
-		"http://localhost:5000": true,
-	}
-
-	if allowedOrigins[origin] {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Max-Age", "3600")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

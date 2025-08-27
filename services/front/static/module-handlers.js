@@ -58,65 +58,6 @@ async function createProject(name, desc) {
   
 
 
-// /**
-//  * Обработчик кнопки "Начать проверку"
-//  * @param {Event} event - Событие клика
-//  * @param {String} options - Дополнительные параметры
-//  */
-// function handleStartAssurance(event, options = {}) {
-//   console.log('🔄 Начинаем проверку по чек-листу...');
-  
-//   // Получаем выбранные файлы
-//   const fileInput = document.getElementById('file-input');
-//   const files = fileInput.files;
-  
-//   if (!files || files.length === 0) {
-//     showToast('Выберите файлы для проверки', false);
-//     return;
-//   }
-  
-//   // Показываем индикатор загрузки
-//   const loadingIndicator = document.getElementById('assurance-loading');
-//   const startBtn = document.getElementById('start-assurance');
-  
-//   startBtn.disabled = true;
-//   startBtn.classList.add('loading');
-//   loadingIndicator.hidden = false;
-
-//   if (!files?.[0]){
-//       console.error('❌ Нет файлов в приложении:', error);
-//       showToast('Нет файлов в приложении', false);
-//       return;
-//   }
-      
-//   let file = files?.[0];
-//   const formData = new FormData();
-//   formData.append('file', file); 
-  
-//   //let url = "http://127.0.0.1:8081/api/projects/"+projectId+"/files?type=excel";
-//   //let url = "http://127.0.0.1:8081/api/attach?type=excel";
-
-//     fetch(endpoints.loadFile + options['projectID'] + "/files?type=documentation", {
-//             method: 'POST',
-//             body: formData,
-//   }).then(response => {
-//       console.log('✅ Ответ от backend:', response);
-//       showToast('Проверка запущена успешно');
-      
-//       // Активируем кнопки для следующих действий
-//       document.getElementById('check-result').disabled = false;
-//       document.getElementById('download-assurance').disabled = false;
-//     })
-//     .catch(error => {
-//       console.error('❌ Ошибка при отправке файла:', error);
-//       showToast('Ошибка при отправке файла:', false);
-//     })
-//     .finally(() => {
-//       startBtn.disabled = false;
-//       startBtn.classList.remove('loading');
-//       loadingIndicator.hidden = true;
-//     });
-// }
 
 async function handleStartAssurance(event, options = {}) {
   console.log('🔄 Начинаем проверку по чек-листу...');
@@ -258,8 +199,7 @@ async function handleDownloadAssurance(event, options = {}) {
     downloadBtn.classList.add('loading');
   }
 
-  const url = "http://127.0.0.1:8081/api/file";
-
+  const url = endpoints.projects + options.projectID + "/checklist";
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -268,13 +208,18 @@ async function handleDownloadAssurance(event, options = {}) {
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Обрабатываем 404 ошибку отдельно  
+    if (response.status === 404) {
+      throw new Error('404 Отчёт ещё не готов. Пожалуйста, попробуйте позже.');
     }
 
-    // Получаем имя файла из заголовка Content-Disposition
+    if (!response.ok) {
+      throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+    }
+
+    // Получаем имя файла из заголовка Content-Disposition  
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'report.xlsx'; // значение по умолчанию
+    let filename = 'report.xlsx'; // значение по умолчанию  
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
       if (filenameMatch) filename = filenameMatch[1];
@@ -283,7 +228,7 @@ async function handleDownloadAssurance(event, options = {}) {
     // Получаем blob  
     const blob = await response.blob();
     
-    // Создаем ссылку для скачивания
+    // Создаем ссылку для скачивания  
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -291,10 +236,10 @@ async function handleDownloadAssurance(event, options = {}) {
     link.style.display = 'none';
     document.body.appendChild(link);
     
-    // Запускаем скачивание
+    // Запускаем скачивание  
     link.click();
     
-    // Очищаем
+    // Очищаем  
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
@@ -305,7 +250,13 @@ async function handleDownloadAssurance(event, options = {}) {
 
   } catch (error) {
     console.error('❌ Ошибка при скачивании файла:', error);
-    showToast('Не удалось скачать файл', false);
+    
+    // Специальное сообщение для 404 ошибки  
+    const errorMessage = error.message.includes('404') 
+      ? 'Результат проверки ещё не готов. Пожалуйста, попробуйте позже.' 
+      : 'Не удалось скачать файл';
+    
+    showToast(errorMessage, false);
   } finally {
     if (downloadBtn) {
       downloadBtn.disabled = false;
@@ -383,48 +334,79 @@ function handleStartRemarks(event, options = {}) {
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
-function handleDownloadRemarks(event, options = {}) {
+async function handleDownloadRemarks(event, options = {}) {
   console.log('📥 Скачиваем реестр замечаний...');
   
   const downloadBtn = document.getElementById('download-remarks');
-  downloadBtn.disabled = true;
-  downloadBtn.classList.add('loading');
-  
-  // TODO: Здесь будет вызов backend API для скачивания реестра
-  const requestData = {
-    action: 'download_remarks_registry',
-    projectId: window.currentProject?.id,
-    format: options.format || 'xlsx',
-    includeMetadata: true,
-    timestamp: new Date().toISOString(),
-    ...options
-  };
-  
-  console.log('📤 Запрос на скачивание реестра:', requestData);
-  
-  // Имитация скачивания реестра
-  simulateBackendCall('/api/remarks/download', requestData)
-    .then(response => {
-      console.log('✅ Реестр готов к скачиванию:', response);
-      
-      if (response.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = response.downloadUrl;
-        link.download = response.filename || 'remarks_registry.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        showToast('Реестр замечаний скачан');
+  if (downloadBtn) {
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add('loading');
+  }
+
+  const url = endpoints.projects + options.projectID + "/remarks_clustered";
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/octet-stream'
       }
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при скачивании реестра:', error);
-      showToast('Ошибка при скачивании реестра', false);
-    })
-    .finally(() => {
+    });
+
+    // Обрабатываем 409 ошибку отдельно  
+    if (response.status === 409) {
+      throw new Error('409 Отчёт ещё не готов. Пожалуйста, попробуйте позже.');
+    }
+
+    if (!response.ok) {
+      throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+    }
+
+    // Получаем имя файла из заголовка Content-Disposition  
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'report.xlsx'; // значение по умолчанию  
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) filename = filenameMatch[1];
+    }
+
+    // Получаем blob  
+    const blob = await response.blob();
+    
+    // Создаем ссылку для скачивания  
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    
+    // Запускаем скачивание  
+    link.click();
+    
+    // Очищаем  
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 100);
+
+    console.log('✅ Файл успешно скачан');
+    showToast('Файл успешно скачан', true);
+
+  } catch (error) {
+    console.error('❌ Ошибка при скачивании файла:', error);
+    
+    // Специальное сообщение для 409 ошибки  
+    const errorMessage = error.message.includes('409') 
+      ? 'Результат обработки ещё не готов. Пожалуйста, попробуйте позже.' 
+      : 'Не удалось скачать файл';
+    
+    showToast(errorMessage, false);
+  } finally {
+    if (downloadBtn) {
       downloadBtn.disabled = false;
       downloadBtn.classList.remove('loading');
-    });
+    }
+  }
 }
 
 // ===== МОДУЛЬ 3: Формирование протокола =====
