@@ -4,5 +4,5 @@ export const endpoints = {
   getProjects: `${API_BASE_URL}/projects`,
   createProject: `${API_BASE_URL}/projects`,
   loadFile: `${API_BASE_URL}/projects/`, 
-  getChecklist: `${API_BASE_URL}/projects/`,
+  projects: `${API_BASE_URL}/projects/`,
 };

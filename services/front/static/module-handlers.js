@@ -199,7 +199,7 @@ async function handleDownloadAssurance(event, options = {}) {
     downloadBtn.classList.add('loading');
   }
 
-  const url = endpoints.getChecklist + options.projectID + "/checklist";
+  const url = endpoints.projects + options.projectID + "/checklist";
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -334,48 +334,79 @@ function handleStartRemarks(event, options = {}) {
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
-function handleDownloadRemarks(event, options = {}) {
+async function handleDownloadRemarks(event, options = {}) {
   console.log('📥 Скачиваем реестр замечаний...');
   
   const downloadBtn = document.getElementById('download-remarks');
-  downloadBtn.disabled = true;
-  downloadBtn.classList.add('loading');
-  
-  // TODO: Здесь будет вызов backend API для скачивания реестра
-  const requestData = {
-    action: 'download_remarks_registry',
-    projectId: window.currentProject?.id,
-    format: options.format || 'xlsx',
-    includeMetadata: true,
-    timestamp: new Date().toISOString(),
-    ...options
-  };
-  
-  console.log('📤 Запрос на скачивание реестра:', requestData);
-  
-  // Имитация скачивания реестра
-  simulateBackendCall('/api/remarks/download', requestData)
-    .then(response => {
-      console.log('✅ Реестр готов к скачиванию:', response);
-      
-      if (response.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = response.downloadUrl;
-        link.download = response.filename || 'remarks_registry.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        showToast('Реестр замечаний скачан');
+  if (downloadBtn) {
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add('loading');
+  }
+
+  const url = endpoints.projects + options.projectID + "/remarks_clustered";
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/octet-stream'
       }
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при скачивании реестра:', error);
-      showToast('Ошибка при скачивании реестра', false);
-    })
-    .finally(() => {
+    });
+
+    // Обрабатываем 409 ошибку отдельно  
+    if (response.status === 409) {
+      throw new Error('409 Отчёт ещё не готов. Пожалуйста, попробуйте позже.');
+    }
+
+    if (!response.ok) {
+      throw new Error(`Ошибка сервера! Статус: ${response.status}`);  
+    }
+
+    // Получаем имя файла из заголовка Content-Disposition  
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'report.xlsx'; // значение по умолчанию  
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) filename = filenameMatch[1];
+    }
+
+    // Получаем blob  
+    const blob = await response.blob();
+    
+    // Создаем ссылку для скачивания  
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    
+    // Запускаем скачивание  
+    link.click();
+    
+    // Очищаем  
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 100);
+
+    console.log('✅ Файл успешно скачан');
+    showToast('Файл успешно скачан', true);
+
+  } catch (error) {
+    console.error('❌ Ошибка при скачивании файла:', error);
+    
+    // Специальное сообщение для 409 ошибки  
+    const errorMessage = error.message.includes('409') 
+      ? 'Результат обработки ещё не готов. Пожалуйста, попробуйте позже.' 
+      : 'Не удалось скачать файл';
+    
+    showToast(errorMessage, false);
+  } finally {
+    if (downloadBtn) {
       downloadBtn.disabled = false;
       downloadBtn.classList.remove('loading');
-    });
+    }
+  }
 }
 
 // ===== МОДУЛЬ 3: Формирование протокола =====
