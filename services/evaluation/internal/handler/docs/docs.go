@@ -15,32 +15,26 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/file": {
+        "/health": {
             "get": {
-                "description": "Send file",
+                "description": "Проверка состояния сервиса и подключения к базе данных",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "application/octet-stream"
+                    "application/json"
                 ],
-                "summary": "Send file",
-                "operationId": "sendFile",
+                "summary": "Health check",
+                "operationId": "health",
                 "responses": {
                     "200": {
-                        "description": "File attachment",
+                        "description": "Service health status",
                         "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
+                            "$ref": "#/definitions/handler.Response"
                         }
                     },
                     "500": {
-                        "description": "internal Server Error - Request is valid but operation failed at server side",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.Error"
                         }
@@ -276,7 +270,7 @@ const docTemplate = `{
         },
         "/projects/{id}/documentation": {
             "post": {
-                "description": "Upload a documentation file to a specific project",
+                "description": "Upload a documentation file to a specific project (max 50MB)",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -443,7 +437,7 @@ const docTemplate = `{
         },
         "/projects/{id}/remarks": {
             "post": {
-                "description": "Upload a remarks file to a specific project",
+                "description": "Upload a remarks file to a specific project (max 50MB)",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -543,54 +537,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/projects/{project_id}/remarks": {
-            "post": {
-                "description": "Get remarks for specific project and forward to external service",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "СТАРАЯ РУЧКА",
-                "operationId": "sendProjectRemarks",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "project_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Success response",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "project not found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "internal server error",
                         "schema": {
                             "$ref": "#/definitions/handler.Error"
                         }
