@@ -104,9 +104,9 @@ func (pt *ProjectProcessorTask) getProject(ctx context.Context) (*db.Project, er
 // processRemarks обрабатывает замечания проекта
 func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.Project) error {
 	log.Printf("Processing remarks for project %d", pt.projectID)
-
+	//querier := db.New(pt.pgClient.DB)
 	// Имитируем обработку замечаний
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// TODO: process remarks
 	//
