@@ -621,31 +621,10 @@
       function openModal(){ modal.hidden = false; nameInput.value=''; descInput.value=''; nameInput.focus(); }
       function closeModal(){ modal.hidden = true; }
 
-      // function saveProject(){
-      //   const name = (nameInput.value||'').trim();
-      //   const desc = (descInput.value||'').trim();
-      //   if(!name){ nameInput.focus(); nameInput.setAttribute('aria-invalid','true'); toast('Введите название проекта', false); return; }
-      //   nameInput.removeAttribute('aria-invalid');
-      //   const list = readProjects();
-      //   const id = uidFromName(name);
-      //   if(list.some(p=>p.id===id)){
-      //     toast('Проект с таким названием уже есть', false);
-      //     return;
-      //   }
-      //   const proj = { id, name, description: desc };
-      //   list.push(proj);
-      //   writeProjects(list);
-      //   setSelectedId(id);
-      //   renderMenu();
-      //   window.currentProject = proj;
-      //   toast('Проект добавлен');
-      //   closeModal();
-      // }
-
       async function fetchProjects() {
         try {
           //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
-          const response = await fetch(endpoints.getProjects, {method:'GET'});
+          const response = await fetch(endpoints.projects, {method:'GET'});
           
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -662,10 +641,6 @@
       async function getProjects() {
         const projectsFromBackend = await fetchProjects();
 
-        // Можно сохранить их в localStorage или использовать напрямую
-        // Например, сохранить в localStorage:
-        //console.log(JSON.stringify(projectsFromBackend));
-        //localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
         writeProjects(projectsFromBackend)
         const aCard = byId('assurance-card');
         const rCard = byId('remarks-card');
@@ -817,7 +792,7 @@
       };
 
       pickBtn.addEventListener('click',()=>input.click());
-      input.addEventListener('change',()=>{const files=input.files; if(!files?.length) return; showFiles(files);});
+      input.addEventListener('change',()=>{const files=input.files; if(!files?.length || files.length === 0) return; handleStartAssurance(e, { file: files[files.length - 1] }); showFiles(files);});
       ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
       ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
       ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));

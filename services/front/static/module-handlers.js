@@ -26,7 +26,7 @@ async function createProject(name, desc) {
   }
 
   try {
-    const response = await fetch(endpoints.createProject, { 
+    const response = await fetch(endpoints.projects, { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +57,75 @@ async function createProject(name, desc) {
 }
   
 
-
+async function sendDocumentAssurance(event, options = {}) {
+  console.log('Отправка файла');
+  
+  const fileInput = document.getElementById('file-input');
+  const files = fileInput.files;
+  
+  if (!files || files.length === 0) {
+    showToast('Выберите файлы для проверки', false);
+    return;
+  }
+  
+  
+  
+  const file = options.file
+  try {
+    // Последовательно отправляем все файлы
+    
+      
+      if (!file) {
+        console.warn(`Файл  не существует`);
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+   
+      
+      console.log(`📤 Отправка файла ${file.name}`);
+      //showToast(`Отправка файла ${i+1}/${files.length}...`, true);
+      
+      const response = await fetch(
+        `${endpoints.loadFile}${options.projectID}${endpoints.loadFileDocumentation}`, 
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Ошибка файла ${file.name}: ${errorData.message || response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Файл ${file.name} успешно отправлен:`, result);
+    
+    
+    // showToast(`Все файлы (${files.length}) успешно отправлены`, true);
+    // console.log('✅ Все файлы успешно обработаны');
+    
+    // // Активируем кнопки для следующих действий
+    // document.getElementById('check-result').disabled = false;
+    // document.getElementById('download-assurance').disabled = false;
+    
+  } catch (error) {
+    console.error('❌ Ошибка при отправке файлов:', error);
+    showToast(error.message || 'Ошибка при отправке файлов', false);
+    throw error;
+    
+  } finally {
+    // startBtn.disabled = false;
+    // startBtn.classList.remove('loading');
+    // loadingIndicator.hidden = true;
+    // if (progressBar) {
+    //   progressBar.hidden = true;
+    // }
+  }
+}
 
 async function handleStartAssurance(event, options = {}) {
   console.log('🔄 Начинаем проверку по чек-листу...');
@@ -580,6 +648,7 @@ window.moduleHandlers = {
   startAssurance: handleStartAssurance,
   checkResult: handleCheckResult,
   downloadAssurance: handleDownloadAssurance,
+  sendDocumentAssurance: sendDocumentAssurance,
   
   // Модуль обработки замечаний
   startRemarks: handleStartRemarks,
