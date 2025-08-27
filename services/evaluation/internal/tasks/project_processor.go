@@ -56,6 +56,19 @@ type LLMResponse struct {
 	} `json:"message"`
 }
 
+// ExternalServiceResponse ответ от внешнего сервиса замечаний
+type ExternalServiceResponse struct {
+	Success bool `json:"success"`
+	Data    struct {
+		Development            []RemarkItem `json:"development"`
+		Geological            []RemarkItem `json:"geological"`
+		HydrodynamicIntegrated []RemarkItem `json:"hydrodynamic_integrated"`
+		Petrophysical         []RemarkItem `json:"petrophysical"`
+		Reassessment          []RemarkItem `json:"reassessment"`
+		Seismogeological      []RemarkItem `json:"seismogeological"`
+	} `json:"data"`
+}
+
 // RAGSystem система для RAG-операций
 type RAGSystem struct {
 	config    RAGConfig
@@ -451,16 +464,35 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 		}
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
+	log.Println(string(respBody))
 
-	// Парсим JSON ответ
-	var remarksResponse RemarksResponse
-	if err := json.Unmarshal(respBody, &remarksResponse); err != nil {
+	// Парсим JSON ответ от внешнего сервиса
+	var externalResponse ExternalServiceResponse
+	if err := json.Unmarshal(respBody, &externalResponse); err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
 			log.Printf("Failed to set project status to ready after error: %v", updateErr)
 		}
 		return fmt.Errorf("failed to parse JSON response: %w", err)
 	}
+
+	// Проверяем успешность ответа
+	if !externalResponse.Success {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
+		return fmt.Errorf("external service returned unsuccessful response")
+	}
+
+	// Преобразуем ответ в формат RemarksResponse для совместимости
+	remarksResponse := make(RemarksResponse)
+	remarksResponse["development"] = externalResponse.Data.Development
+	remarksResponse["geological"] = externalResponse.Data.Geological
+	remarksResponse["hydrodynamic_integrated"] = externalResponse.Data.HydrodynamicIntegrated
+	remarksResponse["petrophysical"] = externalResponse.Data.Petrophysical
+	remarksResponse["reassessment"] = externalResponse.Data.Reassessment
+	remarksResponse["seismogeological"] = externalResponse.Data.Seismogeological
 
 	// Сохраняем замечания в БД
 	if err := pt.saveRemarksToDB(ctx, project.ID, remarksResponse); err != nil {
