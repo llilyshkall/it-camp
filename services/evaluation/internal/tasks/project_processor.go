@@ -66,6 +66,7 @@ type ExternalServiceResponse struct {
 		Petrophysical          []RemarkItem `json:"petrophysical"`
 		Reassessment           []RemarkItem `json:"reassessment"`
 		Seismogeological       []RemarkItem `json:"seismogeological"`
+		None                   []RemarkItem `json:"none"`
 	} `json:"data"`
 }
 
@@ -493,6 +494,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	remarksResponse["petrophysical"] = externalResponse.Data.Petrophysical
 	remarksResponse["reassessment"] = externalResponse.Data.Reassessment
 	remarksResponse["seismogeological"] = externalResponse.Data.Seismogeological
+	remarksResponse["none"] = externalResponse.Data.None
 
 	// Сохраняем замечания в БД
 	if err := pt.saveRemarksToDB(ctx, project.ID, remarksResponse); err != nil {
