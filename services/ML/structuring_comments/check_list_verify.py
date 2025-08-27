@@ -1,13 +1,19 @@
 import os
-import json
 import docx
 import fitz
 import torch
 import pandas as pd
 import asyncio
-import re
 import aiohttp
 from tqdm.asyncio import tqdm as async_tqdm
+import json
+import subprocess
+import shutil
+from enum import StrEnum
+from pathlib import Path
+from typing import NamedTuple
+
+import jinja2
 
 from pptx import Presentation
 from bs4 import BeautifulSoup
@@ -30,6 +36,237 @@ GLOBAL_CONFIG = {
 }
 
 
+# --- PDF generator ----
+def filter_newlines(text: str) -> str:
+    """Фильтрует переносы строк для LaTeX"""
+    # Заменяем переносы строк на пробелы и удаляем лишние пробелы
+    return ' '.join(text.replace("|", "").split()).replace('%', '\\%').replace('&', '\\&').replace("_", "\\_")
+
+
+def process_summary(text: str, section_label: str) -> str:
+    """Обрабатывает сводку, добавляя ссылки на строки таблицы"""
+    # Простая замена номеров на ссылки (можно адаптировать под ваш формат)
+    import re
+    # Ищем упоминания источников типа "ИСТОЧНИК 1", "источник 3" и т.д.
+    pattern = r'(ИСТОЧНИК|источник|Источник|Source|SOURCE|КОНТЕКСТ)\s+(\d+)'
+
+    def replace_with_ref(match):
+        source_num = match.group(2)
+        return f"{match.group(1)} \\hyperlink{{row:{section_label}-{source_num}}}{{{source_num}}}"
+
+    return re.sub(pattern, replace_with_ref, text)
+
+jinja_env = jinja2.Environment(
+    block_start_string='<BLOCK>',
+    block_end_string='</BLOCK>',
+    variable_start_string='<VAR>',
+    variable_end_string='</VAR>',
+    comment_start_string='<!--',
+    comment_end_string='-->'
+)
+
+jinja_env.filters['filter_newlines'] = filter_newlines
+jinja_env.filters['process_summary'] = process_summary
+
+class Source(NamedTuple):
+    source_label: str
+    source_chunk: str
+    source_filepath: str
+
+
+class Section(NamedTuple):
+    name: str
+    label: str
+    summary: str
+    sources: list[Source]
+
+
+class Status(StrEnum):
+    confirmed = "confirmed"
+    not_found = "not_found"
+    partial = "partial"
+    indirect = "indirect"
+    requires_confirmation = "requires_confirmation"
+
+    def get_ru_name(self) -> str:
+        match self:
+            case Status.confirmed:
+                return "Подтверждено"
+            case Status.not_found:
+                return "Не найдено"
+            case Status.partial:
+                return "Частично найдено"
+            case Status.indirect:
+                return "Индиректно"
+            case Status.requires_confirmation:
+                return "Требует подтверждения"
+            case _:
+                raise NotImplementedError
+
+
+CHAPTER_TEMPLATE = jinja_env.from_string("""
+\\chapter{<VAR>chapter_name</VAR>}
+\\label{cha:<VAR>chapter_label</VAR>}
+
+<BLOCK>for section in sections</BLOCK>
+\\section{<VAR>section.name</VAR>}
+\\label{sec:<VAR>section.label</VAR>}
+
+\\subsection{Краткая сводка}
+\\textbf{Статус}: <VAR>chapter_name</VAR>. <VAR>section.summary | filter_newlines | process_summary(section.label)</VAR>
+
+\\subsection{Релевантные результаты}
+\\begin{longtable}{|p{0.05\\textwidth}|p{0.65\\textwidth}|p{0.2\\textwidth}|}
+\\hline
+\\textbf{№} & \\textbf{Релевантные результаты} & \\textbf{Источник} \\\\
+\\hline
+\\endhead
+<BLOCK>for source in section.sources</BLOCK>
+<BLOCK>set source_index = loop.index</BLOCK>
+\\raisebox{-\\baselineskip}[0pt][0pt]{\\hypertarget{row:<VAR>section.label</VAR>-<VAR>source_index</VAR>}{}} <VAR>source_index</VAR> & <VAR>source.source_chunk | filter_newlines</VAR> & \\cite{<VAR>source.source_label</VAR>} \\\\
+\\hline
+<BLOCK>endfor</BLOCK>
+\\end{longtable}
+<BLOCK>endfor</BLOCK>
+""")
+
+BIBLIOGRAPHY_TEMPLATE = jinja_env.from_string("""@misc{<VAR>source_label</VAR>,
+    author = {ПАО ``Газпром``},
+    title = {<VAR>filename | filter_newlines</VAR>},
+    howpublished = {Внутренний документ},
+    year = {2025},
+    note = {Страница: <VAR>page</VAR>, Слайд: <VAR>slide</VAR>}
+}
+""")
+
+LATEX_ROOT_PATH = Path(__file__).parent / "latex-gost-template"
+LATEX_OUTPUT_PATH = LATEX_ROOT_PATH / "thesis.pdf"
+LATEX_COMPILE_SCRIPT = LATEX_ROOT_PATH / "build.sh"
+LATEX_TEMPLATE_PATH = LATEX_ROOT_PATH / "tex"
+LATEX_SOURCE_PATH = LATEX_ROOT_PATH / "tex_tmp"
+
+
+def create_safe_label(text: str) -> str:
+    """Создает безопасный лабел для LaTeX из текста"""
+    return text.lower().replace(' ', '-').replace(',', '').replace('.', '').replace('(', '').replace(')', '')
+
+
+def create_source_label(filename: str, index: int) -> str:
+    """Создает уникальный идентификатор для источника"""
+    base_name = Path(filename).stem.lower().replace(' ', '-').replace('.', '-')
+    return f"{base_name}-{index}"
+
+
+def render_latex(file_path: Path, **kwargs) -> None:
+    template = jinja_env.from_string(file_path.read_text())
+    rendered = template.render(**kwargs)
+    file_path.write_text(rendered)
+
+
+def make_pdf(input_json: dict, output_pdf: Path) -> None:
+    # Создаем директории если они не существуют
+    LATEX_SOURCE_PATH.mkdir(exist_ok=True)
+
+    chapters = {status: [] for status in Status}
+    json_data = input_json
+
+    # Собираем все источники для библиографии
+    all_sources = []
+    source_counter = {}
+
+    for section_name, content in json_data.items():
+        status = Status(content["status"])
+
+        # Обрабатываем источники для этой секции
+        section_sources = []
+        for i, source_data in enumerate(content["sources"]):
+            filename = source_data["filename"]
+            source_counter[filename] = source_counter.get(filename, 0) + 1
+            source_label = create_source_label(filename, source_counter[filename])
+
+            section_sources.append(Source(
+                source_label=source_label,
+                source_chunk=source_data["snippet"],
+                source_filepath=filename
+            ))
+
+            # Добавляем в общий список источников
+            all_sources.append({
+                'source_label': source_label,
+                'filename': filename,
+                'page': source_data.get("page", "N/A") or "N/A",
+                'slide': source_data.get("slide", "N/A") or "N/A"
+            })
+
+        # Создаем секцию
+        section_label = create_safe_label(section_name)
+        section = Section(
+            name=section_name,
+            label=section_label,
+            summary=content["answer"],
+            sources=section_sources
+        )
+
+        chapters[status].append(section)
+
+    shutil.rmtree(LATEX_SOURCE_PATH)
+    shutil.copytree(LATEX_TEMPLATE_PATH, LATEX_SOURCE_PATH)
+
+    # Создаем библиографию
+    bib_content = []
+    for source in all_sources:
+        bib_entry = BIBLIOGRAPHY_TEMPLATE.render(**source)
+        bib_content.append(bib_entry)
+
+    bib_path = LATEX_SOURCE_PATH / "0-main.bib"
+    bib_path.write_text('\n'.join(bib_content), encoding='utf-8')
+
+    # Создаем главы
+    chapter_ids = []
+    for i, status in enumerate(Status, start=1):
+        if not chapters[status]:  # Пропускаем пустые главы
+            continue
+
+        chapter_id = f"chapter-{i}"
+        chapter_filename = f"3{i}-{chapter_id}.tex"
+        chapter_path = LATEX_SOURCE_PATH / chapter_filename
+
+        rendered_template = CHAPTER_TEMPLATE.render(
+            chapter_name=status.get_ru_name(),
+            chapter_label=f"chapter-{i}",
+            sections=chapters[status]
+        )
+
+        chapter_path.write_text(rendered_template, encoding='utf-8')
+        chapter_ids.append(chapter_filename.replace('.tex', ''))
+
+    render_latex(LATEX_SOURCE_PATH / "0-main.tex", chapters=chapter_ids)
+    render_latex(LATEX_SOURCE_PATH / "11-title-page.tex", doc_name="Сводный отчёт по замечаниям и программе доизучения",
+                 doc_id=" GAZ-REP-2025-001", assigned_to="Отдел аналитики")
+    render_latex(LATEX_SOURCE_PATH / "2-intro.tex", intro_text="""Настоящий отчёт подготовлен на основании предоставленных
+данных в формате JSON. Категории данных сформированы как
+главы, группы — как подразделы. Для каждого подраздела
+приведены синтезированное описание и исходные замечания""")
+    render_latex(LATEX_SOURCE_PATH / "4-conclusion.tex", conclusion_text="""Предложенные мероприятия направлены на снижение
+неопределённостей и повышение качества прогнозов.
+Рекомендовано согласовать план доизучения и
+актуализировать модели по итогам получения новых данных.""")
+
+    # Компилируем LaTeX
+    try:
+        subprocess.run(['bash', str(LATEX_COMPILE_SCRIPT)], cwd=LATEX_SOURCE_PATH, check=True)
+
+    except subprocess.CalledProcessError as e:
+        print(f"Ошибка компиляции LaTeX: {e}")
+
+    if LATEX_OUTPUT_PATH.exists():
+        shutil.copy2(LATEX_OUTPUT_PATH, output_pdf)
+        print(f"PDF успешно создан: {output_pdf}")
+    else:
+        print("Ошибка: PDF файл не был создан")
+
+# --- RAG ---
+
 class ComprehensiveRAGSystem:
     def __init__(self, config):
         self.config = config
@@ -42,7 +279,7 @@ class ComprehensiveRAGSystem:
             model_kwargs={'device': self.device},
             encode_kwargs={'normalize_embeddings': True}
         )
-        print("Embedding модель загружена.")
+        print("✅ Embedding модель загружена.")
 
         self.retriever = self._build_or_load_retriever()
 
@@ -63,7 +300,7 @@ class ComprehensiveRAGSystem:
                     ))
             return docs
         except Exception as e:
-            print(f"    PPTX (SVG или неподдерживаемый объект) – поэтому парсим через PyMuPDF: {e}")
+            print(f"    ⚠ PPTX (SVG или неподдерживаемый объект) – fallback через PyMuPDF: {e}")
             try:
                 with fitz.open(filepath) as ppt_as_pdf:
                     for page_num, page in enumerate(ppt_as_pdf):
@@ -220,7 +457,7 @@ class ComprehensiveRAGSystem:
 
         unique_docs = {doc.page_content: doc for doc_list in results_from_queries for doc in doc_list}
         retrieved_docs = list(unique_docs.values())
-        print(f"    Найдено {len(retrieved_docs)} уникальных чанков-кандидатов.")
+        print(f"    🔍 Найдено {len(retrieved_docs)} уникальных чанков-кандидатов.")
 
         if not retrieved_docs:
             return {"answer": "Не найдено релевантных документов.", "status": "not_found", "sources": []}
@@ -297,7 +534,7 @@ async def main(project_names):
         index_file_path = os.path.join(project_folder, "vector_index.faiss")
         chunks_file_path = os.path.join(project_folder, "chunks_meta.json")
         report_path = os.path.join(project_folder,
-                                   f"verification_report_{project_name}_RAG_FINAL.json")
+                                   f"verification_report_{project_name}_RAG_FINAL.pdf")
 
         current_project_config = GLOBAL_CONFIG.copy()
         current_project_config.update({
@@ -337,8 +574,9 @@ async def main(project_names):
             final_report = {c: r for c, r in zip(criteria_to_check, results)}
 
             print(f"\n--- ИТОГОВЫЙ ОТЧЕТ ВЕРИФИКАЦИИ для проекта {project_name} ---")
-            with open(report_path, "w", encoding="utf-8") as f:
-                json.dump(final_report, f, ensure_ascii=False, indent=2)
+
+            make_pdf(final_report, Path(report_path))
+
             print(f"\n Отчет сохранен в {report_path}")
 
         except FileNotFoundError as e:
