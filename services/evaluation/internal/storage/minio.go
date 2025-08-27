@@ -68,6 +68,9 @@ func (m *MinIOStorage) UploadFile(ctx context.Context, file io.Reader, fileName,
 
 // DownloadFile скачивает файл из MinIO
 func (m *MinIOStorage) DownloadFile(ctx context.Context, objectName string) (io.ReadCloser, error) {
+	// Добавляем логирование для отладки
+	fmt.Printf("Attempting to download file: bucket=%s, object=%s\n", m.bucketName, objectName)
+
 	obj, err := m.client.GetObject(ctx, m.bucketName, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)

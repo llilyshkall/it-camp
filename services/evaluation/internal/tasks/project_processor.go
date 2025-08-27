@@ -8,14 +8,277 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	db "evaluation/internal/postgres/sqlc"
 	"evaluation/internal/storage"
 	"evaluation/internal/utils"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/xuri/excelize/v2"
 )
+
+// RAGConfig конфигурация для RAG-системы
+type RAGConfig struct {
+	LLMAPIURL    string
+	LLMModelName string
+	MaxChunkSize int
+	ChunkOverlap int
+	TopK         int
+	RequestDelay time.Duration
+}
+
+// DocumentChunk чанк документа для индексации
+type DocumentChunk struct {
+	Content  string            `json:"content"`
+	Metadata map[string]string `json:"metadata"`
+}
+
+// ChecklistItem элемент чек-листа
+type ChecklistItem struct {
+	Criterion string `json:"criterion"`
+	Status    string `json:"status"`
+	Answer    string `json:"answer"`
+	Sources   []struct {
+		Filename string `json:"filename"`
+		Page     string `json:"page"`
+		Snippet  string `json:"snippet"`
+	} `json:"sources"`
+}
+
+// LLMResponse ответ от LLM API
+type LLMResponse struct {
+	Message struct {
+		Content string `json:"content"`
+	} `json:"message"`
+}
+
+// RAGSystem система для RAG-операций
+type RAGSystem struct {
+	config    RAGConfig
+	client    *resty.Client
+	documents []DocumentChunk
+}
+
+// NewRAGSystem создает новую RAG-систему
+func NewRAGSystem(config RAGConfig) *RAGSystem {
+	client := resty.New().
+		SetTimeout(300 * time.Second).
+		SetRetryCount(3).
+		SetRetryWaitTime(1 * time.Second)
+
+	return &RAGSystem{
+		config:    config,
+		client:    client,
+		documents: []DocumentChunk{},
+	}
+}
+
+// extractTextFromFile извлекает текст из файла по его расширению
+func (rag *RAGSystem) extractTextFromFile(file io.Reader, filename string) (string, error) {
+	// Простая реализация для текстовых файлов
+	// В реальном проекте здесь можно добавить парсинг PDF, DOCX и других форматов
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Убираем HTML теги если есть
+	contentStr := string(content)
+	re := regexp.MustCompile(`<[^>]*>`)
+	contentStr = re.ReplaceAllString(contentStr, "")
+
+	// Убираем лишние пробелы
+	contentStr = strings.TrimSpace(contentStr)
+
+	return contentStr, nil
+}
+
+// splitTextIntoChunks разбивает текст на чанки
+func (rag *RAGSystem) splitTextIntoChunks(text string, filename string) []DocumentChunk {
+	var chunks []DocumentChunk
+
+	// Простое разбиение по предложениям
+	sentences := regexp.MustCompile(`[.!?]+`).Split(text, -1)
+
+	for i, sentence := range sentences {
+		sentence = strings.TrimSpace(sentence)
+		if len(sentence) > 10 { // Минимальная длина предложения
+			chunk := DocumentChunk{
+				Content: sentence,
+				Metadata: map[string]string{
+					"filename": filename,
+					"chunk_id": fmt.Sprintf("%d", i),
+				},
+			}
+			chunks = append(chunks, chunk)
+		}
+	}
+
+	return chunks
+}
+
+// searchRelevantChunks ищет релевантные чанки по запросу
+func (rag *RAGSystem) searchRelevantChunks(query string) []DocumentChunk {
+	var relevantChunks []DocumentChunk
+
+	// Простой поиск по ключевым словам
+	queryLower := strings.ToLower(query)
+	queryWords := strings.Fields(queryLower)
+
+	for _, chunk := range rag.documents {
+		chunkLower := strings.ToLower(chunk.Content)
+		score := 0
+
+		for _, word := range queryWords {
+			if strings.Contains(chunkLower, word) {
+				score++
+			}
+		}
+
+		if score > 0 {
+			relevantChunks = append(relevantChunks, chunk)
+		}
+	}
+
+	// Ограничиваем количество результатов
+	if len(relevantChunks) > rag.config.TopK {
+		relevantChunks = relevantChunks[:rag.config.TopK]
+	}
+
+	return relevantChunks
+}
+
+// callLLM отправляет запрос к LLM API
+func (rag *RAGSystem) callLLM(messages []map[string]string) (string, error) {
+	payload := map[string]interface{}{
+		"model":    rag.config.LLMModelName,
+		"messages": messages,
+		"stream":   false,
+		"format":   "json",
+		"options": map[string]interface{}{
+			"temperature":        0.2,
+			"top_p":              0.9,
+			"repetition_penalty": 1.05,
+		},
+	}
+
+	resp, err := rag.client.R().
+		SetBody(payload).
+		SetResult(&LLMResponse{}).
+		Post(rag.config.LLMAPIURL)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to call LLM API: %w", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return "", fmt.Errorf("LLM API returned status %d: %s", resp.StatusCode(), resp.String())
+	}
+
+	llmResp := resp.Result().(*LLMResponse)
+	return llmResp.Message.Content, nil
+}
+
+// processCriterion обрабатывает один критерий чек-листа
+func (rag *RAGSystem) processCriterion(criterion string) (*ChecklistItem, error) {
+	// Ищем релевантные документы
+	relevantChunks := rag.searchRelevantChunks(criterion)
+
+	if len(relevantChunks) == 0 {
+		return &ChecklistItem{
+			Criterion: criterion,
+			Status:    "not_found",
+			Answer:    "Не найдено релевантных документов.",
+			Sources: []struct {
+				Filename string `json:"filename"`
+				Page     string `json:"page"`
+				Snippet  string `json:"snippet"`
+			}{},
+		}, nil
+	}
+
+	// Формируем контекст для LLM
+	var contextBuilder strings.Builder
+	for i, chunk := range relevantChunks {
+		contextBuilder.WriteString(fmt.Sprintf("[ИСТОЧНИК %d: %s]\n", i+1, chunk.Metadata["filename"]))
+		contextBuilder.WriteString(chunk.Content)
+		contextBuilder.WriteString("\n\n")
+	}
+
+	// Формируем промпт для LLM
+	prompt := fmt.Sprintf(`Ты — ассистент-аналитик, который возвращает ответы строго в формате JSON. Проанализируй предоставленный КОНТЕКСТ и ответь на ВОПРОС НА РУССКОМ.
+
+КОНТЕКСТ:
+---
+%s
+---
+
+ВОПРОС: "%s"
+
+Твой ответ должен быть ТОЛЬКО JSON объектом со следующей структурой:
+{
+  "status": "ОДИН ИЗ СТАТУСОВ: confirmed, not_found, partial, indirect, requires_confirmation",
+  "answer": "Твой развернутый ответ на основе контекста, со ссылками на источники в формате [ИСТОЧНИК N] НА РУССКОМ"
+}`, contextBuilder.String(), criterion)
+
+	// Отправляем запрос к LLM
+	response, err := rag.callLLM([]map[string]string{
+		{"role": "user", "content": prompt},
+	})
+
+	if err != nil {
+		return &ChecklistItem{
+			Criterion: criterion,
+			Status:    "requires_confirmation",
+			Answer:    fmt.Sprintf("Ошибка при обращении к LLM: %v", err),
+			Sources: []struct {
+				Filename string `json:"filename"`
+				Page     string `json:"page"`
+				Snippet  string `json:"snippet"`
+			}{},
+		}, nil
+	}
+
+	// Парсим ответ LLM
+	var llmResult struct {
+		Status string `json:"status"`
+		Answer string `json:"answer"`
+	}
+
+	if err := json.Unmarshal([]byte(response), &llmResult); err != nil {
+		llmResult.Status = "requires_confirmation"
+		llmResult.Answer = fmt.Sprintf("Ошибка парсинга ответа LLM: %v. Ответ: %s", err, response)
+	}
+
+	// Формируем источники
+	var sources []struct {
+		Filename string `json:"filename"`
+		Page     string `json:"page"`
+		Snippet  string `json:"snippet"`
+	}
+
+	for _, chunk := range relevantChunks {
+		sources = append(sources, struct {
+			Filename string `json:"filename"`
+			Page     string `json:"page"`
+			Snippet  string `json:"snippet"`
+		}{
+			Filename: chunk.Metadata["filename"],
+			Page:     chunk.Metadata["chunk_id"],
+			Snippet:  chunk.Content,
+		})
+	}
+
+	return &ChecklistItem{
+		Criterion: criterion,
+		Status:    llmResult.Status,
+		Answer:    llmResult.Answer,
+		Sources:   sources,
+	}, nil
+}
 
 // Repository минимальный интерфейс для репозитория
 type Repository interface {
@@ -266,13 +529,221 @@ func (pt *ProjectProcessorTask) setProjectStatusReady(ctx context.Context, proje
 func (pt *ProjectProcessorTask) generateChecklist(ctx context.Context, project *db.Project) error {
 	log.Printf("Generating checklist for project %d", pt.projectID)
 
-	// Имитируем генерацию чек-листа
-	time.Sleep(3 * time.Second)
+	// Получаем файлы документации для проекта
+	docFiles, err := pt.repo.GetProjectFilesByType(ctx, pt.projectID, db.FileTypeDocumentation)
+	if err != nil {
+		return fmt.Errorf("failed to get documentation files: %w", err)
+	}
 
-	// TODO: generate checklist
+	if len(docFiles) == 0 {
+		log.Printf("No documentation files found for project %d", pt.projectID)
+		// Устанавливаем статус ready если нет файлов для обработки
+		return pt.setProjectStatusReady(ctx, project.ID)
+	}
 
-	log.Printf("Successfully generated checklist for project %d", pt.projectID)
-	return nil
+	// Создаем RAG-систему
+	ragConfig := RAGConfig{
+		LLMAPIURL:    "http://89.108.116.240:11434/api/chat",
+		LLMModelName: "qwen3-8b:latest",
+		MaxChunkSize: 700,
+		ChunkOverlap: 150,
+		TopK:         5,
+		RequestDelay: 500 * time.Millisecond,
+	}
+
+	rag := NewRAGSystem(ragConfig)
+
+	// Обрабатываем каждый файл документации
+	for _, docFile := range docFiles {
+		log.Printf("Processing documentation file: %s", docFile.Filename)
+
+		// Скачиваем файл из S3
+		fileReader, err := pt.storage.DownloadFile(ctx, docFile.FilePath)
+		if err != nil {
+			log.Printf("Failed to download file %s: %v", docFile.Filename, err)
+			continue
+		}
+		defer fileReader.Close()
+
+		// Извлекаем текст из файла
+		text, err := rag.extractTextFromFile(fileReader, docFile.OriginalName)
+		if err != nil {
+			log.Printf("Failed to extract text from file %s: %v", docFile.Filename, err)
+			continue
+		}
+
+		// Разбиваем на чанки и добавляем в RAG-систему
+		chunks := rag.splitTextIntoChunks(text, docFile.OriginalName)
+		rag.documents = append(rag.documents, chunks...)
+
+		log.Printf("Added %d chunks from file %s", len(chunks), docFile.Filename)
+	}
+
+	// Получаем чек-лист из CSV файла (если есть)
+	checklistFile, err := pt.repo.GetProjectFilesByType(ctx, pt.projectID, db.FileTypeChecklist)
+	if err != nil {
+		log.Printf("Failed to get checklist file: %v", err)
+		// Создаем базовый чек-лист
+		return pt.createBasicChecklist(ctx, project, rag)
+	}
+
+	if len(checklistFile) == 0 {
+		log.Printf("No checklist file found, creating basic checklist")
+		return pt.createBasicChecklist(ctx, project, rag)
+	}
+
+	// Обрабатываем чек-лист
+	return pt.processChecklistFile(ctx, project, checklistFile[0], rag)
+}
+
+// createBasicChecklist создает базовый чек-лист для проекта
+func (pt *ProjectProcessorTask) createBasicChecklist(ctx context.Context, project *db.Project, rag *RAGSystem) error {
+	// Базовые критерии для проверки
+	basicCriteria := []string{
+		"Наличие технического задания",
+		"Наличие проектной документации",
+		"Наличие исполнительной документации",
+		"Соответствие требованиям безопасности",
+		"Соответствие нормативным требованиям",
+	}
+
+	var checklistResults []ChecklistItem
+
+	// Обрабатываем каждый критерий
+	for _, criterion := range basicCriteria {
+		log.Printf("Processing criterion: %s", criterion)
+
+		result, err := rag.processCriterion(criterion)
+		if err != nil {
+			log.Printf("Failed to process criterion '%s': %v", criterion, err)
+			result = &ChecklistItem{
+				Criterion: criterion,
+				Status:    "requires_confirmation",
+				Answer:    fmt.Sprintf("Ошибка обработки: %v", err),
+				Sources: []struct {
+					Filename string `json:"filename"`
+					Page     string `json:"page"`
+					Snippet  string `json:"snippet"`
+				}{},
+			}
+		}
+
+		checklistResults = append(checklistResults, *result)
+
+		// Небольшая задержка между запросами
+		time.Sleep(rag.config.RequestDelay)
+	}
+
+	// Сохраняем результаты в JSON файл
+	return pt.saveChecklistResults(ctx, project, checklistResults, "basic_checklist")
+}
+
+// processChecklistFile обрабатывает файл чек-листа
+func (pt *ProjectProcessorTask) processChecklistFile(ctx context.Context, project *db.Project, checklistFile db.ProjectFile, rag *RAGSystem) error {
+	// Скачиваем файл чек-листа
+	fileReader, err := pt.storage.DownloadFile(ctx, checklistFile.FilePath)
+	if err != nil {
+		return fmt.Errorf("failed to download checklist file: %w", err)
+	}
+	defer fileReader.Close()
+
+	// Читаем содержимое файла
+	content, err := io.ReadAll(fileReader)
+	if err != nil {
+		return fmt.Errorf("failed to read checklist file: %w", err)
+	}
+
+	// Парсим CSV (простая реализация)
+	lines := strings.Split(string(content), "\n")
+	var criteria []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "criterion") {
+			// Простое извлечение критерия (в реальном проекте лучше использовать CSV парсер)
+			if strings.Contains(line, ",") {
+				parts := strings.Split(line, ",")
+				if len(parts) > 0 {
+					criteria = append(criteria, strings.TrimSpace(parts[0]))
+				}
+			} else {
+				criteria = append(criteria, line)
+			}
+		}
+	}
+
+	if len(criteria) == 0 {
+		log.Printf("No criteria found in checklist file")
+		return pt.createBasicChecklist(ctx, project, rag)
+	}
+
+	var checklistResults []ChecklistItem
+
+	// Обрабатываем каждый критерий
+	for _, criterion := range criteria {
+		log.Printf("Processing criterion: %s", criterion)
+
+		result, err := rag.processCriterion(criterion)
+		if err != nil {
+			log.Printf("Failed to process criterion '%s': %v", criterion, err)
+			result = &ChecklistItem{
+				Criterion: criterion,
+				Status:    "requires_confirmation",
+				Answer:    fmt.Sprintf("Ошибка обработки: %v", err),
+				Sources: []struct {
+					Filename string `json:"filename"`
+					Page     string `json:"page"`
+					Snippet  string `json:"snippet"`
+				}{},
+			}
+		}
+
+		checklistResults = append(checklistResults, *result)
+
+		// Небольшая задержка между запросами
+		time.Sleep(rag.config.RequestDelay)
+	}
+
+	// Сохраняем результаты
+	return pt.saveChecklistResults(ctx, project, checklistResults, "checklist_verification")
+}
+
+// saveChecklistResults сохраняет результаты проверки чек-листа
+func (pt *ProjectProcessorTask) saveChecklistResults(ctx context.Context, project *db.Project, results []ChecklistItem, reportType string) error {
+	// Создаем JSON отчет
+	reportData := map[string]interface{}{
+		"project_id":   project.ID,
+		"project_name": project.Name,
+		"report_type":  reportType,
+		"generated_at": time.Now().Format(time.RFC3339),
+		"results":      results,
+	}
+
+	reportJSON, err := json.MarshalIndent(reportData, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal report: %w", err)
+	}
+
+	// Сохраняем JSON отчет в S3
+	reportBuffer := bytes.NewBuffer(reportJSON)
+	objectName, err := pt.storage.UploadFile(ctx, reportBuffer, fmt.Sprintf("%s_%s.json", reportType, project.Name), "application/json")
+	if err != nil {
+		return fmt.Errorf("failed to upload report to S3: %w", err)
+	}
+
+	// Сохраняем запись о файле в БД
+	_, err = pt.repo.CreateProjectFile(ctx, project.ID,
+		fmt.Sprintf("%s_%s.json", reportType, project.Name),
+		fmt.Sprintf("Отчет по чек-листу: %s", reportType),
+		objectName, int64(len(reportJSON)), ".json", db.FileTypeFinalReport)
+	if err != nil {
+		return fmt.Errorf("failed to create project file record: %w", err)
+	}
+
+	log.Printf("Successfully saved checklist report %s to S3", objectName)
+
+	// Устанавливаем статус ready после успешной обработки
+	return pt.setProjectStatusReady(ctx, project.ID)
 }
 
 // generateFinalReport генерирует итоговый отчет
