@@ -56,76 +56,11 @@ async function createProject(name, desc) {
   }
 }
   
-// /**
-//  * Обработчик инпута загрузки документов
-//  * @param {Event} event - Событие клика
-//  * @param {Object} options - Дополнительные параметры
-//  */
-// async function sendDocumentAssurance(event, options = {}) {
-//   console.log('Отправка файла');
-  
-//   const fileInput = document.getElementById('file-input');
-//   const files = fileInput.files;
-  
-//   if (!files || files.length === 0) {
-//     showToast('Выберите файлы для проверки', false);
-//     return;
-//   }
-  
-//   const file = options.file
-//   try {    
-//       if (!file) {
-//         console.warn(`Файл  не существует`);
-//         return;
-//       }
-      
-//       const formData = new FormData();
-//       formData.append('file', file);
-      
-   
-      
-//       console.log(`📤 Отправка файла ${file.name}`);
-//       //showToast(`Отправка файла ${i+1}/${files.length}...`, true);
-      
-//       const response = await fetch(
-//         `${endpoints.loadFile}${options.projectID}${endpoints.loadFileDocumentation}`, 
-//         {
-//           method: 'POST',
-//           body: formData
-//         }
-//       );
-      
-//       if (!response.ok) {
-//         const errorData = await response.json();
-//         throw new Error(`Ошибка файла ${file.name}: ${errorData.message || response.statusText}`);
-//       }
-      
-//       const result = await response.json();
-//       console.log(`✅ Файл ${file.name} успешно отправлен:`, result);
-    
-    
-//     // showToast(`Все файлы (${files.length}) успешно отправлены`, true);
-//     // console.log('✅ Все файлы успешно обработаны');
-    
-//     // // Активируем кнопки для следующих действий
-//     // document.getElementById('check-result').disabled = false;
-//     // document.getElementById('download-assurance').disabled = false;
-    
-//   } catch (error) {
-//     console.error('❌ Ошибка при отправке файлов:', error);
-//     showToast(error.message || 'Ошибка при отправке файлов', false);
-//     throw error;
-    
-//   } finally {
-//     // startBtn.disabled = false;
-//     // startBtn.classList.remove('loading');
-//     // loadingIndicator.hidden = true;
-//     // if (progressBar) {
-//     //   progressBar.hidden = true;
-//     // }
-//   }
-//}
-
+/**
+ * Отправка файлов из поля загрузки документов чеклиста 
+ * @param {Event} event - Событие клика
+ * @param {Object} options - Дополнительные параметры
+ */
 async function sendAssuranceDocuments(event, options = {}) {
   console.log('🔄 Начинаем проверку по чек-листу...');
   
@@ -212,7 +147,7 @@ async function sendAssuranceDocuments(event, options = {}) {
 }
 
 /**
- * Обработчик кнопки "Проверить результат"
+ * Обработчик кнопки "Начать проверку ашуранса"
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
@@ -426,7 +361,8 @@ async function handleDownloadRemarks(event, options = {}) {
     downloadBtn.classList.add('loading');
   }
 
-  const url = endpoints.projects + options.projectID + "/remarks_clustered";
+  //const url = endpoints.projects + options.projectID + "/remarks_clustered";
+  const url = `${endpoints.projects}${options.projectID}${endpoints.remarks_clustered}`;
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -435,7 +371,10 @@ async function handleDownloadRemarks(event, options = {}) {
       }
     });
 
-    // Обрабатываем 409 ошибку отдельно  
+    // Обрабатываем 404 ошибку отдельно  
+    if (response.status === 404) {
+      throw new Error('404 Отчёта нет');
+    }
     if (response.status === 409) {
       throw new Error('409 Отчёт ещё не готов. Пожалуйста, попробуйте позже.');
     }
@@ -478,10 +417,14 @@ async function handleDownloadRemarks(event, options = {}) {
   } catch (error) {
     console.error('❌ Ошибка при скачивании файла:', error);
     
-    // Специальное сообщение для 409 ошибки  
-    const errorMessage = error.message.includes('409') 
-      ? 'Результат обработки ещё не готов. Пожалуйста, попробуйте позже.' 
-      : 'Не удалось скачать файл';
+    // Специальное сообщение для 404 ошибки  
+    const errorMessages = {
+      '404': 'Отчёта нет',
+      '409': 'Результат проверки ещё не готов. Пожалуйста, попробуйте позже.',
+      'default': 'Не удалось скачать файл'
+    };
+
+    const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
     
     showToast(errorMessage, false);
   } finally {
@@ -499,7 +442,7 @@ async function handleDownloadRemarks(event, options = {}) {
  * @param {Event} event - Событие клика
  * @param {Object} options - Дополнительные параметры
  */
-function handleMakeProtocol(event, options = {}) {
+async function handleMakeProtocol(event, options = {}) {
   console.log('📄 Формируем протокол...');
   
   const protocolBtn = document.getElementById('make-protocol');
@@ -508,57 +451,78 @@ function handleMakeProtocol(event, options = {}) {
   protocolBtn.disabled = true;
   protocolBtn.classList.add('loading');
   loadingIndicator.hidden = false;
-  
-  // TODO: Здесь будет вызов backend API для формирования протокола
+
   const requestData = {
-    action: 'generate_protocol',
-    projectId: window.currentProject?.id,
-    projectName: window.currentProject?.name,
-    protocolOptions: {
-      format: options.format || 'docx', // docx, pdf
-      includeAttachments: true,
-      template: options.template || 'default',
-      language: options.language || 'ru'
-    },
-    timestamp: new Date().toISOString(),
-    ...options
   };
-  
-  console.log('📤 Данные для формирования протокола:', requestData);
-  
-  // Имитация формирования протокола
-  simulateBackendCall('/api/protocol/generate', requestData)
-    .then(response => {
-      console.log('✅ Протокол сформирован:', response);
+
+  try {
+    const response = await fetch(
+      `${endpoints.projects}${options.projectID}${endpoints.finalReport}`, 
+      { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+    if (!response.ok) {
+      const errorData = await response.json();
       
-      if (response.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = response.downloadUrl;
-        link.download = response.filename || 'protocol.docx';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        showToast('Протокол готов и скачан');
+      // Обработка специфических ошибок
+      let errorMessage;
+      if (response.status === 404) {
+        errorMessage = 'Проект не найден (404)';
+      } else if (response.status === 409) {
+        errorMessage = 'Формирование протокола уже запущено (409)';
+      } else {
+        errorMessage = errorData.message || 'Ошибка при создании проекта';
       }
-    })
-    .catch(error => {
-      console.error('❌ Ошибка при формировании протокола:', error);
-      showToast('Ошибка при формировании протокола', false);
-    })
-    .finally(() => {
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log('✅ Формирование протокола успешно начато:', data);
+    showToast('Формирование протокола успешно начато', true);
+    return data;
+
+  } catch (error) {
+    console.error('❌ Ошибка начала формирования протокола:', error);
+    
+    const errorMessages = {
+      '404': 'Не хватает данных для формирования протокола',
+      '409': 'Результат проверки ещё не готов. Пожалуйста, попробуйте позже.',
+      'default': 'Ошибка при выполнении функции'
+    };
+
+    const errorMessage = errorMessages[error.message.match(/404|409/)?.[0]] || errorMessages.default;
+    
+    showToast(errorMessage, false);
+    showToast(userMessage, false);
+    throw error;
+  } finally {
+    if (protocolBtn) {  // исправлено с saveBtn на protocolBtn
       protocolBtn.disabled = false;
       protocolBtn.classList.remove('loading');
       loadingIndicator.hidden = true;
-    });
+    }
+  }
 }
 
+
+/**
+ * Обработчик кнопки "Скачать протокол"
+ * @param {Event} event - Событие клика
+ * @param {Object} options - Дополнительные параметры
+ */
 async function handleDownloadProtocol(event, options = {}) {
   console.log('📥 Скачиваем финальный отчёт...');
   
   const downloadBtn = document.getElementById('download-protocol');
   if (downloadBtn) {
-    //downloadBtn.disabled = true;
-    //downloadBtn.classList.add('loading');
+    downloadBtn.disabled = true;
+    downloadBtn.classList.add('loading');
   }
 
   const url = `${endpoints.projects}${options.projectID}${endpoints.finalReport}`;
@@ -681,60 +645,6 @@ function showToast(message, isSuccess = true) {
       toast.classList.remove('show');
     }, 2400);
   }
-}
-
-/**
- * Имитирует вызов backend API (заменить на реальные fetch запросы)
- * @param {string} url - URL API endpoint
- * @param {Object} data - Данные для отправки
- * @returns {Promise} - Promise с ответом
- */
-function simulateBackendCall(url, data) {
-  return new Promise((resolve, reject) => {
-    // Имитируем задержку сети
-    setTimeout(() => {
-      // Имитируем успешный ответ
-      if (Math.random() > 0.1) { // 90% успеха
-        const response = {
-          success: true,
-          message: 'Операция выполнена успешно',
-          timestamp: new Date().toISOString(),
-          data: {
-            id: Math.random().toString(36).substr(2, 9),
-            status: 'completed'
-          }
-        };
-        
-        // Добавляем специфичные данные в зависимости от действия
-        if (data.action === 'start_assurance') {
-          response.data.assuranceId = 'ass_' + Math.random().toString(36).substr(2, 9);
-          response.data.estimatedTime = '2-3 минуты';
-        } else if (data.action === 'check_assurance_result') {
-          response.data.verdict = 'ok';
-          response.data.title = 'Готов к ашурансу';
-          response.data.reasons = ['Все файлы соответствуют требованиям', 'Размер в пределах лимита'];
-        } else if (data.action === 'download_assurance_report') {
-          response.data.downloadUrl = 'data:text/plain;base64,';
-          response.data.filename = 'assurance_report.xlsx';
-        } else if (data.action === 'process_remarks') {
-          response.data.processedFiles = data.files.length;
-          response.data.registryId = 'reg_' + Math.random().toString(36).substr(2, 9);
-        } else if (data.action === 'download_remarks_registry') {
-          response.data.downloadUrl = 'data:text/plain;base64,';
-          response.data.filename = 'remarks_registry.xlsx';
-        } else if (data.action === 'generate_protocol') {
-          response.data.protocolId = 'prot_' + Math.random().toString(36).substr(2, 9);
-          response.data.downloadUrl = 'data:text/plain;base64,';
-          response.data.filename = 'protocol.docx';
-        }
-        
-        resolve(response);
-      } else {
-        // Имитируем ошибку
-        reject(new Error('Симулированная ошибка backend API'));
-      }
-    }, 1500 + Math.random() * 1000); // Задержка 1.5-2.5 секунды
-  });
 }
 
 // ===== ЭКСПОРТ ФУНКЦИЙ ДЛЯ ИСПОЛЬЗОВАНИЯ =====

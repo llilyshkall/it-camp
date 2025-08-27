@@ -8,5 +8,6 @@ export const endpoints = {
   loadFile: `${API_BASE_URL}/projects/`, 
   loadFileDocumentation: `/documentation`, 
   startDocCheck: `/checklist`, 
+  remarks_clustered: `/remarks_clustered`, 
   finalReport: `/final_report`, 
 };
