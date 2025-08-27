@@ -563,7 +563,7 @@
       function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
       function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); console.log("!!", list, id);return list.find(p=>p.id.toString()===id.toString()) || null; }
 
       function renderMenu(){
         const list = ensureDefaults();
@@ -572,9 +572,11 @@
           const li = document.createElement('li');
           li.className = 'proj-item';
           li.setAttribute('role','option');
+          //li.setAttribute('data-id', p.id);
           li.setAttribute('data-id', p.id);
           li.tabIndex = -1;
           li.innerHTML = `<span class="proj-dot" aria-hidden="true"></span><span class="proj-name">${p.name}</span>`;
+          console.log(p.id, p)
           li.addEventListener('click', ()=> selectProject(p.id));
           projMenu.appendChild(li);
         });
@@ -601,6 +603,11 @@
         renderMenu();
         closeMenu();
         window.currentProject = currentProject();
+        if (window.currentProject) {
+          localStorage.setItem(SELECTED_KEY, id);
+        }
+        let curid = getSelectedId();
+        console.log(id, curid , localStorage.getItem(curid), window.currentProject);
         toast(`Выбран проект: ${window.currentProject?.name||''}`);
       }
 
@@ -611,26 +618,26 @@
       function openModal(){ modal.hidden = false; nameInput.value=''; descInput.value=''; nameInput.focus(); }
       function closeModal(){ modal.hidden = true; }
 
-      function saveProject(){
-        const name = (nameInput.value||'').trim();
-        const desc = (descInput.value||'').trim();
-        if(!name){ nameInput.focus(); nameInput.setAttribute('aria-invalid','true'); toast('Введите название проекта', false); return; }
-        nameInput.removeAttribute('aria-invalid');
-        const list = readProjects();
-        const id = uidFromName(name);
-        if(list.some(p=>p.id===id)){
-          toast('Проект с таким названием уже есть', false);
-          return;
-        }
-        const proj = { id, name, description: desc };
-        list.push(proj);
-        writeProjects(list);
-        setSelectedId(id);
-        renderMenu();
-        window.currentProject = proj;
-        toast('Проект добавлен');
-        closeModal();
-      }
+      // function saveProject(){
+      //   const name = (nameInput.value||'').trim();
+      //   const desc = (descInput.value||'').trim();
+      //   if(!name){ nameInput.focus(); nameInput.setAttribute('aria-invalid','true'); toast('Введите название проекта', false); return; }
+      //   nameInput.removeAttribute('aria-invalid');
+      //   const list = readProjects();
+      //   const id = uidFromName(name);
+      //   if(list.some(p=>p.id===id)){
+      //     toast('Проект с таким названием уже есть', false);
+      //     return;
+      //   }
+      //   const proj = { id, name, description: desc };
+      //   list.push(proj);
+      //   writeProjects(list);
+      //   setSelectedId(id);
+      //   renderMenu();
+      //   window.currentProject = proj;
+      //   toast('Проект добавлен');
+      //   closeModal();
+      // }
 
       async function fetchProjects() {
         try {
@@ -654,8 +661,9 @@
 
         // Можно сохранить их в localStorage или использовать напрямую
         // Например, сохранить в localStorage:
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
+        console.log(JSON.stringify(projectsFromBackend));
+        //localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
+        writeProjects(projectsFromBackend)
         const aCard = byId('assurance-card');
         const rCard = byId('remarks-card');
         const pCard = byId('protocol-card');
@@ -670,7 +678,7 @@
            pCard.hidden = false;
         }
       }
-          // Init
+      //    Init
       
       getProjects();
       renderMenu();
@@ -688,7 +696,18 @@
       modal.addEventListener('click', (e)=>{ if(e.target?.dataset?.close==='modal') closeModal(); });
       document.getElementById('cancel-project').addEventListener('click', closeModal);
       //saveBtn.addEventListener('click', saveProject);
-      saveBtn.addEventListener('click', (e)=>{ window.moduleHandlers.createProject(nameInput.value, descInput.value); closeModal();});
+      saveBtn.addEventListener('click', (e)=>{ 
+        window.moduleHandlers.createProject(nameInput.value, descInput.value); 
+        closeModal();
+        // const proj = { id, name, description: desc };
+        // list.push(proj);
+        // writeProjects(list);
+        // setSelectedId(id);
+        // renderMenu();
+        // window.currentProject = proj;
+        // toast('Проект добавлен');
+        // closeModal();
+      });
       modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') window.moduleHandlers.createProject(nameInput.value, descInput.value); });
 
       // Expose helper fetch wrapper for backend wiring
@@ -786,12 +805,12 @@
       function readProjects(){
         try { const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); return Array.isArray(arr) ? arr : []; } catch { return []; }
       }
-      function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
-      function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
-      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
-      function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
+      // function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+      // function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
+      // function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      // function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+      // function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
 
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
