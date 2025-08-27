@@ -70,6 +70,29 @@ func (m *MockRepository) SaveAttach(file *models.Attach) (string, error) {
 	return "mock-filename" + file.FileExt, nil
 }
 
+func (m *MockRepository) CheckAndUpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error) {
+	project, exists := m.projects[projectID]
+	if !exists {
+		return nil, errors.New("project not found")
+	}
+	project.Status = newStatus
+	return project, nil
+}
+
+func (m *MockRepository) GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error) {
+	// Простая реализация для тестов - возвращаем пустой список
+	return []db.ProjectFile{}, nil
+}
+
+func (m *MockRepository) UpdateProjectStatus(ctx context.Context, projectID int32, newStatus db.ProjectStatus) (*db.Project, error) {
+	project, exists := m.projects[projectID]
+	if !exists {
+		return nil, errors.New("project not found")
+	}
+	project.Status = newStatus
+	return project, nil
+}
+
 // Тесты для ProjectService
 func TestProjectService_CreateProject(t *testing.T) {
 	tests := []struct {

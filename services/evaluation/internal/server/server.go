@@ -66,7 +66,7 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	})
 
 	// Health check endpoint
-	r.HandleFunc("/health", handler.Health).Methods("GET")
+	r.HandleFunc("/health", handler.Health).Methods("GET", "OPTIONS")
 
 	// API endpoints
 	r.HandleFunc("/api/projects", handler.HandleProjects).Methods("GET", "POST", "OPTIONS")
