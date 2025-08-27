@@ -11,7 +11,7 @@ def open_browser(host: str, port: int):
         pass
 
 host = os.environ.get("HOST", "127.0.0.1")
-port = int(os.environ.get("PORT", "5000"))
+port = int(os.environ.get("PORT", "5001"))
 
 def env_to_bool(v: str) -> bool:
     return str(v).strip().lower() in {"1", "true", "yes", "on"}

@@ -563,7 +563,7 @@
       function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
       function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      function currentProject(){ const list = readProjects(); const id = getSelectedId(); console.log("!!", list, id);return list.find(p=>p.id.toString()===id.toString()) || null; }
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id.toString()===id.toString()) || null; }
 
       function renderMenu(){
         const list = ensureDefaults();
@@ -572,11 +572,10 @@
           const li = document.createElement('li');
           li.className = 'proj-item';
           li.setAttribute('role','option');
-          //li.setAttribute('data-id', p.id);
           li.setAttribute('data-id', p.id);
           li.tabIndex = -1;
           li.innerHTML = `<span class="proj-dot" aria-hidden="true"></span><span class="proj-name">${p.name}</span>`;
-          console.log(p.id, p)
+          //console.log(p.id, p)
           li.addEventListener('click', ()=> selectProject(p.id));
           projMenu.appendChild(li);
         });
@@ -606,8 +605,8 @@
         if (window.currentProject) {
           localStorage.setItem(SELECTED_KEY, id);
         }
-        let curid = getSelectedId();
-        console.log(id, curid , localStorage.getItem(curid), window.currentProject);
+        //let curid = getSelectedId();
+        //console.log(id, curid , localStorage.getItem(curid), window.currentProject);
         toast(`Выбран проект: ${window.currentProject?.name||''}`);
       }
 
@@ -661,7 +660,7 @@
 
         // Можно сохранить их в localStorage или использовать напрямую
         // Например, сохранить в localStorage:
-        console.log(JSON.stringify(projectsFromBackend));
+        //console.log(JSON.stringify(projectsFromBackend));
         //localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
         writeProjects(projectsFromBackend)
         const aCard = byId('assurance-card');
@@ -699,14 +698,6 @@
       saveBtn.addEventListener('click', (e)=>{ 
         window.moduleHandlers.createProject(nameInput.value, descInput.value); 
         closeModal();
-        // const proj = { id, name, description: desc };
-        // list.push(proj);
-        // writeProjects(list);
-        // setSelectedId(id);
-        // renderMenu();
-        // window.currentProject = proj;
-        // toast('Проект добавлен');
-        // closeModal();
       });
       modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') window.moduleHandlers.createProject(nameInput.value, descInput.value); });
 
@@ -807,10 +798,10 @@
       }
       // function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
       // function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
-      // function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
       // function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      // function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
 
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
@@ -843,7 +834,8 @@
 
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startAssurance(event, {
-          projectID: currentProject()
+          //projectID: currentProject().id
+          projectID: window.currentProject?.id,
         });
       });
 
