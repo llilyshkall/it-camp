@@ -21,8 +21,10 @@ services:
       - MINIO_BUCKET_NAME=evaluation-files
       - MINIO_USE_SSL=false
     depends_on:
-      - postgres
-      - minio
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/evaluation", "-health-check"]
       interval: 30s
@@ -81,7 +83,7 @@ services:
     environment:
       - POSTGRES_DB=evaluation_db
       - POSTGRES_USER=evaluation_user
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_PASSWORD=evaluation123
     ports:
       - "5432:5432"
     volumes:

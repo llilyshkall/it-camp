@@ -14,9 +14,11 @@ type Querier interface {
 	CheckAndUpdateProjectStatus(ctx context.Context, arg CheckAndUpdateProjectStatusParams) (Project, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectFile(ctx context.Context, arg CreateProjectFileParams) (ProjectFile, error)
+	CreateRemark(ctx context.Context, arg CreateRemarkParams) (Remark, error)
 	GetProject(ctx context.Context, id int32) (Project, error)
 	GetProjectFiles(ctx context.Context, projectID int32) ([]ProjectFile, error)
 	GetProjectFilesByType(ctx context.Context, arg GetProjectFilesByTypeParams) ([]ProjectFile, error)
+	GetRemarksByProject(ctx context.Context, projectID int32) ([]Remark, error)
 	ListProjects(ctx context.Context) ([]Project, error)
 	UpdateProjectStatus(ctx context.Context, arg UpdateProjectStatusParams) (Project, error)
 }

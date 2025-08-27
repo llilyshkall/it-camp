@@ -19,7 +19,7 @@ import os
 
 # ---  КОНФИГУРАЦИЯ ---
 LOCAL_API_URL = "http://89.108.116.240:11434/api/chat"
-LOCAL_MODEL_NAME = "qwen2.5:14b"
+LOCAL_MODEL_NAME = "qwen3-8b:latest"
 MAX_CONCURRENT_REQUESTS = 3
 
 # Если в кластере больше замечаний, чем это число, будет запущена выборка лучших, чтобы не перегревать модель.
@@ -462,12 +462,13 @@ async def logic(data):
 
 @app.post("/remarks")
 async def remarksHandler(
-    background_tasks: BackgroundTasks,
+    #background_tasks: BackgroundTasks,
     data: dict = Body(...)):
     #print(await logic(data))
     #return JSONResponse(content=None, status_code=202)
-    background_tasks.add_task(logic, data)
-    return JSONResponse(content=None, status_code=202)
+    #background_tasks.add_task(logic, data)
+    processed_remarks = await logic(data)
+    return JSONResponse(content=processed_remarks, status_code=200)
 # if __name__ == "__main__":
 #     asyncio.run(main())
 

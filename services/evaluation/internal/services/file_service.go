@@ -90,7 +90,8 @@ func (s *fileService) UploadRemarks(ctx context.Context, projectID int32, file i
 	}
 
 	// Создаем запись о файле в базе данных
-	projectFile, err := s.repo.CreateProjectFile(ctx, projectID, uniqueFileName, filename, objectName, fileSize, ext, dbFileType)
+	// Используем objectName как filename, так как это реальное имя файла в MinIO
+	projectFile, err := s.repo.CreateProjectFile(ctx, projectID, objectName, filename, objectName, fileSize, ext, dbFileType)
 	if err != nil {
 		restoreStatus()
 		return nil, err
@@ -100,7 +101,7 @@ func (s *fileService) UploadRemarks(ctx context.Context, projectID int32, file i
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 
@@ -145,7 +146,8 @@ func (s *fileService) UploadDocumentation(ctx context.Context, projectID int32, 
 	}
 
 	// Создаем запись о файле в базе данных
-	projectFile, err := s.repo.CreateProjectFile(ctx, projectID, uniqueFileName, filename, objectName, fileSize, ext, db.FileTypeDocumentation)
+	// Используем objectName как filename, так как это реальное имя файла в MinIO
+	projectFile, err := s.repo.CreateProjectFile(ctx, projectID, objectName, filename, objectName, fileSize, ext, db.FileTypeDocumentation)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +175,7 @@ func (s *fileService) GenerateChecklist(ctx context.Context, projectID int32) er
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 
@@ -210,7 +212,7 @@ func (s *fileService) GenerateFinalReport(ctx context.Context, projectID int32) 
 	projectTask := tasks.NewProjectProcessorTask(
 		projectID,
 		1, // Приоритет 1 (высокий)
-		s.pgClient,
+		s.repo,
 		s.storage,
 	)
 

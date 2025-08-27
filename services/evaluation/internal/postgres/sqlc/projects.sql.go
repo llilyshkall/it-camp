@@ -58,6 +58,41 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 	return i, err
 }
 
+const createRemark = `-- name: CreateRemark :one
+INSERT INTO remarks (project_id, direction, section, subsection, content)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, project_id, direction, section, subsection, content, created_at
+`
+
+type CreateRemarkParams struct {
+	ProjectID  int32  `json:"project_id"`
+	Direction  string `json:"direction"`
+	Section    string `json:"section"`
+	Subsection string `json:"subsection"`
+	Content    string `json:"content"`
+}
+
+func (q *Queries) CreateRemark(ctx context.Context, arg CreateRemarkParams) (Remark, error) {
+	row := q.db.QueryRowContext(ctx, createRemark,
+		arg.ProjectID,
+		arg.Direction,
+		arg.Section,
+		arg.Subsection,
+		arg.Content,
+	)
+	var i Remark
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Direction,
+		&i.Section,
+		&i.Subsection,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, name, created_at, status
 FROM projects
@@ -74,6 +109,44 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.Status,
 	)
 	return i, err
+}
+
+const getRemarksByProject = `-- name: GetRemarksByProject :many
+SELECT id, project_id, direction, section, subsection, content, created_at
+FROM remarks
+WHERE project_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetRemarksByProject(ctx context.Context, projectID int32) ([]Remark, error) {
+	rows, err := q.db.QueryContext(ctx, getRemarksByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Remark{}
+	for rows.Next() {
+		var i Remark
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Direction,
+			&i.Section,
+			&i.Subsection,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many

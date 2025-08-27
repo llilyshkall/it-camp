@@ -1,13 +1,17 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"evaluation/internal/services"
 	"evaluation/internal/tasks"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	m "evaluation/internal/models"
 
@@ -108,7 +112,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-
 // // SendFile godoc
 // // @Summary Send file
 // // @Description Send file
@@ -145,121 +148,120 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 // 	http.ServeFile(w, r, filePath)
 // }
 
-// // SendProjectRemarks godoc
-// // @Summary СТАРАЯ РУЧКА
-// // @Description Get remarks for specific project and forward to external service
-// // @ID sendProjectRemarks
-// // @Accept json
-// // @Produce json
-// // @Param project_id path string true "Project ID"
-// // @Success 200 {object} Response "Success response"
-// // @Failure 400 {object} Error "bad request"
-// // @Failure 404 {object} Error "project not found"
-// // @Failure 500 {object} Error "internal server error"
-// // @Router /projects/{project_id}/remarks [post]
-// func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
+// SendProjectRemarks godoc
+// @Summary СТАРАЯ РУЧКА
+// @Description Get remarks for specific project and forward to external service
+// @ID sendProjectRemarks
+// @Accept json
+// @Produce json
+// @Param project_id path string true "Project ID"
+// @Success 200 {object} Response "Success response"
+// @Failure 400 {object} Error "bad request"
+// @Failure 404 {object} Error "project not found"
+// @Failure 500 {object} Error "internal server error"
+// @Router /projects/{project_id}/remarks [post]
+func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
 
-// 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-// 	if len(pathParts) < 4 {
-// 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-// 		return
-// 	}
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
 
-// 	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
-// 	if err != nil {
-// 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-// 		return
-// 	}
+	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
 
-// 	// Extract project_id from path
-// 	// vars := mux.Vars(r)
-// 	// projectID := vars["project_id"]
-// 	if projectID == 0 {
-// 		returnErrorJSON(w, m.StacktraceError(errors.New("project_id is required"), m.ErrBadRequest400))
-// 		return
-// 	}
+	// Extract project_id from path
+	// vars := mux.Vars(r)
+	// projectID := vars["project_id"]
+	if projectID == 0 {
+		returnErrorJSON(w, m.StacktraceError(errors.New("project_id is required"), m.ErrBadRequest400))
+		return
+	}
 
-// 	// Get project data from database
-// 	// projectRemarks, err := h.Repository.GetProjectByID(projectID)
-// 	// if err != nil {
-// 	// 	if errors.Is(err, sql.ErrNoRows) {
-// 	// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("project %s not found", projectID), m.ErrNotFound404))
-// 	// 	} else {
-// 	// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
-// 	// 	}
-// 	// 	return
-// 	// }
-// 	projectRemarks := map[string]interface{}{
-// 		"None": []string{
-// 			"Показать, как прогнозируется распространение водонасыщенных линз в геологической модели и их влияние на НГЗ",
-// 			"ТРебуется более криичное рассмотрение геологии в районе грабена",
-// 		},
-// 		"development": []string{
-// 			"Система ППД необоснована",
-// 		},
-// 		"geological": []string{
-// 			"Неочевидно влияние переходной зоны",
-// 		},
-// 		"hydrodynamic_integrated": []string{
-// 			"моделей нет почему",
-// 		},
-// 		"petrophysical": []string{
-// 			"Запланировать исследования керна по скважине 8306 на расклинивающий эффект",
-// 			"Привести данные лабораторных исследований параметра пористости на графике Рп-Кп по скважине 8306 в пластовых условиях",
-// 			"Провести сравнительный анализ результатов комплекса ГИС \"новых\" и \"исторических\" скважин.",
-// 		},
-// 		"reassessment": []string{
-// 			"Привести на отдельном слайде сравнение плановых и фактических показателей по скважинам ОПР. Показать плановые и фактические показатели Кпрод на исторических скважинах.",
-// 			"При обосновании контактов по блокам на планшетах показать фактические притоки по испытаниям в колонне или открытом стволе",
-// 		},
-// 		"seismogeological": []string{
-// 			"Провести ретроспективный анализ прогнозной способности куба АИ эффективных толщин по циклитам. Сравнить плановые показатели песчанистости из ГМ 2022 г и фактические показатели, полученные в скважинах ОПР. Показать отклонения в цифрах.",
-// 		},
-// 		// Вложенная карта для ключей
-// 		"keys": map[string]string{
-// 			"reassessment":            "Программа доизучения (ГРР и ОПР)",
-// 			"seismogeological":        "Сейсмогеологическая модель",
-// 			"petrophysical":           "Петрофизическая модель",
-// 			"geological":              "Геологическая модель",
-// 			"development":             "Разработка и прогноз технологических показателей добычи",
-// 			"hydrodynamic_integrated": "Гидродинамическая и интегрированная модели",
-// 		},
-// 	}
-// 	// Prepare request to external service
-// 	externalURL := "http://127.0.0.1:8083/remarks"
-// 	jsonData, err := json.Marshal(projectRemarks)
-// 	if err != nil {
-// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
-// 		return
-// 	}
+	// Get project data from database
+	// projectRemarks, err := h.Repository.GetProjectByID(projectID)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("project %s not found", projectID), m.ErrNotFound404))
+	// 	} else {
+	// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+	// 	}
+	// 	return
+	// }
+	projectRemarks := map[string]interface{}{
+		"None": []string{
+			"Показать, как прогнозируется распространение водонасыщенных линз в геологической модели и их влияние на НГЗ",
+			"ТРебуется более криичное рассмотрение геологии в районе грабена",
+		},
+		"development": []string{
+			"Система ППД необоснована",
+		},
+		"geological": []string{
+			"Неочевидно влияние переходной зоны",
+		},
+		"hydrodynamic_integrated": []string{
+			"моделей нет почему",
+		},
+		"petrophysical": []string{
+			"Запланировать исследования керна по скважине 8306 на расклинивающий эффект",
+			"Привести данные лабораторных исследований параметра пористости на графике Рп-Кп по скважине 8306 в пластовых условиях",
+			"Провести сравнительный анализ результатов комплекса ГИС \"новых\" и \"исторических\" скважин.",
+		},
+		"reassessment": []string{
+			"Привести на отдельном слайде сравнение плановых и фактических показателей по скважинам ОПР. Показать плановые и фактические показатели Кпрод на исторических скважинах.",
+			"При обосновании контактов по блокам на планшетах показать фактические притоки по испытаниям в колонне или открытом стволе",
+		},
+		"seismogeological": []string{
+			"Провести ретроспективный анализ прогнозной способности куба АИ эффективных толщин по циклитам. Сравнить плановые показатели песчанистости из ГМ 2022 г и фактические показатели, полученные в скважинах ОПР. Показать отклонения в цифрах.",
+		},
+		// Вложенная карта для ключей
+		"keys": map[string]string{
+			"reassessment":            "Программа доизучения (ГРР и ОПР)",
+			"seismogeological":        "Сейсмогеологическая модель",
+			"petrophysical":           "Петрофизическая модель",
+			"geological":              "Геологическая модель",
+			"development":             "Разработка и прогноз технологических показателей добычи",
+			"hydrodynamic_integrated": "Гидродинамическая и интегрированная модели",
+		},
+	}
+	// Prepare request to external service
+	externalURL := "http://127.0.0.1:8083/remarks"
+	jsonData, err := json.Marshal(projectRemarks)
+	if err != nil {
+		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+		return
+	}
 
-// 	// Send request to external service
-// 	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("failed to send remarks to external service: %v", err), m.ErrServerError500))
-// 		return
-// 	}
-// 	defer resp.Body.Close()
+	// Send request to external service
+	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("failed to send remarks to external service: %v", err), m.ErrServerError500))
+		return
+	}
+	defer resp.Body.Close()
 
-// 	// Check external service response
-// 	if resp.StatusCode != http.StatusAccepted {
-// 		body, _ := io.ReadAll(resp.Body)
-// 		returnErrorJSON(w, m.StacktraceError(
-// 			fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body)),
-// 			m.ErrServerError500,
-// 		))
-// 		return
-// 	}
+	// Check external service response
+	if resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		returnErrorJSON(w, m.StacktraceError(
+			fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body)),
+			m.ErrServerError500,
+		))
+		return
+	}
 
-// 	// Return success response
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(map[string]interface{}{
-// 		"success": true,
-// 		"message": fmt.Sprintf("Remarks for project %d processed successfully", projectID),
-// 	})
-// }
-
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Remarks for project %d processed successfully", projectID),
+	})
+}
 
 // ========== PROJECT HANDLERS ==========
 
