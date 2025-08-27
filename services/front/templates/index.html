@@ -842,10 +842,8 @@
       // Скачать Excel-отчёт проверки с чек-листом - используем новый обработчик
       downloadBtn.addEventListener('click', (event) => {
         window.moduleHandlers.downloadAssurance(event, {
-          // Дополнительные параметры для backend API
-          format: 'excel',
-          includeChecklist: true,
-          includeMetadata: true
+          //format: 'excel',
+          projectID: window.currentProject?.id,
         });
       });
 
@@ -868,6 +866,12 @@
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
       
+      function readProjects(){
+        try { const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); return Array.isArray(arr) ? arr : []; } catch { return []; }
+      }
+      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+
       pick.addEventListener('click',()=>input.click());
       input.addEventListener('change',()=>{const files=input.files; if(!files?.length) return; showFiles(files);});
       ['dragenter','dragover','dragleave','drop'].forEach(ev=>zone.addEventListener(ev,stop,false));
@@ -880,9 +884,7 @@
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startRemarks(event, {
           // Дополнительные параметры для backend API
-          normalizeExcel: true,
-          generateRegistry: true,
-          outputFormat: 'xlsx'
+          projectID: window.currentProject?.id,
         });
       });
 
@@ -890,9 +892,7 @@
       downloadBtn.addEventListener('click', (event) => {
         window.moduleHandlers.downloadRemarks(event, {
           // Дополнительные параметры для backend API
-          format: 'xlsx',
-          includeMetadata: true,
-          includeProcessingInfo: true
+          projectID: window.currentProject?.id,
         });
       });
     })();
@@ -904,11 +904,7 @@
       
       btn.addEventListener('click', (event) => {
         window.moduleHandlers.makeProtocol(event, {
-          // Дополнительные параметры для backend API
-          format: 'docx',
-          includeAttachments: true,
-          template: 'default',
-          language: 'ru'
+          projectID: window.currentProject?.id,
         });
       });
     })();
