@@ -197,11 +197,48 @@ jobs:
               exit 1
             fi
             
+            # Проверяем статус Docker
+            echo "Checking Docker status..."
+            if ! docker info >/dev/null 2>&1; then
+              echo "❌ Docker is not running or user has no access"
+              echo "Starting Docker service..."
+              sudo systemctl start docker || echo "Could not start Docker service"
+              sleep 5
+              
+              # Проверяем снова
+              if ! docker info >/dev/null 2>&1; then
+                echo "❌ Docker is still not accessible"
+                exit 1
+              fi
+            fi
+            echo "✅ Docker is accessible"
+            
             # Останавливаем старые контейнеры (игнорируем ошибки для первого запуска)
             echo "Stopping old containers..."
-            docker-compose down 2>/dev/null || echo "No existing docker-compose to stop"
-            docker stop evaluation postgres front 2>/dev/null || echo "No existing containers to stop"
-            docker rm evaluation postgres front 2>/dev/null || echo "No existing containers to remove"
+            
+            # Переходим в директорию с docker-compose
+            cd ~/evaluation
+            
+            # Останавливаем все контейнеры из docker-compose
+            if [ -f "docker-compose.yaml" ]; then
+              echo "Stopping containers from existing docker-compose..."
+              docker-compose down --remove-orphans 2>/dev/null || echo "No existing docker-compose to stop"
+            else
+              echo "No existing docker-compose.yaml found"
+            fi
+            
+            # Останавливаем все контейнеры, которые могут быть запущены
+            echo "Stopping any remaining containers..."
+            docker ps -q --filter "name=evaluation" | xargs -r docker stop 2>/dev/null || echo "No evaluation containers to stop"
+            docker ps -q --filter "name=postgres" | xargs -r docker stop 2>/dev/null || echo "No postgres containers to stop"
+            docker ps -q --filter "name=front" | xargs -r docker stop 2>/dev/null || echo "No front containers to stop"
+            docker ps -q --filter "name=minio" | xargs -r docker stop 2>/dev/null || echo "No minio containers to stop"
+            
+            # Удаляем остановленные контейнеры
+            echo "Removing stopped containers..."
+            docker container prune -f 2>/dev/null || echo "No containers to remove"
+
+            echo "✅ All containers stopped and removed"
             
             # Создаем docker-compose.yaml для продакшна
             echo "Creating production docker-compose.yaml..."
@@ -320,6 +357,16 @@ jobs:
               postgres_data:
               minio_data:
             EOF
+            
+            # Проверяем, что порты свободны перед запуском
+            echo "Checking if required ports are available..."
+            for port in 8081 5001 5432 9000 9001; do
+              if netstat -tuln 2>/dev/null | grep -q ":$port " || ss -tuln 2>/dev/null | grep -q ":$port "; then
+                echo "❌ Port $port is still in use. Force stopping any remaining processes..."
+                sudo fuser -k "$port/tcp" 2>/dev/null || echo "Could not kill process on port $port"
+                sleep 2
+              fi
+            done
             
             # Запускаем PostgreSQL и MinIO сначала
             echo "Starting PostgreSQL and MinIO services..."
