@@ -386,5 +386,5 @@ async def remarksHandler(
 #     asyncio.run(main(projects_to_process))
 
 if __name__ == "__main__":
-    projects_to_process = ["Project_Alfa"]
+    #projects_to_process = ["Project_Alfa"]
     uvicorn.run(app, host="127.0.0.1", port=8084)
