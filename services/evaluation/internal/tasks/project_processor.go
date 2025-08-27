@@ -94,13 +94,12 @@ func (pt *ProjectProcessorTask) getProjectFiles(ctx context.Context) ([]db.Proje
 // processRemarks обрабатывает замечания проекта
 func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.Project) error {
 	log.Printf("Processing remarks for project %d", pt.projectID)
-
+	//querier := db.New(pt.pgClient.DB)
 	// Имитируем обработку замечаний
-	time.Sleep(2 * time.Second)
+	//time.Sleep(2 * time.Second)
 
 	// TODO: process remarks
-
-
+	//fileProj, err := querier.GetProjectFilesByType(ctx, db.GetProjectFilesByTypeParams{ProjectID: project.ID, FileType: ""})
 	log.Printf("Successfully processed remarks for project %d", pt.projectID)
 	return nil
 }
