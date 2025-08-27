@@ -12,7 +12,6 @@
   <title>{{ page_title }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile-specific.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='oil-rig-animation.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pumpjack.css') }}">
 </head>
 <body>
@@ -131,7 +130,7 @@
         </div>
       </div>
 
-      <div class="wordmark"><a class="wordmark-link" href="#top">ПРОЕКТ ДЛЯ ГАЗПРОМА</a></div>
+      <div class="wordmark"><a class="wordmark-link" href="#top">DockПоток</a></div>
 
       <div class="project-ctl" aria-label="Выбор проекта">
         <div class="proj-dropdown" id="proj-dropdown">
@@ -162,8 +161,8 @@
     <div class="container">
       <div class="hero-content">
         <div class="hero-text">
-          <h1>Чистая стартовая страница</h1>
-          <p class="lead">Заглушка интерфейса с эстетикой «сине-белого» корпоративного стиля. Без логотипов и товарных знаков. Готово к наполнению.</p>
+          <h1>Оптимизация процесса ашуранса</h1>
+          <p class="lead">Продукт оптимизирующий процесс работы документации по ашурансу в Газпромнефти с применениям больших языковых моделей.</p>
         </div>
         <div class="hero-visual">
           <!-- Анимация Pumpjack -->
@@ -249,11 +248,11 @@
               <span class="btn-icon" aria-hidden="true">🚀</span>
               Начать проверку
             </button>
-            <button class="btn btn-outline" id="check-result" disabled>
+            <button class="btn btn-outline" id="check-result" disabled >
               <span class="btn-icon" aria-hidden="true">🔍</span>
               Проверить результат
             </button>
-            <button class="btn btn-ghost" id="download-assurance" disabled>
+            <button class="btn btn-ghost" id="download-assurance">
               <span class="btn-icon" aria-hidden="true">📥</span>
               Скачать отчёт
             </button>
@@ -292,7 +291,7 @@
               <span class="btn-icon" aria-hidden="true">⚙️</span>
               Обработать замечания
             </button>
-            <button class="btn btn-outline" id="download-remarks" disabled>
+            <button class="btn btn-outline" id="download-remarks">
               <span class="btn-icon" aria-hidden="true">📥</span>
               Скачать реестр
             </button>
@@ -305,7 +304,7 @@
             <div class="card-icon" aria-hidden="true">📄</div>
             <h3>Формирование протокола</h3>
           </div>
-          <p class="sublead">Нажмите «Сформировать», и система подготовит файл протокола.</p>
+          <p class="sublead">Нажмите «Сформировать», и система подготовит файл протокола. После формирования кнопка «Скачать протокол» станет активной.</p>
           
           <!-- Индикатор загрузки с нефтяной вышкой -->
           <div class="loading-indicator" id="protocol-loading" hidden>
@@ -319,6 +318,10 @@
             <button class="btn btn-primary btn-large" id="make-protocol">
               <span class="btn-icon" aria-hidden="true">📄</span>
               Сформировать протокол
+            </button>
+            <button class="btn btn-outline btn-large" id="download-protocol">
+              <span class="btn-icon" aria-hidden="true">⬇️</span>
+              Скачать протокол
             </button>
           </div>
         </div>
@@ -385,8 +388,6 @@
 
  <!-- Подключение мобильных улучшений -->
  <script src="{{ url_for('static', filename='mobile-enhancements.js') }}"></script>
- <!-- Подключение анимации нефтяной вышки -->
- <script src="{{ url_for('static', filename='oil-rig-animation.js') }}"></script>
  <!-- Подключение анимации Pumpjack -->
  <script src="{{ url_for('static', filename='pumpjack.js') }}"></script>
  <!-- Подключение обработчиков модулей -->
@@ -473,7 +474,7 @@
           navDropdown.hidden = true;
         }, 300);
         
-        navToggle.focus();
+        //navToggle.focus();
       }
 
       // Переключение меню по клику на кнопку
@@ -563,10 +564,44 @@
       }
       function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
       function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
-      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      //function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function getSelectedId() {
+        try {
+          // Проверяем доступность localStorage
+          if (typeof localStorage === 'undefined') {
+            console.warn('localStorage is not available');
+            return null;
+          }
+          
+          const id = localStorage.getItem(SELECTED_KEY);
+          // Проверяем, что значение существует и не пустое
+          return id && id.trim() !== '' ? id : null;
+        } catch (error) {
+          console.error('Error accessing localStorage:', error);
+          return null;
+        }
+      }
+      function currentProject() {
+        try {
+          const list = readProjects();
+          if (!list || !Array.isArray(list)) {
+            console.warn('Projects list is empty or invalid');
+            return null;
+          }
+          
+          const id = getSelectedId();
+          if (!id) return null;
+          
+          // Находим проект с учетом приведения типов
+          return list.find(p => p.id.toString() === id.toString()) || null;
+        } catch (error) {
+          console.error('Error getting current project:', error);
+          return null;
+        }
+      }
       function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id===id) || null; }
+      //function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id.toString()===id.toString()) || null; }
 
       function renderMenu(){
         const list = ensureDefaults();
@@ -578,6 +613,7 @@
           li.setAttribute('data-id', p.id);
           li.tabIndex = -1;
           li.innerHTML = `<span class="proj-dot" aria-hidden="true"></span><span class="proj-name">${p.name}</span>`;
+          //console.log(p.id, p)
           li.addEventListener('click', ()=> selectProject(p.id));
           projMenu.appendChild(li);
         });
@@ -604,6 +640,11 @@
         renderMenu();
         closeMenu();
         window.currentProject = currentProject();
+        if (window.currentProject) {
+          localStorage.setItem(SELECTED_KEY, id);
+        }
+        //let curid = getSelectedId();
+        //console.log(id, curid , localStorage.getItem(curid), window.currentProject);
         toast(`Выбран проект: ${window.currentProject?.name||''}`);
       }
 
@@ -614,31 +655,10 @@
       function openModal(){ modal.hidden = false; nameInput.value=''; descInput.value=''; nameInput.focus(); }
       function closeModal(){ modal.hidden = true; }
 
-      function saveProject(){
-        const name = (nameInput.value||'').trim();
-        const desc = (descInput.value||'').trim();
-        if(!name){ nameInput.focus(); nameInput.setAttribute('aria-invalid','true'); toast('Введите название проекта', false); return; }
-        nameInput.removeAttribute('aria-invalid');
-        const list = readProjects();
-        const id = uidFromName(name);
-        if(list.some(p=>p.id===id)){
-          toast('Проект с таким названием уже есть', false);
-          return;
-        }
-        const proj = { id, name, description: desc };
-        list.push(proj);
-        writeProjects(list);
-        setSelectedId(id);
-        renderMenu();
-        window.currentProject = proj;
-        toast('Проект добавлен');
-        closeModal();
-      }
-
       async function fetchProjects() {
         try {
           //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
-          const response = await fetch(endpoints.getProjects, {method:'GET'});
+          const response = await fetch(endpoints.basicProjects, {method:'GET'});
           
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -655,10 +675,7 @@
       async function getProjects() {
         const projectsFromBackend = await fetchProjects();
 
-        // Можно сохранить их в localStorage или использовать напрямую
-        // Например, сохранить в localStorage:
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsFromBackend));
+        writeProjects(projectsFromBackend)
         const aCard = byId('assurance-card');
         const rCard = byId('remarks-card');
         const pCard = byId('protocol-card');
@@ -673,7 +690,7 @@
            pCard.hidden = false;
         }
       }
-          // Init
+      //    Init
       
       getProjects();
       renderMenu();
@@ -691,7 +708,10 @@
       modal.addEventListener('click', (e)=>{ if(e.target?.dataset?.close==='modal') closeModal(); });
       document.getElementById('cancel-project').addEventListener('click', closeModal);
       //saveBtn.addEventListener('click', saveProject);
-      saveBtn.addEventListener('click', (e)=>{ window.moduleHandlers.createProject(nameInput.value, descInput.value); closeModal();});
+      saveBtn.addEventListener('click', (e)=>{ 
+        window.moduleHandlers.createProject(nameInput.value, descInput.value); 
+        closeModal();
+      });
       modal.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if((e.ctrlKey||e.metaKey)&&e.key==='Enter') window.moduleHandlers.createProject(nameInput.value, descInput.value); });
 
       // Expose helper fetch wrapper for backend wiring
@@ -784,6 +804,8 @@
       const downloadBtn=document.getElementById('download-assurance'); const checkResultBtn=document.getElementById('check-result');
       let lastAssurance=null;
 
+      checkResultBtn.hidden = true;
+      
       const stop=(e)=>{e.preventDefault(); e.stopPropagation();};
       const showFiles=(files)=>{const list=Array.from(files).map(f=>`${f.name} — ${(f.size/1024).toFixed(1)} КБ`).join('<br>'); info.innerHTML=list||'Файлы не выбраны'; info.hidden=false; startBtn.disabled=false;};
       const send=async(files)=>{const fd=new FormData(); Array.from(files).forEach(f=>fd.append('files[]',f,f.name)); const r=await apiFetch('/assurance',{method:'POST',body:fd}); if(!r.ok) throw 0; return await r.json();}
@@ -805,30 +827,47 @@
         res.hidden=false;
       };
 
-      pickBtn.addEventListener('click',()=>input.click());
-      input.addEventListener('change',()=>{const files=input.files; if(!files?.length) return; showFiles(files);});
-      ['dragenter','dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,stop,false));
-      ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.add('hover'),false));
-      ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('hover'),false));
-      dz.addEventListener('drop',(e)=>{const files=e.dataTransfer.files; if(!files?.length) return; input.files=e.dataTransfer.files; showFiles(files);});
-      dz.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); input.click();}});
+      pickBtn.addEventListener('click', () => input.click());
 
-      // Начать проверку - используем новый обработчик
+      input.addEventListener('change', (e) => {
+          const files = input.files;
+          if (!files?.length) return;
+          //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
+          window.moduleHandlers.sendAssuranceDocuments(e, { projectID: window.currentProject?.id});
+          showFiles(files);
+      });
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => { dz.addEventListener(ev, stop, false);});
+      ['dragenter', 'dragover'].forEach(ev => {dz.addEventListener(ev, () => dz.classList.add('hover'), false);});
+      ['dragleave', 'drop'].forEach(ev => {dz.addEventListener(ev, () => dz.classList.remove('hover'), false);});
+
+      dz.addEventListener('drop', (e) => {
+          const files = e.dataTransfer.files;
+          if (!files?.length) return;
+          input.files = files;
+          //window.moduleHandlers.sendDocumentAssurance(e, { projectID: window.currentProject?.id, file: files[files.length - 1] });
+          window.moduleHandlers.sendAssuranceDocuments(e, { projectID: window.currentProject?.id});
+          
+          showFiles(files);
+      });
+      dz.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              input.click();
+          }
+      });
+
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startAssurance(event, {
-          // Дополнительные параметры для backend API
-          priority: 'normal',
-          notifyOnComplete: true
+          //projectID: currentProject().id
+          projectID: window.currentProject?.id,
         });
       });
 
       // Скачать Excel-отчёт проверки с чек-листом - используем новый обработчик
       downloadBtn.addEventListener('click', (event) => {
         window.moduleHandlers.downloadAssurance(event, {
-          // Дополнительные параметры для backend API
-          format: 'excel',
-          includeChecklist: true,
-          includeMetadata: true
+          //format: 'excel',
+          projectID: window.currentProject?.id,
         });
       });
 
@@ -862,20 +901,14 @@
       // Начать обработку - используем новый обработчик
       startBtn.addEventListener('click', (event) => {
         window.moduleHandlers.startRemarks(event, {
-          // Дополнительные параметры для backend API
-          normalizeExcel: true,
-          generateRegistry: true,
-          outputFormat: 'xlsx'
+          projectID: window.currentProject?.id,
         });
       });
 
       // Скачать обработанный реестр - используем новый обработчик
       downloadBtn.addEventListener('click', (event) => {
         window.moduleHandlers.downloadRemarks(event, {
-          // Дополнительные параметры для backend API
-          format: 'xlsx',
-          includeMetadata: true,
-          includeProcessingInfo: true
+          projectID: window.currentProject?.id,
         });
       });
     })();
@@ -887,13 +920,17 @@
       
       btn.addEventListener('click', (event) => {
         window.moduleHandlers.makeProtocol(event, {
-          // Дополнительные параметры для backend API
-          format: 'docx',
-          includeAttachments: true,
-          template: 'default',
-          language: 'ru'
+          projectID: window.currentProject?.id,
         });
       });
+
+      const downloadBtn = document.getElementById('download-protocol');
+      downloadBtn.addEventListener('click', (event) => {
+        window.moduleHandlers.downloadProtocol(event, {
+          projectID: window.currentProject?.id,
+        });
+      });
+
     })();
   });
 </script>

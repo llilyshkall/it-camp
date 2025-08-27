@@ -1,38 +1,33 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"evaluation/internal/services"
 	"evaluation/internal/tasks"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	m "evaluation/internal/models"
 
 	"github.com/gorilla/mux"
 )
 
-// @title API
+// @title Evaluation Service API
 // @version 1.0
-// @description ... back server.
+// @description API сервиса для оценки проектов с поддержкой загрузки файлов, генерации отчетов и интеграции с внешними сервисами
 // @termsOfService http://swagger.io/terms/
 
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
+// @contact.name Development Team
+// @contact.url https://github.com/your-org/evaluation-service
+// @contact.email dev@example.com
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
 
-// @host 127.0.0.1:8081
-// @BasePath  /api
+// @host localhost:8081
+// @BasePath /api
 
 type File interface {
 	io.Reader
@@ -85,6 +80,15 @@ func New(projectService services.ProjectService, fileService services.FileServic
 
 // ========== HEALTH CHECK ==========
 
+// Health godoc
+// @Summary Health check
+// @Description Проверка состояния сервиса и подключения к базе данных
+// @ID health
+// @Accept json
+// @Produce json
+// @Success 200 {object} Response "Service health status"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /health [get]
 // Health проверяет состояние сервиса
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -104,188 +108,163 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// SendFile godoc
-// @Summary Send file
-// @Description Send file
-// @ID sendFile
-// @Accept  json
-// @Produce  octet-stream
-// @Success 200 {file} file "File attachment"
-// @Failure 400 {object} Error "bad request"
-// @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
-// @Router /file [get]
-func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
-	// Разрешить CORS для всех источников (для разработки)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	// Обработка preflight-запроса
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	dir, err := os.Getwd()
-	if err != nil {
-		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file location"), m.ErrServerError500))
-	}
-	filename := "aed85cd5-53d7-4eb6-a106-4deee07ed2a1.xlsx"
-	filePath := dir + "/" + filename
-	//filepath = ""
-	log.Println(filePath)
-	// // Проверяем существование файла
-	// if _, err := os.Stat(filePath); os.IsNotExist(err) {
-	// 	http.Error(w, "File not found", http.StatusNotFound)
-	// 	return
-	// }
+// // SendFile godoc
+// // @Summary Send file
+// // @Description Send file
+// // @ID sendFile
+// // @Accept json
+// // @Produce octet-stream
+// // @Success 200 {file} file "File attachment"
+// // @Failure 400 {object} Error "bad request"
+// // @Failure 500 {object} Error "internal Server Error - Request is valid but operation failed at server side"
+// // @Router /file [get]
+// func (h *Handler) SendFile(w http.ResponseWriter, r *http.Request) {
+// 	dir, err := os.Getwd()
+// 	if err != nil {
+// 		returnErrorJSON(w, m.StacktraceError(errors.New("invalid file location"), m.ErrServerError500))
+// 	}
+// 	filename := "aed85cd5-53d7-4eb6-a106-4deee07ed2a1.xlsx"
+// 	filePath := dir + "/" + filename
+// 	//filepath = ""
+// 	log.Println(filePath)
+// 	// // Проверяем существование файла
+// 	// if _, err := os.Stat(filePath); os.IsNotExist(err) {
+// 	// 	http.Error(w, "File not found", http.StatusNotFound)
+// 	// 	return
+// 	// }
 
-	// // Получаем имя файла из пути
-	// _, fileName := filepath.Split(filePath)
+// 	// // Получаем имя файла из пути
+// 	// _, fileName := filepath.Split(filePath)
 
-	//json.NewEncoder(w).Encode(&m.Response{Body: filePath})
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	w.Header().Set("Content-Transfer-Encoding", "binary")
-	w.Header().Set("Expires", "0")
-	http.ServeFile(w, r, filePath)
-}
+// 	//json.NewEncoder(w).Encode(&m.Response{Body: filePath})
+// 	w.Header().Set("Content-Type", "application/octet-stream")
+// 	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+// 	w.Header().Set("Content-Transfer-Encoding", "binary")
+// 	w.Header().Set("Expires", "0")
+// 	http.ServeFile(w, r, filePath)
+// }
 
-// SendProjectRemarks godoc
-// @Summary Send Project Remarks
-// @Description Get remarks for specific project and forward to external service
-// @ID sendProjectRemarks
-// @Accept  json
-// @Produce json
-// @Param project_id path string true "Project ID"
-// @Success 200 {object} Response "Success response"
-// @Failure 400 {object} Error "bad request"
-// @Failure 404 {object} Error "project not found"
-// @Failure 500 {object} Error "internal server error"
-// @Router /projects/{project_id}/remarks [post]
-func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
-	// CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+// // SendProjectRemarks godoc
+// // @Summary СТАРАЯ РУЧКА
+// // @Description Get remarks for specific project and forward to external service
+// // @ID sendProjectRemarks
+// // @Accept json
+// // @Produce json
+// // @Param project_id path string true "Project ID"
+// // @Success 200 {object} Response "Success response"
+// // @Failure 400 {object} Error "bad request"
+// // @Failure 404 {object} Error "project not found"
+// // @Failure 500 {object} Error "internal server error"
+// // @Router /projects/{project_id}/remarks [post]
+// func (h *Handler) SendProjectRemarks(w http.ResponseWriter, r *http.Request) {
 
-	// Handle preflight request
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+// 	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+// 	if len(pathParts) < 4 {
+// 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+// 		return
+// 	}
 
-	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(pathParts) < 4 {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
+// 	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
+// 	if err != nil {
+// 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+// 		return
+// 	}
 
-	projectID, err := strconv.ParseInt(pathParts[2], 10, 32)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
+// 	// Extract project_id from path
+// 	// vars := mux.Vars(r)
+// 	// projectID := vars["project_id"]
+// 	if projectID == 0 {
+// 		returnErrorJSON(w, m.StacktraceError(errors.New("project_id is required"), m.ErrBadRequest400))
+// 		return
+// 	}
 
-	// Extract project_id from path
-	// vars := mux.Vars(r)
-	// projectID := vars["project_id"]
-	if projectID == 0 {
-		returnErrorJSON(w, m.StacktraceError(errors.New("project_id is required"), m.ErrBadRequest400))
-		return
-	}
+// 	// Get project data from database
+// 	// projectRemarks, err := h.Repository.GetProjectByID(projectID)
+// 	// if err != nil {
+// 	// 	if errors.Is(err, sql.ErrNoRows) {
+// 	// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("project %s not found", projectID), m.ErrNotFound404))
+// 	// 	} else {
+// 	// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+// 	// 	}
+// 	// 	return
+// 	// }
+// 	projectRemarks := map[string]interface{}{
+// 		"None": []string{
+// 			"Показать, как прогнозируется распространение водонасыщенных линз в геологической модели и их влияние на НГЗ",
+// 			"ТРебуется более криичное рассмотрение геологии в районе грабена",
+// 		},
+// 		"development": []string{
+// 			"Система ППД необоснована",
+// 		},
+// 		"geological": []string{
+// 			"Неочевидно влияние переходной зоны",
+// 		},
+// 		"hydrodynamic_integrated": []string{
+// 			"моделей нет почему",
+// 		},
+// 		"petrophysical": []string{
+// 			"Запланировать исследования керна по скважине 8306 на расклинивающий эффект",
+// 			"Привести данные лабораторных исследований параметра пористости на графике Рп-Кп по скважине 8306 в пластовых условиях",
+// 			"Провести сравнительный анализ результатов комплекса ГИС \"новых\" и \"исторических\" скважин.",
+// 		},
+// 		"reassessment": []string{
+// 			"Привести на отдельном слайде сравнение плановых и фактических показателей по скважинам ОПР. Показать плановые и фактические показатели Кпрод на исторических скважинах.",
+// 			"При обосновании контактов по блокам на планшетах показать фактические притоки по испытаниям в колонне или открытом стволе",
+// 		},
+// 		"seismogeological": []string{
+// 			"Провести ретроспективный анализ прогнозной способности куба АИ эффективных толщин по циклитам. Сравнить плановые показатели песчанистости из ГМ 2022 г и фактические показатели, полученные в скважинах ОПР. Показать отклонения в цифрах.",
+// 		},
+// 		// Вложенная карта для ключей
+// 		"keys": map[string]string{
+// 			"reassessment":            "Программа доизучения (ГРР и ОПР)",
+// 			"seismogeological":        "Сейсмогеологическая модель",
+// 			"petrophysical":           "Петрофизическая модель",
+// 			"geological":              "Геологическая модель",
+// 			"development":             "Разработка и прогноз технологических показателей добычи",
+// 			"hydrodynamic_integrated": "Гидродинамическая и интегрированная модели",
+// 		},
+// 	}
+// 	// Prepare request to external service
+// 	externalURL := "http://127.0.0.1:8083/remarks"
+// 	jsonData, err := json.Marshal(projectRemarks)
+// 	if err != nil {
+// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
+// 		return
+// 	}
 
-	// Get project data from database
-	// projectRemarks, err := h.Repository.GetProjectByID(projectID)
-	// if err != nil {
-	// 	if errors.Is(err, sql.ErrNoRows) {
-	// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("project %s not found", projectID), m.ErrNotFound404))
-	// 	} else {
-	// 		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
-	// 	}
-	// 	return
-	// }
-	projectRemarks := map[string]interface{}{
-		"None": []string{
-			"Показать, как прогнозируется распространение водонасыщенных линз в геологической модели и их влияние на НГЗ",
-			"ТРебуется более криичное рассмотрение геологии в районе грабена",
-		},
-		"development": []string{
-			"Система ППД необоснована",
-		},
-		"geological": []string{
-			"Неочевидно влияние переходной зоны",
-		},
-		"hydrodynamic_integrated": []string{
-			"моделей нет почему",
-		},
-		"petrophysical": []string{
-			"Запланировать исследования керна по скважине 8306 на расклинивающий эффект",
-			"Привести данные лабораторных исследований параметра пористости на графике Рп-Кп по скважине 8306 в пластовых условиях",
-			"Провести сравнительный анализ результатов комплекса ГИС \"новых\" и \"исторических\" скважин.",
-		},
-		"reassessment": []string{
-			"Привести на отдельном слайде сравнение плановых и фактических показателей по скважинам ОПР. Показать плановые и фактические показатели Кпрод на исторических скважинах.",
-			"При обосновании контактов по блокам на планшетах показать фактические притоки по испытаниям в колонне или открытом стволе",
-		},
-		"seismogeological": []string{
-			"Провести ретроспективный анализ прогнозной способности куба АИ эффективных толщин по циклитам. Сравнить плановые показатели песчанистости из ГМ 2022 г и фактические показатели, полученные в скважинах ОПР. Показать отклонения в цифрах.",
-		},
-		// Вложенная карта для ключей
-		"keys": map[string]string{
-			"reassessment":            "Программа доизучения (ГРР и ОПР)",
-			"seismogeological":        "Сейсмогеологическая модель",
-			"petrophysical":           "Петрофизическая модель",
-			"geological":              "Геологическая модель",
-			"development":             "Разработка и прогноз технологических показателей добычи",
-			"hydrodynamic_integrated": "Гидродинамическая и интегрированная модели",
-		},
-	}
-	// Prepare request to external service
-	externalURL := "http://127.0.0.1:8083/remarks"
-	jsonData, err := json.Marshal(projectRemarks)
-	if err != nil {
-		returnErrorJSON(w, m.StacktraceError(err, m.ErrServerError500))
-		return
-	}
+// 	// Send request to external service
+// 	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
+// 	if err != nil {
+// 		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("failed to send remarks to external service: %v", err), m.ErrServerError500))
+// 		return
+// 	}
+// 	defer resp.Body.Close()
 
-	// Send request to external service
-	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		returnErrorJSON(w, m.StacktraceError(fmt.Errorf("failed to send remarks to external service: %v", err), m.ErrServerError500))
-		return
-	}
-	defer resp.Body.Close()
+// 	// Check external service response
+// 	if resp.StatusCode != http.StatusAccepted {
+// 		body, _ := io.ReadAll(resp.Body)
+// 		returnErrorJSON(w, m.StacktraceError(
+// 			fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body)),
+// 			m.ErrServerError500,
+// 		))
+// 		return
+// 	}
 
-	// Check external service response
-	if resp.StatusCode != http.StatusAccepted {
-		body, _ := io.ReadAll(resp.Body)
-		returnErrorJSON(w, m.StacktraceError(
-			fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body)),
-			m.ErrServerError500,
-		))
-		return
-	}
+// 	// Return success response
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	json.NewEncoder(w).Encode(map[string]interface{}{
+// 		"success": true,
+// 		"message": fmt.Sprintf("Remarks for project %d processed successfully", projectID),
+// 	})
+// }
 
-	// Return success response
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": fmt.Sprintf("Remarks for project %d processed successfully", projectID),
-	})
-}
 
 // ========== PROJECT HANDLERS ==========
 
 // HandleProjects обрабатывает запросы к /api/projects
 func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	switch r.Method {
 	case http.MethodGet:
 		h.ListProjects(w, r)
@@ -298,13 +277,6 @@ func (h *Handler) HandleProjects(w http.ResponseWriter, r *http.Request) {
 
 // HandleProject обрабатывает запросы к /api/projects/{id}
 func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 	switch r.Method {
 	case http.MethodGet:
 		h.GetProject(w, r)
@@ -313,18 +285,31 @@ func (h *Handler) HandleProject(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleProjectFiles обрабатывает запросы к /api/projects/{id}/files
-func (h *Handler) HandleProjectFiles(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+// HandleDocumentation обрабатывает запросы к /api/projects/{id}/documentation
+func (h *Handler) HandleDocumentation(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		h.UploadProjectFile(w, r)
+		h.UploadDocumentation(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleChecklist обрабатывает запросы к /api/projects/{id}/checklist
+func (h *Handler) HandleChecklist(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.GenerateChecklist(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleRemarks обрабатывает запросы к /api/projects/{id}/remarks
+func (h *Handler) HandleRemarks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.UploadRemarks(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -340,21 +325,21 @@ func (h *Handler) HandleGenerateFinalReport(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// UploadProjectFile godoc
-// @Summary Upload file to project
-// @Description Upload a file to a specific project with specified type
-// @ID uploadProjectFile
-// @Accept  multipart/form-data
-// @Produce  json
+// UploadDocumentation godoc
+// @Summary Upload documentation file to project
+// @Description Upload a documentation file to a specific project (max 50MB)
+// @ID uploadDocumentation
+// @Accept multipart/form-data
+// @Produce json
 // @Param id path int true "Project ID"
-// @Param file formData file true "File to upload"
-// @Param type query string true "Type of file: documentation, remarks, checklist, final_report, remarks_clustered"
-// @Success 202 {object} db.ProjectFile "File uploaded successfully"
+// @Param file formData file true "Documentation file to upload"
+// @Success 202 {object} db.ProjectFile "Documentation file uploaded successfully"
 // @Failure 400 {object} Error "Bad request - invalid input data"
 // @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Project is not in ready status"
 // @Failure 500 {object} Error "Internal server error"
-// @Router /projects/{id}/files [post]
-func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
+// @Router /projects/{id}/documentation [post]
+func (h *Handler) UploadDocumentation(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -376,8 +361,124 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем тип файла из query параметров
-	fileTypeStr := r.URL.Query().Get("type")
+	// Ограничиваем размер файла
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
+
+	// Получаем файл из формы
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("Failed to get file: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+	defer file.Close()
+
+	fileName := fileHeader.Filename
+	fileSize := fileHeader.Size
+	log.Printf("Received documentation file: %s, size: %d bytes", fileName, fileSize)
+
+	// Используем сервис для загрузки документации
+	projectFile, err := h.fileService.UploadDocumentation(r.Context(), int32(projectID), file, fileName, fileSize)
+	if err != nil {
+		log.Printf("Failed to upload documentation file: %v", err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем информацию о загруженном файле
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(projectFile)
+}
+
+// GenerateChecklist godoc
+// @Summary Generate checklist for project
+// @Description Generate checklist for a specific project
+// @ID generateChecklist
+// @Accept json
+// @Produce json
+// @Param id path int true "Project ID"
+// @Success 202 {object} Response "Checklist generation started"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Project is not in ready status"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/checklist [post]
+func (h *Handler) GenerateChecklist(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// Используем сервис для генерации чеклиста
+	err = h.fileService.GenerateChecklist(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to generate checklist for project %d: %v", projectID, err)
+		returnErrorJSON(w, err)
+		return
+	}
+
+	// Возвращаем успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(&Response{
+		Body: map[string]interface{}{
+			"message":    "Checklist generation started",
+			"project_id": projectID,
+		},
+	})
+}
+
+// UploadRemarks godoc
+// @Summary Upload remarks file to project
+// @Description Upload a remarks file to a specific project (max 50MB)
+// @ID uploadRemarks
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path int true "Project ID"
+// @Param file formData file true "Remarks file to upload"
+// @Success 202 {object} db.ProjectFile "Remarks file uploaded successfully"
+// @Failure 400 {object} Error "Bad request - invalid input data"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/remarks [post]
+func (h *Handler) UploadRemarks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
 
 	// Ограничиваем размер файла
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // 50MB
@@ -393,12 +494,12 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 
 	fileName := fileHeader.Filename
 	fileSize := fileHeader.Size
-	log.Printf("Received file: %s, size: %d bytes", fileName, fileSize)
+	log.Printf("Received remarks file: %s, size: %d bytes", fileName, fileSize)
 
-	// Используем сервис для загрузки файла в проект
-	projectFile, err := h.fileService.UploadProjectFile(r.Context(), int32(projectID), file, fileName, fileTypeStr, fileSize)
+	// Используем сервис для загрузки файла замечаний (только тип "remarks")
+	projectFile, err := h.fileService.UploadRemarks(r.Context(), int32(projectID), file, fileName, "remarks", fileSize)
 	if err != nil {
-		log.Printf("Failed to upload project file: %v", err)
+		log.Printf("Failed to upload remarks file: %v", err)
 		returnErrorJSON(w, err)
 		return
 	}
@@ -413,8 +514,8 @@ func (h *Handler) UploadProjectFile(w http.ResponseWriter, r *http.Request) {
 // @Summary Get all projects
 // @Description Get list of all projects
 // @ID listProjects
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Success 200 {array} db.Project "List of projects"
 // @Failure 500 {object} Error "Internal server error"
 // @Router /projects [get]
@@ -442,8 +543,8 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 // @Summary Get project by ID
 // @Description Get specific project by its ID
 // @ID getProject
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path int true "Project ID"
 // @Success 200 {object} db.Project "Project found"
 // @Failure 400 {object} Error "Bad request - invalid project ID"
@@ -490,8 +591,8 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 // @Summary Create new project
 // @Description Create a new project with name
 // @ID createProject
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param project body models.CreateProjectRequest true "Project data"
 // @Success 201 {object} db.Project "Project created successfully"
 // @Failure 400 {object} Error "Bad request - invalid input data"
@@ -528,8 +629,8 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 // @Summary Generate final report for project
 // @Description Generate final report for a specific project
 // @ID generateFinalReport
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path int true "Project ID"
 // @Success 202 {object} Response "Final report generation started"
 // @Failure 400 {object} Error "Bad request - invalid project ID"
@@ -612,8 +713,8 @@ func (h *Handler) HandleGetFinalReport(w http.ResponseWriter, r *http.Request) {
 // @Summary Get project checklist
 // @Description Get checklist result for a specific project
 // @ID getChecklist
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path int true "Project ID"
 // @Success 200 {object} Response "Checklist result"
 // @Failure 400 {object} Error "Bad request - invalid project ID"
@@ -658,8 +759,8 @@ func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
 // @Summary Get clustered remarks for project
 // @Description Get clustered remarks result for a specific project
 // @ID getRemarksClustered
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path int true "Project ID"
 // @Success 200 {object} Response "Clustered remarks result"
 // @Failure 400 {object} Error "Bad request - invalid project ID"
@@ -704,8 +805,8 @@ func (h *Handler) GetRemarksClustered(w http.ResponseWriter, r *http.Request) {
 // @Summary Get final report for project
 // @Description Get final report result for a specific project
 // @ID getFinalReport
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param id path int true "Project ID"
 // @Success 200 {object} Response "Final report result"
 // @Failure 400 {object} Error "Bad request - invalid project ID"

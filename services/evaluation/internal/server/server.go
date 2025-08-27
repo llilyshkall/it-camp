@@ -36,9 +36,27 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Разрешаем все origin для разработки
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+
+			// w.Header().Set("Access-Control-Allow-Origin", "*")
+			// w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			// Разрешаем конкретные origin'ы (настройте под свои нужды)
+
+			origin := r.Header.Get("Origin")
+			allowedOrigins := map[string]bool{
+				"http://127.0.0.1:5001": true,
+				"http://localhost:5001": true,
+				"http://127.0.0.1:5000": true,
+				"http://localhost:5000": true,
+			}
+
+			if allowedOrigins[origin] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "3600")
 
 			// Обрабатываем preflight OPTIONS запросы
 			if r.Method == "OPTIONS" {
@@ -58,7 +76,9 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 
 	// Специфичные пути для проектов с поддержкой параметров
 	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/files", handler.HandleProjectFiles).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/documentation", handler.HandleDocumentation).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleChecklist).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks", handler.HandleRemarks).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST", "OPTIONS")
 
 	// GET ручки для получения результатов обработки
