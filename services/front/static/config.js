@@ -1,6 +1,7 @@
 export const API_BASE_URL = 'http://127.0.0.1:8081/api';
 
 export const endpoints = {
+  basicProjects: `${API_BASE_URL}/projects`,
   projects: `${API_BASE_URL}/projects/`,
   //getProjects: `${API_BASE_URL}/projects`,
   //createProject: `${API_BASE_URL}/projects`,

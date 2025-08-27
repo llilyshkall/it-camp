@@ -564,10 +564,44 @@
       }
       function writeProjects(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
       function ensureDefaults(){ const arr = readProjects(); if(arr.length===0){ writeProjects(defaults); return defaults; } return arr; }
-      function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      //function getSelectedId(){ return localStorage.getItem(SELECTED_KEY); }
+      function getSelectedId() {
+        try {
+          // Проверяем доступность localStorage
+          if (typeof localStorage === 'undefined') {
+            console.warn('localStorage is not available');
+            return null;
+          }
+          
+          const id = localStorage.getItem(SELECTED_KEY);
+          // Проверяем, что значение существует и не пустое
+          return id && id.trim() !== '' ? id : null;
+        } catch (error) {
+          console.error('Error accessing localStorage:', error);
+          return null;
+        }
+      }
+      function currentProject() {
+        try {
+          const list = readProjects();
+          if (!list || !Array.isArray(list)) {
+            console.warn('Projects list is empty or invalid');
+            return null;
+          }
+          
+          const id = getSelectedId();
+          if (!id) return null;
+          
+          // Находим проект с учетом приведения типов
+          return list.find(p => p.id.toString() === id.toString()) || null;
+        } catch (error) {
+          console.error('Error getting current project:', error);
+          return null;
+        }
+      }
       function setSelectedId(id){ if(id){ localStorage.setItem(SELECTED_KEY, id); } }
 
-      function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id.toString()===id.toString()) || null; }
+      //function currentProject(){ const list = readProjects(); const id = getSelectedId(); return list.find(p=>p.id.toString()===id.toString()) || null; }
 
       function renderMenu(){
         const list = ensureDefaults();
@@ -624,7 +658,7 @@
       async function fetchProjects() {
         try {
           //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
-          const response = await fetch(endpoints.projects, {method:'GET'});
+          const response = await fetch(endpoints.basicProjects, {method:'GET'});
           
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

@@ -26,7 +26,7 @@ async function createProject(name, desc) {
   }
 
   try {
-    const response = await fetch(endpoints.projects, { 
+    const response = await fetch(endpoints.basicProjects, { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
