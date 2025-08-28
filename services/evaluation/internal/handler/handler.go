@@ -750,7 +750,7 @@ func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=checklist.pdf"))
 	w.Header().Set("Content-Transfer-Encoding", "binary")
 
 	// Копируем данные из reader в ResponseWriter
@@ -855,7 +855,7 @@ func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=final_report.pdf"))
 	w.Header().Set("Content-Transfer-Encoding", "binary")
 
 	// Копируем данные из reader в ResponseWriter

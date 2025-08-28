@@ -314,7 +314,7 @@ func (s *fileService) GetFinalReport(ctx context.Context, projectID int32) (io.R
 		return nil, models.ErrNotFound404
 	}
 
-	downloadFile, err := s.storage.DownloadFile(ctx, files[len(files)-1].FilePath)
+	downloadFile, err := s.storage.DownloadFile(ctx, files[0].FilePath)
 	if err != nil {
 		return nil, err
 	}
