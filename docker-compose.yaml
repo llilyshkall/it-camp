@@ -14,10 +14,10 @@ services:
       - DB_PORT=5432
       - DB_NAME=evaluation_db
       - DB_USER=evaluation_user
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=backtotheoil
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_ACCESS_KEY=backtotheoil
+      - MINIO_SECRET_KEY=backtotheoil
       - MINIO_BUCKET_NAME=evaluation-files
       - MINIO_USE_SSL=false
     depends_on:
@@ -83,13 +83,11 @@ services:
     environment:
       - POSTGRES_DB=evaluation_db
       - POSTGRES_USER=evaluation_user
-      - POSTGRES_PASSWORD=evaluation123
+      - POSTGRES_PASSWORD=backtotheoil
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U evaluation_user -d evaluation_db"]
       interval: 10s
@@ -98,15 +96,14 @@ services:
     restart: unless-stopped
     networks:
       - evaluation-network
-
   minio:
     image: minio/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=backtotheoil
+      - MINIO_ROOT_PASSWORD=backtotheoil
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data

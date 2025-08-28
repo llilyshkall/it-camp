@@ -10,7 +10,7 @@ endif
 DB_HOST ?= localhost
 DB_PORT ?= 5432
 DB_USER ?= evaluation_user
-DB_PASSWORD ?= evaluation123
+DB_PASSWORD ?= backtotheoil
 DB_NAME ?= evaluation_db
 
 # Переменные для миграций (подключение к localhost)
