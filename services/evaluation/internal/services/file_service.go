@@ -263,7 +263,7 @@ func (s *fileService) GetChecklist(ctx context.Context, projectID int32) (interf
 }
 
 // GetRemarksClustered получает кластеризированные замечания для проекта
-func (s *fileService) GetRemarksClustered(ctx context.Context, projectID int32) (interface{}, error) {
+func (s *fileService) GetRemarksClustered(ctx context.Context, projectID int32) (io.ReadCloser, error) {
 	// Проверяем статус проекта
 	project, err := s.repo.GetProject(ctx, projectID)
 	if err != nil {
@@ -281,18 +281,24 @@ func (s *fileService) GetRemarksClustered(ctx context.Context, projectID int32) 
 		return nil, err
 	}
 
-	// Если файлов нет, возвращаем ошибку
-	if len(files) == 0 {
-		return nil, models.ErrNotFound404
+	downloadFile, err := s.storage.DownloadFile(ctx, files[len(files)-1].FilePath)
+	if err != nil {
+		return nil, err
 	}
 
-	// Возвращаем результат
-	return map[string]interface{}{
-		"project_id": projectID,
-		"status":     project.Status,
-		"files":      files,
-		"message":    "Clustered remarks files found",
-	}, nil
+	// // Если файлов нет, возвращаем ошибку
+	// if len(files) == 0 {
+	// 	return nil, models.ErrNotFound404
+	// }
+
+	// // Возвращаем результат
+	// return map[string]interface{}{
+	// 	"project_id": projectID,
+	// 	"status":     project.Status,
+	// 	"files":      files,
+	// 	"message":    "Clustered remarks files found",
+	// }, nil
+	return downloadFile, nil
 }
 
 // GetFinalReport получает финальный отчет для проекта

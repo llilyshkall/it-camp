@@ -519,10 +519,17 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// }
 
 	externalURL2 := "http://127.0.0.1:8086/remarks_report"
-
+	requestBody, err := json.Marshal(remarksResponse)
+	if err != nil {
+		// Устанавливаем статус ready при ошибке
+		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
+			log.Printf("Failed to set project status to ready after error: %v", updateErr)
+		}
+		return fmt.Errorf("failed to marshal remarks: %w", err)
+	}
 	// Send request to external service json.NewEncoder(w).Encode(
 	//resp, err = http.Post(externalURL2, "application/json", bytes.NewBuffer(remarksResponse))
-	resp, err = http.Post(externalURL2, "application/json", bytes.NewBuffer(remarksResponse))
+	resp, err = http.Post(externalURL2, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
@@ -541,9 +548,49 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 		}
 		return fmt.Errorf("external service returned status %d: %s", resp.StatusCode, string(body))
 	}
+	// // Читаем ответ
+	// respBody, err = io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to read response body: %w", err)
+	// }
+
+	// Получаем PDF файл из ответа
+	pdfBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read PDF response: %w", err)
+	}
+
+	// // Структура для парсинга ответа
+	// type ApiResponse struct {
+	// 	Status string          `json:"status"`
+	// 	Data   json.RawMessage `json:"data"` // Используем RawMessage для гибкости
+	// }
+
+	// // Парсим JSON
+	// var apiResponse ApiResponse
+	// if err := json.Unmarshal(respBody, &apiResponse); err != nil {
+	// 	return fmt.Errorf("failed to parse response JSON: %w", err)
+	// }
+
+	// ...
+
+	var reportBuffer *bytes.Buffer
+
+	// Вариант 1: Если данные уже в виде []byte
+	reportBuffer = bytes.NewBuffer(pdfBytes)
+
+	// Если данные в base64:
+	// decodedData, err := base64.StdEncoding.DecodeString(apiResponse.Data)
+	// if err != nil {
+	//     return fmt.Errorf("failed to decode base64 data: %w", err)
+	// }
+	// apiResponse.Data = decodedData
+
+	// Теперь apiResponse.Data содержит байты файла
+	//log.Printf("Received file data length: %d bytes", len(apiResponse.Data))
 
 	// Сохраняем PDF файл в S3
-	objectName, err := pt.storage.UploadFile(ctx, body2, "remarks_report.pdf", "application/pdf")
+	objectName, err := pt.storage.UploadFile(ctx, reportBuffer, "remarks_report.pdf", "application/pdf")
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {
@@ -553,7 +600,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	}
 
 	// Сохраняем запись о файле в БД
-	_, err = pt.repo.CreateProjectFile(ctx, project.ID, "remarks_report.pdf", "Отчет по замечаниям.pdf", objectName, int64(pdfBuffer.Len()), ".pdf", db.FileTypeRemarksClustered)
+	_, err = pt.repo.CreateProjectFile(ctx, project.ID, "remarks_report.pdf", "Отчет по замечаниям.pdf", objectName, int64(reportBuffer.Len()), ".pdf", db.FileTypeRemarksClustered)
 	if err != nil {
 		// Устанавливаем статус ready при ошибке
 		if updateErr := pt.setProjectStatusReady(ctx, project.ID); updateErr != nil {

@@ -42,7 +42,7 @@ type FileService interface {
 	GenerateChecklist(ctx context.Context, projectID int32) error
 	GenerateFinalReport(ctx context.Context, projectID int32) error
 	GetChecklist(ctx context.Context, projectID int32) (interface{}, error)
-	GetRemarksClustered(ctx context.Context, projectID int32) (interface{}, error)
+	GetRemarksClustered(ctx context.Context, projectID int32) (io.ReadCloser, error)
 	GetFinalReport(ctx context.Context, projectID int32) (interface{}, error)
 }
 

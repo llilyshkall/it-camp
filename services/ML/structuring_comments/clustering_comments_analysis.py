@@ -19,8 +19,8 @@ import os
 
 # ---  КОНФИГУРАЦИЯ ---
 LOCAL_API_URL = "http://89.108.116.240:11434/api/chat"
-LOCAL_MODEL_NAME = "qwen2.5:14b"
-#LOCAL_MODEL_NAME = "qwen3-8b:latest"
+#LOCAL_MODEL_NAME = "qwen2.5:14b"
+LOCAL_MODEL_NAME = "qwen3-8b:latest"
 MAX_CONCURRENT_REQUESTS = 3
 
 # Если в кластере больше замечаний, чем это число, будет запущена выборка лучших, чтобы не перегревать модель.

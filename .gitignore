@@ -76,5 +76,9 @@ services/ML/structuring_comments/synthesis_report_clustered.json
 services/ML/.venv1
 services/ML/structuring_comments/Project_Alfa
 
-services/createFileService/.venv2
+services/createFileService/.venv3
 
+services/evaluation/internal/tasks/ex.json
+services/evaluation/internal/tasks/gost_report.py
+services/evaluation/internal/tasks/pdf_test.py
+services/evaluation/internal/tasks/test_report.pdf
