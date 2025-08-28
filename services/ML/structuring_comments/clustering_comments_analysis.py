@@ -445,19 +445,19 @@ async def logic(data):
     save_knowledge_base(THEMES_FILE, major_categories_kb, sub_categories_kb)
 
     # Сохраняем отчеты о синтезе
-    with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
-        json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
-    print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
+    # with open("synthesis_report_clustered.json", "w", encoding="utf-8") as f:
+    #     json.dump(synthesis_reports, f, ensure_ascii=False, indent=2)
+    # print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
 
     # Формируем и сохраняем финальный отчет
-    #final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
+    final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
     # with open("report_final_classified.json", "w", encoding="utf-8") as f:
     #     json.dump(final_report_list, f, ensure_ascii=False, indent=2)
     #print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
     print("\n---  Пайплайн завершен! ---")
     return {
         "success": True,
-        "data": synthesis_reports
+        "data": final_report_list
     }
 
 
