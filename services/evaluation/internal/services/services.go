@@ -41,9 +41,9 @@ type FileService interface {
 	UploadDocumentation(ctx context.Context, projectID int32, file io.Reader, filename string, fileSize int64) (*db.ProjectFile, error)
 	GenerateChecklist(ctx context.Context, projectID int32) error
 	GenerateFinalReport(ctx context.Context, projectID int32) error
-	GetChecklist(ctx context.Context, projectID int32) (interface{}, error)
+	GetChecklist(ctx context.Context, projectID int32) (io.ReadCloser, error)
 	GetRemarksClustered(ctx context.Context, projectID int32) (io.ReadCloser, error)
-	GetFinalReport(ctx context.Context, projectID int32) (interface{}, error)
+	GetFinalReport(ctx context.Context, projectID int32) (io.ReadCloser, error)
 }
 
 // HealthService интерфейс для проверки состояния сервиса

@@ -2610,7 +2610,7 @@ html[data-theme="light"] .footer-nav a{color:#eef6ff}
 
 /* Улучшенная доступность для мобильных */
 @media (max-width: 768px) {
-  .nav-menu-link:focus,
+  /* .nav-menu-link:focus, */
   .btn:focus,
   .filter-input:focus,
   .custom-select-toggle:focus {

@@ -741,7 +741,7 @@ func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Используем сервис для получения чеклиста
+	// Используем сервис для получения кластеризированных замечаний
 	result, err := h.fileService.GetChecklist(r.Context(), int32(projectID))
 	if err != nil {
 		log.Printf("Failed to get checklist for project %d: %v", projectID, err)
@@ -749,12 +749,17 @@ func (h *Handler) GetChecklist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Возвращаем результат
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&Response{
-		Body: result,
-	})
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
+	w.Header().Set("Content-Transfer-Encoding", "binary")
+
+	// Копируем данные из reader в ResponseWriter
+	_, err = io.Copy(w, result)
+	if err != nil {
+		log.Printf("Failed to send file")
+		returnErrorJSON(w, err)
+		return
+	}
 }
 
 // GetRemarksClustered godoc
@@ -841,7 +846,7 @@ func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Используем сервис для получения финального отчета
+	// Используем сервис для получения кластеризированных замечаний
 	result, err := h.fileService.GetFinalReport(r.Context(), int32(projectID))
 	if err != nil {
 		log.Printf("Failed to get final report for project %d: %v", projectID, err)
@@ -849,10 +854,15 @@ func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Возвращаем результат
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&Response{
-		Body: result,
-	})
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
+	w.Header().Set("Content-Transfer-Encoding", "binary")
+
+	// Копируем данные из reader в ResponseWriter
+	_, err = io.Copy(w, result)
+	if err != nil {
+		log.Printf("Failed to send file")
+		returnErrorJSON(w, err)
+		return
+	}
 }
