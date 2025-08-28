@@ -43,6 +43,8 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 				"http://localhost:5001": true,
 				"http://127.0.0.1:5000": true,
 				"http://localhost:5000": true,
+				"http://89.108.116.240:5000": true,
+				"http://89.108.116.240:5001": true,
 			}
 
 			if allowedOrigins[origin] {
