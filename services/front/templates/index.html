@@ -549,6 +549,9 @@
         // { id: 'brusnichnoe', name: 'Брусничное', description: '' },
       ];
 
+      //"protocol-card"
+      
+
       const byId = (id)=>document.getElementById(id);
       const projToggle = byId('proj-toggle');
       const projMenu = byId('proj-menu');
@@ -671,6 +674,8 @@
           return []; // или возвращайте дефолтные проекты
         }
       }
+      const pCard = byId('protocol-card');
+      pCard.hidden = true;
 
       async function getProjects() {
         const projectsFromBackend = await fetchProjects();
@@ -683,11 +688,11 @@
         if (projectsFromBackend.length == 0 ) {
            aCard.hidden = true;
            rCard.hidden = true;
-           pCard.hidden = true;
+           //pCard.hidden = true;
         } else {
            aCard.hidden = false;
            rCard.hidden = false;
-           pCard.hidden = false;
+           //pCard.hidden = false;
         }
       }
       //    Init
@@ -915,6 +920,9 @@
 
     // ===== 3) Формирование протокола =====
     (()=>{
+      const protocolCard = document.getElementById('protocol-card');
+      protocolCard.hidden = true;
+
       const btn=document.getElementById('make-protocol');
       const loadingIndicator = document.getElementById('protocol-loading');
       

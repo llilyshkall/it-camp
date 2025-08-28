@@ -310,6 +310,8 @@ func (h *Handler) HandleChecklist(w http.ResponseWriter, r *http.Request) {
 // HandleRemarks обрабатывает запросы к /api/projects/{id}/remarks
 func (h *Handler) HandleRemarks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case http.MethodGet:
+		h.GetRemarks(w, r)
 	case http.MethodPost:
 		h.UploadRemarks(w, r)
 	default:
@@ -865,4 +867,70 @@ func (h *Handler) GetFinalReport(w http.ResponseWriter, r *http.Request) {
 		returnErrorJSON(w, err)
 		return
 	}
+}
+
+// GetRemarks godoc
+// @Summary Get  remarks for project
+// @Description Get remarks result for a specific project
+// @ID getRemarks
+// @Accept json
+// @Produce json
+// @Param id path int true "Project ID"
+// @Success 200 {object} Response "remarks result"
+// @Failure 400 {object} Error "Bad request - invalid project ID"
+// @Failure 404 {object} Error "Project not found"
+// @Failure 409 {object} Error "Remarks are still being processed"
+// @Failure 500 {object} Error "Internal server error"
+// @Router /projects/{id}/remarks [get]
+func (h *Handler) GetRemarks(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем ID проекта из URL с помощью gorilla/mux
+	vars := mux.Vars(r)
+	projectIDStr, ok := vars["id"]
+	if !ok {
+		log.Println("Project ID not found in URL")
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid project ID format: %v", err)
+		returnErrorJSON(w, m.ErrBadRequest400)
+		return
+	}
+
+	// // Используем сервис для получения кластеризированных замечаний
+	// result, err := h.fileService.GetRemarksClustered(r.Context(), int32(projectID))
+	// if err != nil {
+	// 	log.Printf("Failed to get clustered remarks for project %d: %v", projectID, err)
+	// 	returnErrorJSON(w, err)
+	// 	return
+	// }
+
+	// w.Header().Set("Content-Type", "application/octet-stream")
+	// w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
+	// w.Header().Set("Content-Transfer-Encoding", "binary")
+
+	// // Копируем данные из reader в ResponseWriter
+	// _, err = io.Copy(w, result)
+	// if err != nil {
+	// 	log.Printf("Failed to send file")
+	// 	returnErrorJSON(w, err)
+	// 	return
+	// }
+	// Получаем список проектов через сервис
+	projects, err := h.projectService.GetProjectRemarks(r.Context(), int32(projectID))
+	if err != nil {
+		log.Printf("Failed to list projects: %v", err)
+		returnErrorJSON(w, m.ErrServerError500)
+		return
+	}
+
+	// Возвращаем список проектов
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(projects)
+
+	// Отправляем файл
+	//http.ServeFile(w, r, filePath)
 }

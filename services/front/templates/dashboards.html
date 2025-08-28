@@ -234,7 +234,7 @@
         </div>
 
         <!-- Список проектов -->
-        <div class="card card-lg">
+        <div class="card card-lg" id="card card-lg" >
           <div class="card-head">
             <div class="card-icon" aria-hidden="true">📋</div>
             <h3>Список проектов</h3>
@@ -312,7 +312,7 @@
         </div>
 
         <!-- Общая статистика -->
-        <div class="card card-lg">
+        <div class="card card-lg" id="card2">
           <div class="card-head">
             <div class="card-icon" aria-hidden="true">📈</div>
             <h3>Общая статистика</h3>
@@ -354,7 +354,7 @@
         </div>
 
         <!-- Временная шкала проектов -->
-        <div class="card card-lg">
+        <div class="card card-lg" id="card3">
           <div class="card-head">
             <div class="card-icon" aria-hidden="true">📊</div>
             <h3>Временная шкала проектов</h3>
@@ -409,7 +409,7 @@
         <div class="card card-lg">
           <div class="card-head">
             <div class="card-icon" aria-hidden="true">🥧</div>
-            <h3>Распределение по статусам</h3>
+            <h3>Распределение замечаний по областям</h3>
           </div>
           <div class="pie-chart-container">
             <div class="pie-chart">
@@ -427,7 +427,7 @@
         <div class="card card-lg">
           <div class="card-head">
             <div class="card-icon" aria-hidden="true">💰</div>
-            <h3>Бюджет проектов</h3>
+            <h3>Количество замечаний по областям</h3>
           </div>
           <div class="budget-chart-container">
             <div class="budget-chart" id="budget-chart">
@@ -832,7 +832,8 @@
 <!-- Подключение мобильных улучшений -->
 <script src="{{ url_for('static', filename='mobile-enhancements.js') }}"></script>
 
-<script>
+<script type="module">
+  import { endpoints } from '../static/config.js';
   document.addEventListener('DOMContentLoaded', function() {
     // ===== Переключатель темы =====
     (function(){
@@ -855,6 +856,14 @@
         apply(next);
       });
     })();
+    const projDetails = document.getElementById('project-details');
+    const card1 = document.getElementById('card card-lg');
+    const card2 = document.getElementById('card2');
+    const card3 = document.getElementById('card3');
+    projDetails.hidden = true;
+    card1.hidden = true;
+    card2.hidden = true;
+    card3.hidden = true;
 
     // ===== Левая навигация =====
     (function(){
@@ -1064,6 +1073,11 @@
     const applyFiltersBtn = document.getElementById('apply-filters');
     const resetFiltersBtn = document.getElementById('reset-filters');
     const projectRows = document.querySelectorAll('.table-row');
+
+    // projectFilterWrapper.hidden = true;
+    // projectFilterToggle.hidden = true;
+    // projectFilterMenu.hidden = true;
+    // projectFilterText.hidden = true;
     
     // Проверяем, что все необходимые элементы найдены
     if (!projectFilterWrapper || !projectFilterToggle || !projectFilterMenu || !projectFilterText ||
@@ -1305,7 +1319,7 @@
         document.querySelectorAll('.project-detail').forEach(detail => {
           detail.style.display = 'block';
         });
-        updateCharts(projectRows); // Показываем все проекты на графиках
+        //updateCharts(projectRows); // Показываем все проекты на графиках
         return;
       }
       
@@ -1326,40 +1340,168 @@
       });
       
       // Обновляем графики для видимых проектов
-      updateCharts(visibleRows);
+      //updateCharts(visibleRows);
     }
 
-    function updateCharts(rows) {
+    async function fetchRemarks() {
+        try {
+          //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
+          const response = await fetch(endpoints.projects + "5" + endpoints.remarks, {method:'GET'});
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          // предполагается, что data — это массив проектов
+          console.log(data)
+          return data;
+        } catch (error) {
+          console.error('Ошибка при получении проектов:', error);
+          return []; // или возвращайте дефолтные проекты
+        }
+      }
+      // const pCard = byId('protocol-card');
+      // pCard.hidden = true;
+
+      async function getRemarks() {
+        //const projectsFromBackend = await fetchRemarks();
+        return await fetchRemarks();
+        // writeProjects(projectsFromBackend)
+        // const aCard = byId('assurance-card');
+        // const rCard = byId('remarks-card');
+        // const pCard = byId('protocol-card');
+        
+        // if (projectsFromBackend.length == 0 ) {
+        //    aCard.hidden = true;
+        //    rCard.hidden = true;
+        //    //pCard.hidden = true;
+        // } else {
+        //    aCard.hidden = false;
+        //    rCard.hidden = false;
+        //    //pCard.hidden = false;
+        // }
+      }
+      //    Init
+      
+    
+
+    // function updateCharts(rows) {
+    //   console.log('Обновление всех графиков...');
+    //   console.log('Получено строк для графиков:', rows.length);
+      
+    //   // Подсчитываем статусы для круговой диаграммы
+    //   const statusCounts = {};
+    //   rows.forEach(row => {
+    //     const status = row.getAttribute('data-status');
+    //     statusCounts[status] = (statusCounts[status] || 0) + 1;
+    //   });
+      
+    //   console.log('Статистика статусов:', statusCounts);
+      
+    //   // Обновляем круговую диаграмму
+    //   updatePieChart(statusCounts);
+      
+    //   // Обновляем финансовый график
+    //   updateBudgetChart(rows);
+    // }
+
+    // function updatePieChart(statusCounts) {
+    //   const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+    //   if (total === 0) return;
+      
+    //   const pieChart = document.querySelector('.pie-chart svg');
+    //   if (!pieChart) return;
+      
+    //   // Очищаем существующие круги
+    //   pieChart.innerHTML = '';
+      
+    //   // Добавляем базовый круг
+    //   const baseCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    //   baseCircle.setAttribute('cx', '100');
+    //   baseCircle.setAttribute('cy', '100');
+    //   baseCircle.setAttribute('r', '80');
+    //   baseCircle.setAttribute('fill', 'none');
+    //   baseCircle.setAttribute('stroke', '#e5e7eb');
+    //   baseCircle.setAttribute('stroke-width', '40');
+    //   pieChart.appendChild(baseCircle);
+      
+    //   let currentAngle = 0;
+    //   Object.entries(statusCounts).forEach(([status, count]) => {
+    //     const percentage = (count / total) * 100;
+    //     const angle = (percentage / 100) * 360;
+        
+    //     const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    //     segment.setAttribute('cx', '100');
+    //     segment.setAttribute('cy', '100');
+    //     segment.setAttribute('r', '80');
+    //     segment.setAttribute('fill', 'none');
+    //     segment.setAttribute('stroke', getStatusColor(status));
+    //     segment.setAttribute('stroke-width', '40');
+    //     segment.setAttribute('stroke-dasharray', `${(angle / 360) * 502.7} 502.7`);
+    //     segment.setAttribute('stroke-dashoffset', `${-currentAngle / 360 * 502.7}`);
+    //     segment.setAttribute('transform', 'rotate(-90 100 100)');
+    //     segment.title = `${getStatusName(status)}: ${count} проект`;
+        
+    //     pieChart.appendChild(segment);
+    //     currentAngle += angle;
+    //   });
+      
+    //   // Обновляем легенду
+    //   updatePieLegend(statusCounts, total);
+    // }
+
+    // function updatePieLegend(statusCounts, total) {
+    //   const legend = document.querySelector('.pie-legend');
+    //   if (!legend) return;
+      
+    //   legend.innerHTML = '';
+      
+    //   Object.entries(statusCounts).forEach(([status, count]) => {
+    //     const percentage = Math.round((count / total) * 100);
+        
+    //     const item = document.createElement('div');
+    //     item.className = 'pie-legend-item';
+    //     item.innerHTML = `
+    //       <span class="pie-legend-color" style="background: ${getStatusColor(status)};"></span>
+    //       <span>${getStatusName(status)} (${percentage}%)</span>
+    //     `;
+        
+    //     legend.appendChild(item);
+    //   });
+    // }
+    //function updateCharts(data) {
+    async function updateCharts() {
+      const data = await getRemarks();
+      console.log(data)
       console.log('Обновление всех графиков...');
-      console.log('Получено строк для графиков:', rows.length);
+      console.log('Получено задач:', data.length);
+
+      // Подсчет распределения по секциям (geological/development) для круговой диаграммы  
+      const sectionCounts = data.reduce((acc, item) => {
+        acc[item.section] = (acc[item.section] || 0) + 1;
+        return acc;
+      }, {});
+
+      console.log('Распределение по секциям:', sectionCounts);  
       
-      // Подсчитываем статусы для круговой диаграммы
-      const statusCounts = {};
-      rows.forEach(row => {
-        const status = row.getAttribute('data-status');
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
-      
-      console.log('Статистика статусов:', statusCounts);
-      
-      // Обновляем круговую диаграмму
-      updatePieChart(statusCounts);
-      
-      // Обновляем финансовый график
-      updateBudgetChart(rows);
+      // Обновляем круговую диаграмму  
+      updatePieChart(sectionCounts);
+      updatePieLegend(sectionCounts, data.length);
+      // Обновляем график распределения задач по времени  
+      //updateTimelineChart(data);
     }
 
-    function updatePieChart(statusCounts) {
-      const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+    function updatePieChart(sectionCounts) {
+      const total = Object.values(sectionCounts).reduce((sum, count) => sum + count, 0);
       if (total === 0) return;
       
       const pieChart = document.querySelector('.pie-chart svg');
       if (!pieChart) return;
       
-      // Очищаем существующие круги
+      // Очищаем существующие элементы  
       pieChart.innerHTML = '';
       
-      // Добавляем базовый круг
+      // Добавляем базовый круг  
       const baseCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       baseCircle.setAttribute('cx', '100');
       baseCircle.setAttribute('cy', '100');
@@ -1370,28 +1512,95 @@
       pieChart.appendChild(baseCircle);
       
       let currentAngle = 0;
-      Object.entries(statusCounts).forEach(([status, count]) => {
-        const percentage = (count / total) * 100;
-        const angle = (percentage / 100) * 360;
+      // const colors = {
+      //   geological: '#3b82f6',  // blue  
+      //   development: '#10b981'   // green  
+      // };
+      const colors = {
+        geological: '#10b981',
+        development: '#f59e0b',
+        hydrodynamic_integrated: '#3b82f6',
+        petrophysical: '#ef4444', //'#8b5cf6',
+        reassessment: '#06b6d4',
+        seismogeological: '#a855f7',
+      };
+      console.log(sectionCounts)
+      Object.entries(sectionCounts).forEach(([section, count]) => {
+        const percentage = (count * 100 / total) ;
+        const angle = (percentage * 360 / 100) ;
         
         const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        // segment.setAttribute('cx', '100');
+        // segment.setAttribute('cy', '100');
+        // segment.setAttribute('r', '80');
+        // segment.setAttribute('fill', 'none');
+        // segment.setAttribute('stroke', colors[section] || '#6b7280');
+        // //segment.setAttribute('stroke', getStatusColor(status));
+        
+        // segment.setAttribute('stroke-width', '40');
+        // segment.setAttribute('stroke-dasharray', `${angle} 360`);
+        // segment.setAttribute('stroke-dashoffset', `-${currentAngle}`);
+        // segment.setAttribute('transform', 'rotate(-90 100 100)');
+         //     const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         segment.setAttribute('cx', '100');
         segment.setAttribute('cy', '100');
         segment.setAttribute('r', '80');
         segment.setAttribute('fill', 'none');
-        segment.setAttribute('stroke', getStatusColor(status));
+        segment.setAttribute('stroke', colors[section] || '#6b7280');
         segment.setAttribute('stroke-width', '40');
         segment.setAttribute('stroke-dasharray', `${(angle / 360) * 502.7} 502.7`);
         segment.setAttribute('stroke-dashoffset', `${-currentAngle / 360 * 502.7}`);
         segment.setAttribute('transform', 'rotate(-90 100 100)');
-        segment.title = `${getStatusName(status)}: ${count} проект`;
+        //segment.title = `${getStatusName(status)}: ${count} проект`;
         
         pieChart.appendChild(segment);
         currentAngle += angle;
       });
+    }
+
+    function updatePieLegend(statusCounts, total) {
+      const legend = document.querySelector('.pie-legend');
+      if (!legend) return;
       
-      // Обновляем легенду
-      updatePieLegend(statusCounts, total);
+      legend.innerHTML = '';
+
+      
+      
+      Object.entries(statusCounts).forEach(([section, count]) => {
+        const names= {
+          geological: 'Геологическая модель', 
+          development: 'Разработка и прогноз технологических показателей добычи', 
+          hydrodynamic_integrated: 'Гидродинамическая и интегрированная модели', 
+          petrophysical: 'Петрофизическая модель', 
+          reassessment: 'Программа доизучения (ГРР и ОПР)', 
+          seismogeological: 'Сейсмогеологическая модель'
+          };
+        const colors = {
+          geological: '#10b981',
+          development: '#f59e0b',
+          hydrodynamic_integrated: '#3b82f6',
+          petrophysical: '#ef4444', //'#8b5cf6',
+          reassessment: '#06b6d4',
+          seismogeological: '#a855f7',
+          // 'commissioning': '#ef4444',
+          // 'conservation': '#6b7280'
+        };
+
+        const percentage = Math.round((count / total) * 100);
+        
+        const item = document.createElement('div');
+        item.className = 'pie-legend-item';
+        // item.innerHTML = `
+        //   <span class="pie-legend-color" style="background: ${getStatusColor(status)};"></span>
+        //   <span>${getStatusName(status)} (${percentage}%)</span>
+        // `;
+        item.innerHTML = `
+          <span class="pie-legend-color" style="background: ${colors[section] || '#6b7280'};"></span>
+          <span>${names[section]} (${percentage}%)</span>
+        `;
+        
+        legend.appendChild(item);
+      });
     }
 
     function updateBudgetChart(rows) {
@@ -1499,32 +1708,47 @@
     }
 
     function getStatusColor(status) {
+      // const colors = {
+      //   'operation': '#10b981',
+      //   'construction': '#f59e0b',
+      //   'completed': '#3b82f6',
+      //   'design': '#8b5cf6',
+      //   'exploration': '#06b6d4',
+      //   'planning': '#a855f7',
+      //   'commissioning': '#ef4444',
+      //   'conservation': '#6b7280'
+      // };
       const colors = {
-        'operation': '#10b981',
-        'construction': '#f59e0b',
-        'completed': '#3b82f6',
-        'design': '#8b5cf6',
-        'exploration': '#06b6d4',
-        'planning': '#a855f7',
-        'commissioning': '#ef4444',
-        'conservation': '#6b7280'
-      };
+        'geological': '#10b981',
+        'development': '#f59e0b',
+        'hydrodynamic_integrated': '#3b82f6',
+        'petrophysical': '#8b5cf6',
+        'reassessment': '#06b6d4',
+        'seismogeological': '#a855f7',
+      }
       const color = colors[status] || '#6b7280';
       console.log(`Цвет для статуса '${status}': ${color}`);
       return color;
     }
 
     function getStatusName(status) {
-      const names = {
-        'operation': 'Эксплуатация',
-        'construction': 'Строительство',
-        'completed': 'Завершён',
-        'design': 'Проектирование',
-        'exploration': 'Разведка',
-        'planning': 'Планирование',
-        'commissioning': 'Пусконаладка',
-        'conservation': 'Консервация'
-      };
+      // const names = {
+      //   'operation': 'Эксплуатация',
+      //   'construction': 'Строительство',
+      //   'completed': 'Завершён',
+      //   'design': 'Проектирование',
+      //   'exploration': 'Разведка',
+      //   'planning': 'Планирование',
+      //   'commissioning': 'Пусконаладка',
+      //   'conservation': 'Консервация'
+      // };
+      names = { 
+        geological: 'Геологическая модель', 
+        development: 'План разработки', 
+        hydrodynamic_integrated: 'Интегрированная ГДМ', 
+        petrophysical: 'Петрофизические свойства', 
+        reassessment: 'Анализ запасов', 
+        seismogeological: 'Сейсмогеологическая модель' };
       return names[status] || status;
     }
 
@@ -1548,25 +1772,7 @@
       return result;
     }
 
-    function updatePieLegend(statusCounts, total) {
-      const legend = document.querySelector('.pie-legend');
-      if (!legend) return;
-      
-      legend.innerHTML = '';
-      
-      Object.entries(statusCounts).forEach(([status, count]) => {
-        const percentage = Math.round((count / total) * 100);
-        
-        const item = document.createElement('div');
-        item.className = 'pie-legend-item';
-        item.innerHTML = `
-          <span class="pie-legend-color" style="background: ${getStatusColor(status)};"></span>
-          <span>${getStatusName(status)} (${percentage}%)</span>
-        `;
-        
-        legend.appendChild(item);
-      });
-    }
+    
 
     function updateStats() {
       console.log('Обновление статистики...');
@@ -1834,7 +2040,7 @@
     }
     
     // Функция создания fallback диаграммы
-    function createFallbackBudgetChart() {
+    async function createFallbackBudgetChart() {
       console.log('Создание fallback диаграммы бюджета...');
       
       const budgetChart = document.getElementById('budget-chart');
@@ -1933,6 +2139,7 @@
       pieChart: pieChartElement,
       pieLegend: pieLegendElement
     });
+    updateCharts();
     
     // Проверяем, что элемент диаграммы бюджета найден и имеет правильный ID
     if (budgetChartElement) {
@@ -1952,7 +2159,8 @@
           if (budgetChartElement && projectRows.length > 0) {
         console.log('Все элементы найдены, обновляем графики...');
         updateProjectDetails();
-        updateCharts(projectRows);
+        //updateCharts(projectRows);
+        //updateCharts();
         console.log('Диаграммы обновлены');
       } else {
         console.error('Проблема с элементами:', {
@@ -1969,7 +2177,8 @@
           if (retryBudgetChart && retryProjectRows.length > 0) {
             console.log('Элементы найдены при повторной попытке');
             updateProjectDetails();
-            updateCharts(Array.from(retryProjectRows));
+            //updateCharts(Array.from(retryProjectRows));
+            //updateCharts();
           } else {
             console.error('Элементы все еще не найдены при повторной попытке');
             

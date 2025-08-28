@@ -57,3 +57,12 @@ func (s *projectService) ListProjects(ctx context.Context) ([]db.Project, error)
 
 	return projects, nil
 }
+
+func (s *projectService) GetProjectRemarks(ctx context.Context, projectID int32) ([]db.Remark, error) {
+	remarks, err := s.repo.GetProjectRemarks(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	return remarks, nil
+}

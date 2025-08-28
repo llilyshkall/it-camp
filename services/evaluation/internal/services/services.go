@@ -18,6 +18,7 @@ type Repository interface {
 	GetProjectFilesByType(ctx context.Context, projectID int32, fileType db.FileType) ([]db.ProjectFile, error)
 	CreateRemark(ctx context.Context, arg db.CreateRemarkParams) (db.Remark, error)
 	SaveAttach(file *models.Attach) (string, error)
+	GetProjectRemarks(ctx context.Context, projectID int32) ([]db.Remark, error)
 }
 
 // FileStorage интерфейс для файлового хранилища
@@ -33,6 +34,7 @@ type ProjectService interface {
 	CreateProject(ctx context.Context, name string) (*db.Project, error)
 	GetProject(ctx context.Context, id int32) (*db.Project, error)
 	ListProjects(ctx context.Context) ([]db.Project, error)
+	GetProjectRemarks(ctx context.Context, projectID int32) ([]db.Remark, error)
 }
 
 // FileService интерфейс для бизнес-логики файлов

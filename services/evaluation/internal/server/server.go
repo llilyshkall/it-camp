@@ -39,10 +39,10 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 			// w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			origin := r.Header.Get("Origin")
 			allowedOrigins := map[string]bool{
-				"http://127.0.0.1:5001": true,
-				"http://localhost:5001": true,
-				"http://127.0.0.1:5000": true,
-				"http://localhost:5000": true,
+				"http://127.0.0.1:5001":      true,
+				"http://localhost:5001":      true,
+				"http://127.0.0.1:5000":      true,
+				"http://localhost:5000":      true,
 				"http://89.108.116.240:5000": true,
 				"http://89.108.116.240:5001": true,
 			}
@@ -76,7 +76,7 @@ func New(cfg *config.Config, projectService services.ProjectService, fileService
 	r.HandleFunc("/api/projects/{id:[0-9]+}", handler.HandleProject).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/projects/{id:[0-9]+}/documentation", handler.HandleDocumentation).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/projects/{id:[0-9]+}/checklist", handler.HandleChecklist).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks", handler.HandleRemarks).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/projects/{id:[0-9]+}/remarks", handler.HandleRemarks).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/projects/{id:[0-9]+}/final_report", handler.HandleGenerateFinalReport).Methods("POST", "OPTIONS")
 
 	// GET ручки для получения результатов обработки

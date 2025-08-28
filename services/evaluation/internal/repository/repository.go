@@ -115,6 +115,10 @@ func (r *Repository) CreateRemark(ctx context.Context, arg db.CreateRemarkParams
 	return r.querier.CreateRemark(ctx, arg)
 }
 
+func (r *Repository) GetProjectRemarks(ctx context.Context, projectID int32) ([]db.Remark, error) {
+	return r.querier.GetRemarksByProject(ctx, projectID)
+}
+
 // SaveAttach сохраняет информацию о загруженном файле
 func (r *Repository) SaveAttach(file *models.Attach) (string, error) {
 	// Генерируем уникальное имя файла
