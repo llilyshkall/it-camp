@@ -110,6 +110,9 @@ jobs:
           labels: ${{ steps.meta-evaluation.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Build and push front Docker image
         uses: docker/build-push-action@v5
@@ -121,6 +124,9 @@ jobs:
           labels: ${{ steps.meta-front.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
   deploy:
     name: Deploy to Server
@@ -245,7 +251,7 @@ jobs:
             cat > ~/evaluation/docker-compose.yaml << 'EOF'
             services:
               evaluation:
-                image: ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}:master
+                image: ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}:${{ github.sha }}
                 ports:
                   - "8081:8080"
                 environment:
@@ -280,7 +286,7 @@ jobs:
                   - evaluation-network
 
               front:
-                image: ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}:master
+                image: ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}:${{ github.sha }}
                 ports:
                   - "5001:5000"
                 environment:
@@ -426,12 +432,33 @@ jobs:
               exit 1
             fi
             
+            # Очищаем старые образы и логируем версии
+            echo "Cleaning up old images..."
+            docker image prune -f
+            docker system prune -f
+            
+            # Логируем версии образов для развертывания
+            echo "Deploying evaluation image: ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}:${{ github.sha }}"
+            echo "Deploying front image: ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}:${{ github.sha }}"
+            
+            # Принудительно подтягиваем последние образы
+            echo "Pulling latest images..."
+            docker pull ${{ env.REGISTRY }}/${{ env.EVALUATION_IMAGE_NAME }}:${{ github.sha }}
+            docker pull ${{ env.REGISTRY }}/${{ env.FRONT_IMAGE_NAME }}:${{ github.sha }}
+            
             # Проверяем статус сервисов
             echo "Services status:"
             if ! docker-compose ps; then
               echo "❌ Services are not running"
               exit 1
             fi
+            
+            # Проверяем версии запущенных образов
+            echo "Verifying deployed image versions:"
+            echo "Evaluation service image:"
+            docker-compose images evaluation
+            echo "Front service image:"
+            docker-compose images front
             
             # Проверяем health
             echo "Health check:"

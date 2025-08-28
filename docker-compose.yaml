@@ -10,11 +10,11 @@ services:
     environment:
       - PORT=8080
       - ENVIRONMENT=development
-      - DB_HOST=postgres
+      - DB_HOST=localhost
       - DB_PORT=5432
       - DB_NAME=evaluation_db
       - DB_USER=evaluation_user
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=evaluation123
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
