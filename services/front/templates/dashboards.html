@@ -1345,8 +1345,7 @@
 
     async function fetchRemarks() {
         try {
-          //const response = await fetch('http://127.0.0.1:8081/api/projects'); // замените на ваш URL
-          const response = await fetch(endpoints.projects + "5" + endpoints.remarks, {method:'GET'});
+          const response = await fetch(endpoints.projects + "1" + endpoints.remarks, {method:'GET'});
           
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1364,22 +1363,7 @@
       // pCard.hidden = true;
 
       async function getRemarks() {
-        //const projectsFromBackend = await fetchRemarks();
         return await fetchRemarks();
-        // writeProjects(projectsFromBackend)
-        // const aCard = byId('assurance-card');
-        // const rCard = byId('remarks-card');
-        // const pCard = byId('protocol-card');
-        
-        // if (projectsFromBackend.length == 0 ) {
-        //    aCard.hidden = true;
-        //    rCard.hidden = true;
-        //    //pCard.hidden = true;
-        // } else {
-        //    aCard.hidden = false;
-        //    rCard.hidden = false;
-        //    //pCard.hidden = false;
-        // }
       }
       //    Init
       
