@@ -286,18 +286,6 @@ func (s *fileService) GetRemarksClustered(ctx context.Context, projectID int32) 
 		return nil, err
 	}
 
-	// // Если файлов нет, возвращаем ошибку
-	// if len(files) == 0 {
-	// 	return nil, models.ErrNotFound404
-	// }
-
-	// // Возвращаем результат
-	// return map[string]interface{}{
-	// 	"project_id": projectID,
-	// 	"status":     project.Status,
-	// 	"files":      files,
-	// 	"message":    "Clustered remarks files found",
-	// }, nil
 	return downloadFile, nil
 }
 

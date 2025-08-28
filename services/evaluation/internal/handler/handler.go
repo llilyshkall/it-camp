@@ -795,35 +795,6 @@ func (h *Handler) GetRemarksClustered(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// // Возвращаем результат
-	// w.Header().Set("Content-Type", "application/json")
-	// w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(&Response{
-	// 	Body: result,
-	// })
-	// Устанавливаем заголовки для скачивания файла
-	// w.Header().Set("Content-Type", "application/pdf")
-	// w.Header().Set("Content-Disposition", "attachment; filename=report.pdf")
-	// w.Header().Set("Content-Length", strconv.Itoa(len(result["files"][0])))
-	// w.WriteHeader(http.StatusOK)
-
-	// // Пишем PDF напрямую в ответ
-	// if _, err := w.Write(result); err != nil {
-	// 	log.Printf("Failed to write PDF response: %v", err)
-	// }
-	// filename := "aed85cd5-53d7-4eb6-a106-4deee07ed2a1.xlsx"
-	// filePath := dir + "/" + filename
-
-	// // Проверяем существование файла
-	// if _, err := os.Stat(filePath); os.IsNotExist(err) {
-	// 	http.Error(w, "File not found", http.StatusNotFound)
-	// 	return
-	// }
-	// w.Header().Set("Content-Type", "application/octet-stream")
-	// w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	// w.Header().Set("Content-Transfer-Encoding", "binary")
-	// w.Header().Set("Expires", "0")
-
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=remarks_clustered.pdf"))
 	w.Header().Set("Content-Transfer-Encoding", "binary")

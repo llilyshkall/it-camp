@@ -1,4 +1,5 @@
-export const API_BASE_URL = 'http://127.0.0.1:8081/api';
+//export const API_BASE_URL = 'http://127.0.0.1:8081/api';
+export const API_BASE_URL = 'http://89.108.116.240:8081/api';
 
 export const endpoints = {
   basicProjects: `${API_BASE_URL}/projects`,
