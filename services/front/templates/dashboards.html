@@ -1472,7 +1472,7 @@
     //function updateCharts(data) {
     async function updateCharts() {
       const data = await getRemarks();
-      console.log(data)
+      //console.log(data)
       console.log('Обновление всех графиков...');
       console.log('Получено задач:', data.length);
 
@@ -1603,109 +1603,116 @@
       });
     }
 
-    function updateBudgetChart(rows) {
-      console.log('Обновление диаграммы бюджета...');
-      
-      const budgetChart = document.getElementById('budget-chart');
-      if (!budgetChart) {
-        console.error('Элемент диаграммы бюджета не найден!');
+    async function updateBudgetChart() {
+      // Ваши исходные данные
+      // const data = {
+      //   development: 6,
+      //   geological: 4,
+      //   hydrodynamic_integrated: 4,
+      //   petrophysical: 1,
+      //   reassessment: 1,
+      //   seismogeological: 3
+      // };
+      const remarks = await getRemarks();
+      const data = remarks.reduce((acc, item) => {
+        acc[item.section] = (acc[item.section] || 0) + 1;
+        return acc;
+      }, {});
+
+      const names = {
+        geological: 'Геологическая модель', 
+        development: 'Разработка и прогноз технологических показателей добычи', 
+        hydrodynamic_integrated: 'Гидродинамическая и интегрированная модели', 
+        petrophysical: 'Петрофизическая модель', 
+        reassessment: 'Программа доизучения (ГРР и ОПР)', 
+        seismogeological: 'Сейсмогеологическая модель'
+      };
+
+      const colors = {
+        geological: '#10b981',
+        development: '#f59e0b',
+        hydrodynamic_integrated: '#3b82f6',
+        petrophysical: '#ef4444',
+        reassessment: '#06b6d4',
+        seismogeological: '#a855f7'
+      };
+
+      const chartContainer = document.getElementById('budget-chart');
+      if (!chartContainer) {
+        console.error('Элемент с id "budget-chart" не найден!');
         return;
       }
-      
-      // Очищаем существующие столбцы
-      budgetChart.innerHTML = '';
-      
-      if (rows.length === 0) {
-        console.log('Нет строк для отображения');
-        return;
-      }
-      
-      // Создаем простую столбчатую диаграмму
-      rows.forEach((row, index) => {
-        const projectNameCell = row.querySelector('.table-cell:first-child');
-        const budgetCell = row.querySelector('.table-cell:nth-child(5)');
-        const status = row.getAttribute('data-status');
-        
-        if (!projectNameCell || !budgetCell || !status) {
-          return;
-        }
-        
-        const projectName = projectNameCell.textContent;
-        const budget = budgetCell.textContent;
-        const budgetValue = parseBudgetValue(budget);
-        
-        // Создаем контейнер для столбца
-        const columnContainer = document.createElement('div');
-        columnContainer.className = 'budget-column';
-        columnContainer.style.cssText = `
+
+      // Очищаем контейнер
+      chartContainer.innerHTML = '';
+
+      // Находим максимум для масштабирования высот
+      const maxValue = Math.max(...Object.values(data));
+
+      // Создаем столбцы
+      Object.entries(data).forEach(([section, value]) => {
+        // Контейнер для столбца
+        const columnWrapper = document.createElement('div');
+        columnWrapper.style.cssText = `
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          width: 80px;
+          margin: 0 8px;
         `;
-        
-        // Создаем столбец
-        const column = document.createElement('div');
-        column.className = 'budget-bar';
-        column.style.cssText = `
+
+        // Столбец
+        const bar = document.createElement('div');
+        bar.style.cssText = `
           width: 60px;
-          height: ${Math.max(20, (budgetValue / 450) * 200)}px;
-          background: linear-gradient(to top, ${getStatusColor(status)}, ${getStatusColor(status)}80);
-          border-radius: 8px 8px 0 0;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          height: ${(value / maxValue) * 200}px; /* масштабируем высоту */
+          background-color: ${colors[section] || '#ccc'}; /* цвет из словаря */
+          border-radius: 4px 4px 0 0;
           transition: all 0.3s ease;
           cursor: pointer;
         `;
-        
-        // Добавляем hover эффект
-        column.addEventListener('mouseenter', () => {
-          column.style.transform = 'scaleY(1.05)';
-          column.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.3)';
+
+        // hover эффект
+        bar.addEventListener('mouseenter', () => {
+          bar.style.transform = 'scaleY(1.05)';
+          bar.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
         });
-        
-        column.addEventListener('mouseleave', () => {
-          column.style.transform = 'scaleY(1)';
-          column.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        bar.addEventListener('mouseleave', () => {
+          bar.style.transform = 'scaleY(1)';
+          bar.style.boxShadow = 'none';
         });
-        
-        // Добавляем название проекта
+
+        // Название секции (полное название)
         const label = document.createElement('div');
-        label.className = 'budget-label';
-        label.textContent = projectName;
+        label.textContent = names[section] || section;
         label.style.cssText = `
-          font-size: 11px;
-          color: var(--muted);
+          margin-top: 4px;
+          font-size: 20px;
           text-align: center;
-          font-weight: 500;
-          white-space: nowrap;
           max-width: 80px;
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         `;
-        
-        // Добавляем значение бюджета
-        const value = document.createElement('div');
-        value.className = 'budget-value';
-        value.textContent = budget;
-        value.style.cssText = `
-          font-size: 12px;
-          color: var(--text);
-          font-weight: 700;
-          text-align: center;
+
+        // Значение
+        const valueLabel = document.createElement('div');
+        valueLabel.textContent = value;
+        valueLabel.style.cssText = `
+          margin-top: 2px;
+          font-size: 32px;
+          font-weight: bold;
         `;
-        
-        // Собираем столбец
-        columnContainer.appendChild(column);
-        columnContainer.appendChild(label);
-        columnContainer.appendChild(value);
-        
-        // Добавляем в диаграмму
-        budgetChart.appendChild(columnContainer);
+
+        // Собираем
+        columnWrapper.appendChild(bar);
+        columnWrapper.appendChild(label);
+        columnWrapper.appendChild(valueLabel);
+
+        // Добавляем в контейнер
+        chartContainer.appendChild(columnWrapper);
       });
-      
-      console.log('Диаграмма бюджета обновлена, добавлено столбцов:', budgetChart.children.length);
     }
+
 
     function getStatusColor(status) {
       // const colors = {
@@ -2140,6 +2147,7 @@
       pieLegend: pieLegendElement
     });
     updateCharts();
+    updateBudgetChart()
     
     // Проверяем, что элемент диаграммы бюджета найден и имеет правильный ID
     if (budgetChartElement) {
