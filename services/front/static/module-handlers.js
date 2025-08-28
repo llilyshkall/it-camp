@@ -245,11 +245,11 @@ async function handleDownloadAssurance(event, options = {}) {
 
     // Получаем имя файла из заголовка Content-Disposition  
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'report.xlsx'; // значение по умолчанию  
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch) filename = filenameMatch[1];
-    }
+    let filename = 'report_assurance.pdf'; // значение по умолчанию  
+    // if (contentDisposition) {
+    //   const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+    //   if (filenameMatch) filename = filenameMatch[1];
+    // }
 
     // Получаем blob  
     const blob = await response.blob();
@@ -577,11 +577,11 @@ async function handleDownloadProtocol(event, options = {}) {
 
     // Получаем имя файла из заголовка Content-Disposition  
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'report.xlsx'; // значение по умолчанию  
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch) filename = filenameMatch[1];
-    }
+    let filename = 'report_final.pdf'; // значение по умолчанию  
+    // if (contentDisposition) {
+    //   const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+    //   if (filenameMatch) filename = filenameMatch[1];
+    // }
 
     // Получаем blob  
     const blob = await response.blob();
