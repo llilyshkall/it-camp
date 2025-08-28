@@ -271,58 +271,58 @@ def build_gost_pdf_bytes(
     story.append(Paragraph(_safe(intro), styles["GOST-Body"]))
     story.append(Spacer(1, 4*mm))
 
-    for block in (json_obj or []):
-        cat = block.get("category") or "Раздел"
-        items = block.get("items") or []
+    # for block in (json_obj or []):
+    #     cat = block.get("category") or "Раздел"
+    #     items = block.get("items") or []
 
-        story.append(Paragraph(_safe(cat), styles["GOST-H1"])); _add_toc_entry(doc, 0, cat)
-        story.append(Spacer(1, 4*mm))
-
-        for it in items:
-            grp = it.get("group_name") or "Подраздел"
-            synth = it.get("synthesized_text") or ""
-            remarks = it.get("original_remarks") or []
-
-            story.append(Paragraph(_safe(grp), styles["GOST-H2"])); _add_toc_entry(doc, 1, grp)
-
-            if synth:
-                story.append(_table_summary(synth))
-                story.append(Spacer(1, 2*mm))
-            if remarks:
-                story.append(_table_remarks(remarks))
-                story.append(Spacer(1, 4*mm))
-
-        story.append(Spacer(1, 6*mm))
-
-    # for section_name, section_data in (json_obj.items() if isinstance(json_obj, dict) else []):
-    #     # Добавляем заголовок раздела  
-    #     section_title = section_name.capitalize() if section_name else "Раздел"
-    #     story.append(Paragraph(_safe(section_title), styles["GOST-H1"]))
-    #     _add_toc_entry(doc, 0, section_title)
+    #     story.append(Paragraph(_safe(cat), styles["GOST-H1"])); _add_toc_entry(doc, 0, cat)
     #     story.append(Spacer(1, 4*mm))
 
-    #     # Обрабатываем группы в разделе
-    #     for group in (section_data if isinstance(section_data, list) else []):
-    #         group_name = group.get("group_name") or "Подраздел"
-    #         synthesized = group.get("synthesized_remark") or ""
-    #         remarks = group.get("original_duplicates") or []
+    #     for it in items:
+    #         grp = it.get("group_name") or "Подраздел"
+    #         synth = it.get("synthesized_text") or ""
+    #         remarks = it.get("original_remarks") or []
 
-    #         # Добавляем подзаголовок группы
-    #         story.append(Paragraph(_safe(group_name), styles["GOST-H2"]))
-    #         _add_toc_entry(doc, 1, group_name)
+    #         story.append(Paragraph(_safe(grp), styles["GOST-H2"])); _add_toc_entry(doc, 1, grp)
 
-    #         # Добавляем синтезированное замечание
-    #         if synthesized:
-    #             story.append(_table_summary(synthesized))
+    #         if synth:
+    #             story.append(_table_summary(synth))
     #             story.append(Spacer(1, 2*mm))
-
-    #         # Добавляем оригинальные замечания
     #         if remarks:
     #             story.append(_table_remarks(remarks))
     #             story.append(Spacer(1, 4*mm))
 
-    #     # Добавляем отступ после раздела
     #     story.append(Spacer(1, 6*mm))
+
+    for section_name, section_data in (json_obj.items() if isinstance(json_obj, dict) else []):
+        # Добавляем заголовок раздела  
+        section_title = section_name.capitalize() if section_name else "Раздел"
+        story.append(Paragraph(_safe(section_title), styles["GOST-H1"]))
+        _add_toc_entry(doc, 0, section_title)
+        story.append(Spacer(1, 4*mm))
+
+        # Обрабатываем группы в разделе
+        for group in (section_data if isinstance(section_data, list) else []):
+            group_name = group.get("group_name") or "Подраздел"
+            synthesized = group.get("synthesized_remark") or ""
+            remarks = group.get("original_duplicates") or []
+
+            # Добавляем подзаголовок группы
+            story.append(Paragraph(_safe(group_name), styles["GOST-H2"]))
+            _add_toc_entry(doc, 1, group_name)
+
+            # Добавляем синтезированное замечание
+            if synthesized:
+                story.append(_table_summary(synthesized))
+                story.append(Spacer(1, 2*mm))
+
+            # Добавляем оригинальные замечания
+            if remarks:
+                story.append(_table_remarks(remarks))
+                story.append(Spacer(1, 4*mm))
+
+        # Добавляем отступ после раздела
+        story.append(Spacer(1, 6*mm))
 
     # заключение
     if add_conclusion:

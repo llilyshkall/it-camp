@@ -450,14 +450,15 @@ async def logic(data):
     # print("  Отчеты о синтезе сохранены в synthesis_report_clustered.json")
 
     # Формируем и сохраняем финальный отчет
-    final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
+    #final_report_list = [{"category": name, "items": items} for name, items in sorted(final_report.items())]
+
     # with open("report_final_classified.json", "w", encoding="utf-8") as f:
     #     json.dump(final_report_list, f, ensure_ascii=False, indent=2)
     #print("  Финальный классифицированный отчет сохранен в report_final_classified.json")
     print("\n---  Пайплайн завершен! ---")
     return {
         "success": True,
-        "data": final_report_list
+        "data": synthesis_reports
     }
 
 
