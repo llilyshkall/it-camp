@@ -434,7 +434,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	}
 
 	// externalURL := "http://127.0.0.1:8083/remarks"
-	externalURL := "http://127.0.0.11:8083/remarks"
+	externalURL := "http://172.17.0.1:8083/remarks"
 
 	// Send request to external service
 	resp, err := http.Post(externalURL, "application/json", bytes.NewBuffer(jsonData))
@@ -520,7 +520,7 @@ func (pt *ProjectProcessorTask) processRemarks(ctx context.Context, project *db.
 	// }
 
 	// externalURL2 := "http://127.0.0.1:8086/remarks_report"
-	externalURL2 := "http://127.0.0.11:8086/remarks_report"
+	externalURL2 := "http://172.17.0.1:8086/remarks_report"
 
 	requestBody, err := json.Marshal(remarksResponse)
 	if err != nil {
