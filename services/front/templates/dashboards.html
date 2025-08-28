@@ -1369,90 +1369,7 @@
       
     
 
-    // function updateCharts(rows) {
-    //   console.log('Обновление всех графиков...');
-    //   console.log('Получено строк для графиков:', rows.length);
-      
-    //   // Подсчитываем статусы для круговой диаграммы
-    //   const statusCounts = {};
-    //   rows.forEach(row => {
-    //     const status = row.getAttribute('data-status');
-    //     statusCounts[status] = (statusCounts[status] || 0) + 1;
-    //   });
-      
-    //   console.log('Статистика статусов:', statusCounts);
-      
-    //   // Обновляем круговую диаграмму
-    //   updatePieChart(statusCounts);
-      
-    //   // Обновляем финансовый график
-    //   updateBudgetChart(rows);
-    // }
-
-    // function updatePieChart(statusCounts) {
-    //   const total = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
-    //   if (total === 0) return;
-      
-    //   const pieChart = document.querySelector('.pie-chart svg');
-    //   if (!pieChart) return;
-      
-    //   // Очищаем существующие круги
-    //   pieChart.innerHTML = '';
-      
-    //   // Добавляем базовый круг
-    //   const baseCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    //   baseCircle.setAttribute('cx', '100');
-    //   baseCircle.setAttribute('cy', '100');
-    //   baseCircle.setAttribute('r', '80');
-    //   baseCircle.setAttribute('fill', 'none');
-    //   baseCircle.setAttribute('stroke', '#e5e7eb');
-    //   baseCircle.setAttribute('stroke-width', '40');
-    //   pieChart.appendChild(baseCircle);
-      
-    //   let currentAngle = 0;
-    //   Object.entries(statusCounts).forEach(([status, count]) => {
-    //     const percentage = (count / total) * 100;
-    //     const angle = (percentage / 100) * 360;
-        
-    //     const segment = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    //     segment.setAttribute('cx', '100');
-    //     segment.setAttribute('cy', '100');
-    //     segment.setAttribute('r', '80');
-    //     segment.setAttribute('fill', 'none');
-    //     segment.setAttribute('stroke', getStatusColor(status));
-    //     segment.setAttribute('stroke-width', '40');
-    //     segment.setAttribute('stroke-dasharray', `${(angle / 360) * 502.7} 502.7`);
-    //     segment.setAttribute('stroke-dashoffset', `${-currentAngle / 360 * 502.7}`);
-    //     segment.setAttribute('transform', 'rotate(-90 100 100)');
-    //     segment.title = `${getStatusName(status)}: ${count} проект`;
-        
-    //     pieChart.appendChild(segment);
-    //     currentAngle += angle;
-    //   });
-      
-    //   // Обновляем легенду
-    //   updatePieLegend(statusCounts, total);
-    // }
-
-    // function updatePieLegend(statusCounts, total) {
-    //   const legend = document.querySelector('.pie-legend');
-    //   if (!legend) return;
-      
-    //   legend.innerHTML = '';
-      
-    //   Object.entries(statusCounts).forEach(([status, count]) => {
-    //     const percentage = Math.round((count / total) * 100);
-        
-    //     const item = document.createElement('div');
-    //     item.className = 'pie-legend-item';
-    //     item.innerHTML = `
-    //       <span class="pie-legend-color" style="background: ${getStatusColor(status)};"></span>
-    //       <span>${getStatusName(status)} (${percentage}%)</span>
-    //     `;
-        
-    //     legend.appendChild(item);
-    //   });
-    // }
+  
     //function updateCharts(data) {
     async function updateCharts() {
       const data = await getRemarks();
@@ -1648,7 +1565,7 @@
         const bar = document.createElement('div');
         bar.style.cssText = `
           width: 60px;
-          height: ${(value / maxValue) * 200}px; /* масштабируем высоту */
+          height: ${(value / maxValue) * 180}px; /* масштабируем высоту */
           background-color: ${colors[section] || '#ccc'}; /* цвет из словаря */
           border-radius: 4px 4px 0 0;
           transition: all 0.3s ease;
